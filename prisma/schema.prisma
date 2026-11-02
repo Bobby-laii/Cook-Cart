@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  passwordHash        String
+  name                String
+  role                String   @default("CUSTOMER") // CUSTOMER, STORE_PARTNER, ADMIN
+  dietaryRestrictions String?  @default("")
+  allergies           String?  @default("")
+  preferredLanguage   String   @default("en") // en, zh-HK
+  chefName            String?  @default("Chef Cart")
+  chefAvatarUrl       String?  @default("🧑‍🍳")
+  chefPersonality     String?  @default("friendly") // friendly, professional, playful, calm
+  chefAvatarConfig    String? // JSON ChefAvatarConfig (layered SVG avatar), see src/lib/avatar/chefAvatar.ts
+  onboardingCompleted Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  partnerStore  Store?             @relation("PartnerUser")
+  savedRecipes  SavedRecipe[]
+  cartItems     CartItem[]
+  orders        Order[]
+  conversations ChatConversation[]
+  aiUsageLogs   AIUsageLog[]
+}
+
+model Store {
+  id                    String   @id @default(cuid())
+  name                  String
+  nameZh                String
+  slug                  String   @unique
+  description           String
+  descriptionZh         String
+  address               String
+  addressZh             String
+  logoUrl               String
+  deliveryFee           Float    @default(30.0)
+  freeDeliveryThreshold Float    @default(350.0)
+  minOrderAmount        Float    @default(100.0)
+  deliveryTimeEstimate  String   @default("45-60 mins")
+  pickupAvailable       Boolean  @default(true)
+  deliveryAvailable     Boolean  @default(true)
+  isMock                Boolean  @default(true)
+  partnerUserId         String?  @unique
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  partnerUser User?     @relation("PartnerUser", fields: [partnerUserId], references: [id])
+  products    Product[]
+  orders      Order[]
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  storeId       String
+  name          String
+  nameZh        String
+  category      String
+  categoryZh    String
+  description   String
+  descriptionZh String?
+  price         Float
+  unit          String
+  stock         Int      @default(100)
+  imageUrl      String
+  isMock        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store      Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([storeId])
+  @@index([name])
+}
+
+model Recipe {
+  id               String   @id @default(cuid())
+  title            String
+  titleZh          String
+  cuisine          String
+  cookTimeMinutes  Int
+  difficulty       String   // Easy, Medium, Hard
+  servings         Int      @default(2)
+  description      String
+  descriptionZh    String
+  ingredients      String   // JSON string of RecipeIngredient[]
+  extraIngredients String   // JSON string of RecipeIngredient[]
+  instructions     String   // JSON string of RecipeStep[]
+  tips             String?
+  safetyNotes      String?
+  // Resolved food photo. Nullable: recipes saved before photos existed, and any
+  // suggestion whose provider lookup failed, must still load.
+  imageUrl         String?
+  isAIRecommended  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  savedByUsers SavedRecipe[]
+}
+
+model SavedRecipe {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  rating    String   @default("NONE") // UP, DOWN, NONE
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id               String   @id @default(cuid())
+  orderNumber      String   @unique
+  userId           String
+  storeId          String
+  status           String   @default("PLACED") // PLACED, CONFIRMED, PREPARING, OUT_FOR_DELIVERY, READY_FOR_PICKUP, COMPLETED, CANCELLED
+  fulfillmentType  String   @default("DELIVERY") // DELIVERY, PICKUP
+  deliveryAddress  String?
+  deliveryTimeSlot String?
+  pickupStoreName  String?
+  pickupTimeSlot   String?
+  subtotal         Float
+  deliveryFee      Float    @default(0.0)
+  transactionFee   Float    @default(0.0)
+  total            Float
+  isPaid           Boolean  @default(true)
+  paymentRef       String?
+  paymentMethod    String   @default("MOCK_PAYMENT")
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store         Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items         OrderItem[]
+  notifications OrderNotification[]
+
+  @@index([userId])
+  @@index([storeId])
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  productId     String?
+  productName   String
+  productNameZh String?
+  unit          String
+  price         Float
+  quantity      Int
+  total         Float
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model OrderNotification {
+  id        String   @id @default(cuid())
+  orderId   String
+  status    String
+  message   String
+  messageZh String?
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model AppSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model AIUsageLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  conversationId   String
+  modelName        String
+  tokensPrompt     Int      @default(0)
+  tokensCompletion Int      @default(0)
+  tokensTotal      Int      @default(0)
+  estimatedCostHkd Float    @default(0.0)
+  createdAt        DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model ChatConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String   @default("New Cooking Chat")
+  cuisine     String?
+  ingredients String?  // JSON array of strings
+  messages    String   // JSON string of ChatMessage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
