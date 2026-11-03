@@ -2,34 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design System: Cafe + Bento (.agents/skills/design-cafe, design-bento)
+ *   primary   #5D4432
+ *   secondary #E9E3DD
+ *   surface   #F9F7F5
+ *   text      #3E2B1E
+ *   success   #16A34A   warning #D97706   danger #DC2626
+ *   fonts     Poppins (body/display), JetBrains Mono (label-caps / code)
+ *   WCAG 2.2 AA: keyboard-first, visible focus states
+ */
 :root {
-  --foreground-rgb: 28, 25, 23;
-  --background-start-rgb: 250, 250, 249;
-  --background-end-rgb: 255, 255, 255;
+  --cafe-primary: #5D4432;
+  --cafe-secondary: #E9E3DD;
+  --cafe-surface: #F9F7F5;
+  --cafe-text: #3E2B1E;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #fafaf9;
+  color: var(--cafe-text);
+  background-color: var(--cafe-surface);
+  background-image: radial-gradient(rgba(93, 68, 50, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  letter-spacing: -0.005em;
 }
 
-/* Custom scrollbar for recipe and chat history */
+::selection {
+  background: #DFC8B6;
+  color: #281C14;
+}
+
+/* Cafe skill rule: visible focus states for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #5D4432;
+  outline-offset: 2px;
+}
+
+/* Cafe label-caps token: JetBrains Mono, 0.75rem */
+.label-caps {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Custom scrollbar in warm coffee tones */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f1f0;
+  background: #F3EEE9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d6d3d1;
+  background: #D8CDC2;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a29e;
+  background: #B3A291;
 }
 
 /* Chef avatar studio micro-animations */
@@ -51,4 +84,3 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .cc-pop, .cc-fade-in { animation: none; }
 }
-
