@@ -5,6 +5,11 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { APP_CONFIG } from "@/config/appConfig";
 import { COMMON_INGREDIENTS_CATALOGUE, IngredientItem } from "@/config/ingredientsCatalogue";
 import {
+  getPopularIngredientsForCuisine,
+  isEuropeanCuisine,
+  TOP_50_EUROPEAN_INGREDIENTS,
+} from "@/config/regionalIngredients";
+import {
   Sparkles,
   Camera,
   Plus,
@@ -77,27 +82,29 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
   const [detectedItems, setDetectedItems] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState("");
 
-  // Popular quick tap chips
-  const popularChips = [
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Bok Choy", zh: "白菜仔" },
-    { en: "Gai Lan", zh: "芥蘭" },
-    { en: "Eggs", zh: "鮮雞蛋" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Tomatoes", zh: "蕃茄" },
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Sliced Beef", zh: "牛肉片" },
-    { en: "Shiitake Mushrooms", zh: "鮮冬菇" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Old Ginger", zh: "老薑" },
-    { en: "Spring Onions", zh: "青蔥" },
-  ];
+  // Check if current cuisine selection is European
+  const isEuropean = useMemo(() => isEuropeanCuisine(cuisine), [cuisine]);
 
-  // Real-time local autocomplete matching from COMMON_INGREDIENTS_CATALOGUE
+  // Quick tap: Top 10 for European cuisines, regional staples otherwise
+  const popularChips = useMemo(() => {
+    return getPopularIngredientsForCuisine(cuisine, 12);
+  }, [cuisine]);
+
+  // Searchable list: all 50 European benchmark ingredients + general catalogue.
+  // When a European cuisine is selected, the European items are ranked first.
+  const searchCatalogue = useMemo(() => {
+    const european = TOP_50_EUROPEAN_INGREDIENTS.map((i) => ({ en: i.en, zh: i.zh }));
+    const europeanEn = new Set(european.map((i) => i.en.toLowerCase()));
+    const general = COMMON_INGREDIENTS_CATALOGUE.filter((i) => !europeanEn.has(i.en.toLowerCase()));
+    return isEuropean ? [...european, ...general] : [...general, ...european];
+  }, [isEuropean]);
+
+  // Real-time local autocomplete: starts after 2 letters (or 1 Chinese character)
   const matchingSuggestions = useMemo(() => {
     const query = ingredientInput.trim().toLowerCase();
-    if (!query) return [];
-    return COMMON_INGREDIENTS_CATALOGUE.filter((item) => {
+    const hasCjk = /[\u3400-\u9FFF]/.test(query);
+    if (!query || (!hasCjk && query.length < 2)) return [];
+    return searchCatalogue.filter((item) => {
       const matchEn = item.en.toLowerCase().includes(query);
       const matchZh = item.zh.includes(query);
       const alreadySelected =
@@ -106,7 +113,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
         ingredients.includes(language === "zh-HK" ? item.zh : item.en);
       return (matchEn || matchZh) && !alreadySelected;
     }).slice(0, 8);
-  }, [ingredientInput, ingredients, language]);
+  }, [ingredientInput, ingredients, language, searchCatalogue]);
 
   // Close suggestions dropdown when clicking outside
   useEffect(() => {
@@ -187,6 +194,17 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
     setDetectedItems([]);
   };
 
+  // Resolved display name for selected cuisine
+  const selectedCuisineObj = useMemo(
+    () => APP_CONFIG.cuisines.find((c) => c.id === cuisine),
+    [cuisine]
+  );
+  const cuisineDisplayName = selectedCuisineObj
+    ? language === "zh-HK"
+      ? selectedCuisineObj.labelZh
+      : selectedCuisineObj.label
+    : cuisine;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (ingredients.length === 0) {
@@ -196,12 +214,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
 
     // Send the label in the user's own language, so the AI reply matches the UI
     // instead of quoting an English cuisine name back at a Chinese-speaking user.
-    const selectedCuisineObj = APP_CONFIG.cuisines.find((c) => c.id === cuisine);
-    const cuisineLabel = selectedCuisineObj
-      ? language === "zh-HK"
-        ? selectedCuisineObj.labelZh
-        : selectedCuisineObj.label
-      : cuisine;
+    const cuisineLabel = cuisineDisplayName;
 
     onSubmit({
       cuisine: cuisineLabel,
@@ -428,11 +441,24 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
             </div>
 
             {/* Quick Tap Suggestions */}
-            <div className="pt-1">
-              <span className="text-[11px] text-stone-500 font-medium mr-2">
-                {t("popularIngredientsPrompt")}
-              </span>
-              <div className="inline-flex flex-wrap gap-1.5">
+            <div className="pt-2 border-t border-stone-100 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[11px] text-stone-600 font-semibold flex items-center gap-1">
+                  <span>{isEuropean ? "🇪🇺" : "💡"}</span>
+                  <span>
+                    {isEuropean
+                      ? language === "zh-HK"
+                        ? `歐洲常用食材（${cuisineDisplayName}）：`
+                        : `Top European distinctive ingredients (${cuisineDisplayName}):`
+                      : language === "zh-HK"
+                        ? `常用食材（${cuisineDisplayName}）：`
+                        : `Quick tap (${cuisineDisplayName}):`}
+                  </span>
+                </span>
+              </div>
+
+              {/* Main Quick Tap Chips */}
+              <div className="flex flex-wrap gap-1.5">
                 {popularChips.map((chip) => {
                   const label = language === "zh-HK" ? chip.zh : chip.en;
                   const isSelected = ingredients.includes(label) || ingredients.includes(chip.en);
@@ -442,9 +468,14 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
                       key={chip.en}
                       type="button"
                       onClick={() => handleAddIngredient(language === "zh-HK" ? chip.zh : chip.en)}
-                      className="px-2 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs transition"
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-2xs ${
+                        isEuropean
+                          ? "bg-amber-50/90 hover:bg-amber-100 text-amber-900 border border-amber-200/80"
+                          : "bg-stone-100 hover:bg-stone-200 text-stone-700"
+                      }`}
                     >
-                      + {label}
+                      <span className={isEuropean ? "text-amber-600 font-bold" : "text-stone-400"}>+</span>
+                      <span>{label}</span>
                     </button>
                   );
                 })}

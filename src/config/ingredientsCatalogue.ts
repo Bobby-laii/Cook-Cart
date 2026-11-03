@@ -1,6 +1,7 @@
 /**
  * Common Fresh Ingredients Catalogue for Instant Local Autocomplete Search
  * 100% Client-side and in-memory — 0ms latency, zero API costs, zero rate-limits.
+ * Comprehensive coverage of local Asian staples & top European benchmark ingredients.
  */
 
 export interface IngredientItem {
@@ -25,6 +26,10 @@ export const COMMON_INGREDIENTS_CATALOGUE: IngredientItem[] = [
   { en: "Lamb Chops", zh: "羊扒", category: "meat" },
   { en: "Bacon", zh: "煙肉", category: "meat" },
   { en: "Sausages", zh: "香腸", category: "meat" },
+  { en: "Pancetta", zh: "意式生煙肉", category: "meat" },
+  { en: "Prosciutto di Parma", zh: "巴馬火腿", category: "meat" },
+  { en: "Spanish Chorizo", zh: "西班牙辣腸", category: "meat" },
+  { en: "Salami", zh: "薩拉米香腸", category: "meat" },
 
   // Seafood
   { en: "Salmon Fillet", zh: "三文魚柳", category: "seafood" },
@@ -36,6 +41,7 @@ export const COMMON_INGREDIENTS_CATALOGUE: IngredientItem[] = [
   { en: "Fish Balls", zh: "魚蛋", category: "seafood" },
   { en: "Crab Sticks", zh: "蟹柳", category: "seafood" },
   { en: "Mussels", zh: "青口", category: "seafood" },
+  { en: "Anchovies", zh: "銀魚柳", category: "seafood" },
 
   // Vegetables & Herbs
   { en: "Bok Choy", zh: "白菜仔", category: "vegetable" },
@@ -67,14 +73,46 @@ export const COMMON_INGREDIENTS_CATALOGUE: IngredientItem[] = [
   { en: "Asparagus", zh: "蘆筍", category: "vegetable" },
   { en: "Green Beans", zh: "四季豆", category: "vegetable" },
   { en: "Bean Sprouts", zh: "芽菜", category: "vegetable" },
+  // European benchmark vegetables & herbs
+  { en: "Flat-Leaf Parsley", zh: "歐芹", category: "vegetable" },
+  { en: "Fresh Thyme", zh: "百里香", category: "vegetable" },
+  { en: "Bay Leaves", zh: "香葉", category: "vegetable" },
+  { en: "Lemon", zh: "檸檬", category: "vegetable" },
+  { en: "Fresh Basil", zh: "羅勒", category: "vegetable" },
+  { en: "Oregano", zh: "牛至", category: "vegetable" },
+  { en: "Rosemary", zh: "迷迭香", category: "vegetable" },
+  { en: "Leeks", zh: "韭蔥", category: "vegetable" },
+  { en: "Shallots", zh: "干蔥", category: "vegetable" },
+  { en: "Green Lentils", zh: "小扁豆", category: "vegetable" },
+  { en: "Chickpeas", zh: "鷹嘴豆", category: "vegetable" },
+  { en: "Cannellini Beans", zh: "白豆", category: "vegetable" },
+  { en: "Fresh Chives", zh: "細香蔥", category: "vegetable" },
+  { en: "Fresh Dill", zh: "蒔蘿", category: "vegetable" },
+  { en: "Beetroot", zh: "紅菜頭", category: "vegetable" },
+  { en: "Sauerkraut", zh: "德式酸菜", category: "vegetable" },
+  { en: "Horseradish", zh: "辣根", category: "vegetable" },
 
-  // Tofu, Eggs & Dairy
+  // Tofu, Eggs & Dairy / Cheeses
   { en: "Fresh Eggs", zh: "鮮雞蛋", category: "tofu_dairy" },
   { en: "Firm Tofu", zh: "硬豆腐", category: "tofu_dairy" },
   { en: "Soft Silken Tofu", zh: "嫩豆腐", category: "tofu_dairy" },
   { en: "Fried Tofu Puffs", zh: "豆卜", category: "tofu_dairy" },
   { en: "Butter", zh: "牛油", category: "tofu_dairy" },
-  { en: "Cheddar Cheese", zh: "芝士", category: "tofu_dairy" },
+  { en: "Cheddar Cheese", zh: "車打芝士", category: "tofu_dairy" },
+  { en: "Parmigiano-Reggiano", zh: "巴馬臣芝士", category: "tofu_dairy" },
+  { en: "Feta Cheese", zh: "菲達芝士", category: "tofu_dairy" },
+  { en: "Gouda Cheese", zh: "高達芝士", category: "tofu_dairy" },
+  { en: "Mozzarella", zh: "水牛芝士", category: "tofu_dairy" },
+  { en: "Goat Cheese", zh: "山羊芝士", category: "tofu_dairy" },
+  { en: "Gruyère Cheese", zh: "格呂耶爾芝士", category: "tofu_dairy" },
+  { en: "Brie Cheese", zh: "布里芝士", category: "tofu_dairy" },
+  { en: "Crème Fraîche", zh: "法式酸忌廉", category: "tofu_dairy" },
+  { en: "Pecorino Romano", zh: "佩科里諾羊奶芝士", category: "tofu_dairy" },
+  { en: "Ricotta", zh: "意大利乳清芝士", category: "tofu_dairy" },
+  { en: "Mascarpone", zh: "馬斯卡彭芝士", category: "tofu_dairy" },
+  { en: "Blue Cheese", zh: "藍芝士", category: "tofu_dairy" },
+  { en: "Emmental Cheese", zh: "埃曼塔芝士", category: "tofu_dairy" },
+  { en: "Sour Cream", zh: "酸忌廉", category: "tofu_dairy" },
   { en: "Fresh Milk", zh: "鮮牛奶", category: "tofu_dairy" },
   { en: "Heavy Cream", zh: "淡忌廉", category: "tofu_dairy" },
 
@@ -82,10 +120,23 @@ export const COMMON_INGREDIENTS_CATALOGUE: IngredientItem[] = [
   { en: "Jasmine White Rice", zh: "泰國香米", category: "grain_noodle" },
   { en: "Spaghetti Pasta", zh: "意大利粉", category: "grain_noodle" },
   { en: "Penne Pasta", zh: "長通粉", category: "grain_noodle" },
+  { en: "Semolina Pasta", zh: "意大利麵", category: "grain_noodle" },
+  { en: "Gnocchi", zh: "意式薯糰", category: "grain_noodle" },
+  { en: "Sourdough Bread", zh: "酸種麵包", category: "grain_noodle" },
   { en: "Fresh Wonton Egg Noodles", zh: "全蛋幼麵", category: "grain_noodle" },
   { en: "Japanese Udon Noodles", zh: "烏冬", category: "grain_noodle" },
   { en: "Ramen Noodles", zh: "拉麵", category: "grain_noodle" },
   { en: "Rice Vermicelli", zh: "米粉", category: "grain_noodle" },
   { en: "Soba Noodles", zh: "蕎麥麵", category: "grain_noodle" },
-];
 
+  // Distinctive Pantry & Flavor Components (Excluding basic salt/sugar)
+  { en: "Extra-Virgin Olive Oil", zh: "特級初榨橄欖油", category: "pantry_seasoning" },
+  { en: "Pesto Genovese", zh: "意式青醬", category: "pantry_seasoning" },
+  { en: "Dijon Mustard", zh: "第戎芥末醬", category: "pantry_seasoning" },
+  { en: "White Wine", zh: "白酒", category: "pantry_seasoning" },
+  { en: "Red Wine", zh: "紅酒", category: "pantry_seasoning" },
+  { en: "Wine Vinegar", zh: "酒醋", category: "pantry_seasoning" },
+  { en: "Balsamic Vinegar of Modena", zh: "摩德納香醋", category: "pantry_seasoning" },
+  { en: "Capers", zh: "酸豆", category: "pantry_seasoning" },
+  { en: "Caraway Seeds", zh: "葛縷子", category: "pantry_seasoning" },
+];
