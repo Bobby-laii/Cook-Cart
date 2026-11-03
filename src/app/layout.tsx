@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, JetBrains_Mono } from "next/font/google";
+import { Roboto, Poppins, Inconsolata, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -8,25 +8,40 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OnboardingGate } from "@/components/avatar/OnboardingGate";
 
-// Typography tokens from `design-cafe`: primary=Poppins, mono=JetBrains Mono
+// Typography tokens from `design-clean` (.agents/skills/design-clean):
+// primary=Roboto, display=Poppins, mono=Inconsolata + Cormorant Garamond for BON TASTE serif
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-roboto",
+  display: "swap",
+});
+
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const inconsolata = Inconsolata({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-jetbrains",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inconsolata",
+  display: "swap",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-cormorant",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "CookCart - AI Cooking & Grocery Shopping in Hong Kong",
+  title: "BON TASTE — AI Culinary & Grocery Concierge in Hong Kong",
   description:
-    "Decide what to cook with AI based on your ingredients, and order groceries from Hong Kong supermarkets in one app.",
+    "Curated AI recipe recommendations using 100% of your ingredients, paired with live Hong Kong supermarket price comparison.",
 };
 
 export default function RootLayout({
@@ -35,8 +50,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${poppins.variable} ${jetbrainsMono.variable}`}>
-      <body className="font-sans antialiased flex flex-col min-h-screen bg-stone-50 text-stone-900">
+    <html
+      lang="en"
+      className={`${roboto.variable} ${poppins.variable} ${inconsolata.variable} ${cormorant.variable}`}
+    >
+      <body className="font-sans antialiased flex flex-col min-h-screen bg-[#F8F9FA] text-[#0F2A3D]">
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>

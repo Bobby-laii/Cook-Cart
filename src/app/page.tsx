@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { BonTasteLogo, BonTastePlateIcon } from "@/components/BonTasteLogo";
 import {
   Sparkles,
   ChefHat,
@@ -18,11 +19,12 @@ import {
 } from "lucide-react";
 
 /**
- * Homepage designed with `design-cafe` tokens + `design-bento` modular grid:
- *   - Surface #F9F7F5 (stone-50), secondary cards #E9E3DD (stone-200),
- *     primary #5D4432 (brand-500), text #3E2B1E (stone-900).
- *   -Poppins display headings (3rem h1) + JetBrains Mono `.label-caps` kickers.
- *   - Asymmetric bento grid replaces the three identical feature boxes.
+ * Homepage designed with the `design-clean` skill (.agents/skills/design-clean)
+ * tailored to the BON TASTE brand identity:
+ *   - Surface #FFFFFF on #F8F9FA porcelain canvas, ample whitespace, 8pt grid
+ *   - Primary slate-blue #4E7B94 ("T A S T E") & deep midnight navy #0F2A3D ("B O N")
+ *   - Double hairline rule motif & concentric plate "O" emblem from the logo
+ *   - Roboto body, Poppins headings, Cormorant Garamond editorial display, Inconsolata label-caps
  */
 export default function HomePage() {
   const { t, language } = useLanguage();
@@ -30,216 +32,244 @@ export default function HomePage() {
   const zh = language === "zh-HK";
 
   return (
-    <div className="space-y-12 pb-16 pt-8">
-      {/* ─── Hero + Live Kitchen Card ─── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Left hero block (7 cols) */}
-          <div className="lg:col-span-7 rounded-3xl bg-white border border-stone-200 p-8 sm:p-10 lg:p-12 shadow-cafe flex flex-col justify-between">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700">
-                <span className="w-2 h-2 rounded-full bg-fresh-600" />
-                <span className="label-caps">
-                  {zh ? "香港家庭 AI 買餸廚房" : "Hong Kong Kitchen · AI + Groceries"}
-                </span>
+    <div className="space-y-16 pb-20">
+      {/* ─── Clean Hero Section with Official BON TASTE Lockup ─── */}
+      <section className="bg-white border-b border-stone-200 py-12 sm:py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Column (7 cols): Brand Lockup + Clean Editorial Copy */}
+            <div className="lg:col-span-7 space-y-8">
+              {/* Official BON TASTE Double-Rule Logo Lockup */}
+              <div className="space-y-4">
+                <BonTasteLogo variant="hero" />
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="w-2 h-2 rounded-full bg-fresh-600" />
+                  <span className="label-caps text-stone-500">
+                    {zh
+                      ? "香港 AI 智能料理與超市格價禮賓平台"
+                      : "HONG KONG · AI CULINARY & GROCERY CONCIERGE"}
+                  </span>
+                </div>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl font-bold text-stone-900 tracking-tight leading-[1.12]">
-                {zh ? (
-                  <>
-                    不知道今晚煮乜？
-                    <span className="block text-brand-500 mt-1">
-                      AI 幫你諗餸，一鍵格價買齊。
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    What’s in your kitchen
-                    <span className="block text-brand-500 mt-1">
-                      becomes dinner tonight.
-                    </span>
-                  </>
-                )}
-              </h1>
+              <div className="space-y-4">
+                <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.5rem] font-semibold text-stone-900 tracking-tight leading-[1.2]">
+                  {zh ? (
+                    <>
+                      以現有食材，烹調恰到好處的日常品味。
+                      <span className="block text-brand-500 font-normal mt-1">
+                        AI 度身設計食譜 · 四大超市即時格價。
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Refined everyday cooking, tailored to what you have.
+                      <span className="block text-brand-500 font-normal mt-1">
+                        Zero-waste AI recipes & live HK grocery comparison.
+                      </span>
+                    </>
+                  )}
+                </h1>
 
-              <p className="text-base sm:text-lg text-stone-600 max-w-xl leading-relaxed">
-                {zh
-                  ? "揀選菜系、輸入或拍照上載現有食材。Chef Cart 保證將所有指定食材全數入饌，即時比對香港四大超市格價，直送上門或門市自取。"
-                  : "Pick a cuisine, tap your ingredients, or snap your fridge. CookCart crafts 3 recipes that use every item you entered and compares prices across Hong Kong supermarkets."}
-              </p>
-            </div>
+                <p className="text-base text-stone-600 max-w-xl leading-relaxed">
+                  {zh
+                    ? "選擇菜系、點選或拍照上載雪櫃現有食材。BON TASTE 嚴格保證將您指定的所有食材全數入饌，並即時比對香港各大超市價格，一鍵直送或自取。"
+                    : "Select a cuisine, tap regional ingredients, or upload a photo of your fridge. BON TASTE crafts 3 dishes using 100% of your items and compares prices across Hong Kong supermarkets."}
+                </p>
+              </div>
 
-            <div className="pt-8 space-y-6">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Clean 8pt-grid Action Row */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                 <Link
                   href="/chat"
-                  className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-stone-50 font-semibold text-base shadow-cafe transition"
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-lg bg-stone-900 hover:bg-brand-600 text-white font-medium text-sm sm:text-base shadow-clean transition"
                 >
-                  <Sparkles className="w-5 h-5" />
-                  {zh ? "開始 AI 煮食對話" : "Start Cooking with AI"}
+                  <Sparkles className="w-4 h-4 text-brand-300" />
+                  {zh ? "開始 AI 煮食諮詢" : "Start AI Cooking Chat"}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 
                 <Link
                   href="/explore"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-900 font-semibold text-base border border-stone-200 transition"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg bg-white hover:bg-stone-50 text-stone-900 font-medium text-sm sm:text-base border border-stone-300 transition"
                 >
-                  <Compass className="w-5 h-5 text-brand-500" />
+                  <Compass className="w-4 h-4 text-brand-500" />
                   {zh ? "探索環球菜系" : "Explore Cuisines"}
                 </Link>
 
                 <Link
                   href="/my-recipes"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 font-medium text-sm transition"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 font-medium text-sm transition"
                 >
                   <ChefHat className="w-4 h-4 text-brand-500" />
                   {t("navMyRecipes")}
                 </Link>
               </div>
 
-              {/* Three guarantees strip */}
-              <div className="pt-5 border-t border-stone-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-stone-600">
+              {/* Three Core Guarantees */}
+              <div className="pt-6 border-t border-stone-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-stone-600">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-fresh-600 shrink-0" />
                   <span>{zh ? "100% 用盡指定食材" : "Uses every entered ingredient"}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-fresh-600 shrink-0" />
+                  <TrendingDown className="w-4 h-4 text-brand-500 shrink-0" />
                   <span>{zh ? "香港 4 大超市即時格價" : "4 HK supermarkets compared"}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-fresh-600 shrink-0" />
-                  <span>{zh ? "逐步計時烹調模式" : "Step-by-step cooking timers"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right sample order card (5 cols) */}
-          <div className="lg:col-span-5 rounded-3xl bg-stone-900 text-stone-50 p-7 sm:p-8 shadow-cafe-lg flex flex-col justify-between border border-stone-800">
-            <div className="flex items-center justify-between pb-5 border-b border-stone-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-500 flex items-center justify-center text-lg">
-                  🍳
-                </div>
-                <div>
-                  <span className="label-caps text-caramel-300 block">Live Preview</span>
-                  <h2 className="text-base font-semibold text-stone-50">Chef Cart · Tonight’s Ticket</h2>
-                </div>
-              </div>
-              <span className="label-caps px-2.5 py-1 rounded-full bg-stone-800 text-stone-200 border border-stone-700">
-                HK$
-              </span>
-            </div>
-
-            <div className="my-5 space-y-3.5">
-              {/* Pantry items */}
-              <div className="p-4 rounded-2xl bg-stone-800/70 border border-stone-700/70 space-y-2">
-                <span className="label-caps text-stone-400">
-                  {zh ? "已選食材" : "01 · Your Pantry"}
-                </span>
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  <span className="px-2.5 py-1 rounded-lg bg-stone-900 text-stone-100 text-xs font-medium border border-stone-700">
-                    🐔 {zh ? "雞腿肉" : "Chicken Thighs"}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-stone-900 text-stone-100 text-xs font-medium border border-stone-700">
-                    🥬 {zh ? "白菜仔" : "Bok Choy"}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-stone-900 text-stone-100 text-xs font-medium border border-stone-700">
-                    🧄 {zh ? "大蒜" : "Garlic"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dish suggestion */}
-              <div className="p-4 rounded-2xl bg-brand-500/30 border border-brand-400/30 space-y-1">
-                <span className="label-caps text-caramel-300">
-                  {zh ? "AI 推薦菜式 #1" : "02 · Dish Match · 20 mins"}
-                </span>
-                <p className="font-semibold text-stone-50 text-sm">
-                  {zh
-                    ? "蒜香白菜滑雞煲"
-                    : "Garlic-Glazed Chicken Thighs with Baby Bok Choy"}
-                </p>
-                <p className="text-stone-300 text-xs">
-                  {zh
-                    ? "✓ 全數用盡 3 款食材 · 額外只需生抽及紹興酒"
-                    : "✓ Uses all 3 items · only needs soy sauce & Shaoxing wine"}
-                </p>
-              </div>
-
-              {/* Store comparison */}
-              <div className="p-4 rounded-2xl bg-stone-50 text-stone-900 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="label-caps text-stone-500">
-                    {zh ? "超市格價" : "03 · Best Basket"}
-                  </span>
-                  <span className="font-mono text-[11px] font-semibold text-fresh-700 bg-fresh-100 px-2 py-0.5 rounded-full">
-                    {zh ? "節省 18%" : "Save 18%"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1.5 px-3 rounded-xl bg-stone-200/70 font-semibold text-xs">
-                  <span>WellMart HK · {zh ? "最抵" : "Lowest"}</span>
-                  <span className="font-mono">HK$ 48.50</span>
-                </div>
-                <div className="flex justify-between items-center px-3 text-xs text-stone-500">
-                  <span>ParkGrocer HK</span>
-                  <span className="font-mono">HK$ 52.00</span>
+                  <Clock className="w-4 h-4 text-brand-500 shrink-0" />
+                  <span>{zh ? "沉浸式步驟計時烹調" : "Guided step-by-step timers"}</span>
                 </div>
               </div>
             </div>
 
-            <Link
-              href="/chat"
-              className="w-full py-3 rounded-xl bg-stone-50 hover:bg-stone-200 text-stone-900 text-xs font-bold tracking-wide uppercase text-center transition block"
-            >
-              {zh ? "輸入你的食材試試 →" : "Try With Your Own Ingredients →"}
-            </Link>
+            {/* Right Column (5 cols): Clean Porcelain Tasting Menu & Basket Card */}
+            <div className="lg:col-span-5">
+              <div className="rounded-xl bg-white border border-stone-200 shadow-clean-lg p-6 sm:p-8 space-y-6">
+                {/* Card Header with BON TASTE Plate Emblem */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <BonTastePlateIcon size={32} />
+                      <div>
+                        <span className="label-caps text-brand-500 block">
+                          {zh ? "今日主廚餐單預覽" : "LIVE MENU PREVIEW"}
+                        </span>
+                        <h2 className="font-serif text-xl font-semibold text-stone-900 tracking-wide">
+                          BON TASTE · Menu du Jour
+                        </h2>
+                      </div>
+                    </div>
+                    <span className="label-caps px-2.5 py-1 rounded bg-stone-100 text-stone-700 border border-stone-200">
+                      HKD $
+                    </span>
+                  </div>
+                  <div className="bon-double-rule" />
+                </div>
+
+                {/* Step 01: Selected Ingredients */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="label-caps text-stone-500">
+                      {zh ? "01 · 您現有的食材" : "01 · Selected Ingredients"}
+                    </span>
+                    <span className="font-mono text-xs text-fresh-600 font-semibold">
+                      3 / 3 matched
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 rounded bg-stone-50 text-stone-900 text-xs font-medium border border-stone-200">
+                      {zh ? "雞腿肉 · Chicken Thighs" : "Chicken Thighs"}
+                    </span>
+                    <span className="px-3 py-1 rounded bg-stone-50 text-stone-900 text-xs font-medium border border-stone-200">
+                      {zh ? "白菜仔 · Bok Choy" : "Bok Choy"}
+                    </span>
+                    <span className="px-3 py-1 rounded bg-stone-50 text-stone-900 text-xs font-medium border border-stone-200">
+                      {zh ? "大蒜 · Garlic" : "Garlic"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Step 02: AI Dish Match */}
+                <div className="p-4 rounded-lg bg-brand-50/70 border border-brand-200/80 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="label-caps text-brand-600">
+                      {zh ? "02 · AI 推薦菜式" : "02 · Recommended Dish"}
+                    </span>
+                    <span className="font-mono text-xs text-stone-500">20 mins · Easy</span>
+                  </div>
+                  <p className="font-display font-semibold text-stone-900 text-sm sm:text-base">
+                    {zh
+                      ? "蒜香白菜嫩煎雞腿"
+                      : "Pan-Seared Garlic Chicken Thighs & Baby Bok Choy"}
+                  </p>
+                  <p className="text-stone-600 text-xs leading-relaxed">
+                    {zh
+                      ? "✓ 全數入饌 3 款指定食材 · 額外僅需生抽及紹興酒"
+                      : "✓ Incorporates all 3 ingredients; only needs light soy sauce & Shaoxing wine"}
+                  </p>
+                </div>
+
+                {/* Step 03: Supermarket Comparison */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="label-caps text-stone-500">
+                      {zh ? "03 · 香港超市即時格價" : "03 · Store Price Comparison"}
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-fresh-600">
+                      {zh ? "最抵節省 18%" : "Save 18%"}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-stone-200 border border-stone-200 rounded-lg overflow-hidden text-xs">
+                    <div className="flex justify-between items-center py-2.5 px-3.5 bg-stone-50 font-semibold text-stone-900">
+                      <span>WellMart HK · {zh ? "最優惠" : "Best Price"}</span>
+                      <span className="font-mono">HK$ 48.50</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2.5 px-3.5 bg-white text-stone-600">
+                      <span>ParkGrocer HK</span>
+                      <span className="font-mono">HK$ 52.00</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Link
+                  href="/chat"
+                  className="w-full py-3 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold tracking-wider uppercase text-center transition block"
+                >
+                  {zh ? "立即輸入你的食材體驗 →" : "Compose Your Menu Now →"}
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Bento Grid: How CookCart Works ─── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-          <div>
-            <span className="label-caps text-brand-500">Workflow · 3 Steps</span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-stone-900 mt-1">
-              {zh ? "由雪櫃到餐桌，三步搞掂" : "From fridge to table in three moves"}
-            </h2>
+      {/* ─── Clean 3-Column Workflow Section (8pt Baseline Grid) ─── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+            <div>
+              <span className="label-caps text-brand-500">
+                {zh ? "精簡三步流程" : "THE BON TASTE WORKFLOW"}
+              </span>
+              <h2 className="font-display text-2xl sm:text-3xl font-semibold text-stone-900 mt-1">
+                {zh ? "簡潔、精準，由雪櫃直達餐桌" : "Minimal, precise, from pantry to plate"}
+              </h2>
+            </div>
+            <p className="text-sm text-stone-600 max-w-md">
+              {zh
+                ? "零多餘干擾，專注於食材原味與最透明的香港超市格價。"
+                : "Clutter-free planning focused on culinary quality and transparent grocery pricing."}
+            </p>
           </div>
-          <p className="text-sm text-stone-600 max-w-md">
-            {zh
-              ? "不浪費任何一棵菜，亦不用逐間超市格價。"
-              : "Designed around zero food waste and transparent Hong Kong grocery pricing."}
-          </p>
+          <div className="bon-double-rule" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-          {/* Step 1 — wide bento block (5 cols) */}
-          <div className="md:col-span-5 rounded-3xl bg-white border border-stone-200 p-7 shadow-cafe flex flex-col justify-between space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 01 */}
+          <div className="rounded-xl bg-white border border-stone-200 p-6 sm:p-8 shadow-clean flex flex-col justify-between space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="label-caps text-stone-500">Step 01</span>
-                <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                <span className="label-caps text-brand-500">01 / INPUT</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-stone-100 text-stone-700">
                   17 Cuisines · Top 50 EU
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-stone-900">
-                {zh ? "點選菜系與現有食材" : "Tap your cuisine & ingredients"}
+              <h3 className="font-display text-lg font-semibold text-stone-900">
+                {zh ? "選取菜系與現有食材" : "Select Cuisine & Ingredients"}
               </h3>
               <p className="text-sm text-stone-600 leading-relaxed">
                 {zh
-                  ? "快選香港家常食材或歐洲 Top 10 經典配料、輸入首兩個字母即時搜尋，或直接拍一張雪櫃相。"
-                  : "Quick-tap regional staples (Cantonese or European Top 10), type two letters to search 90+ items, or upload a fridge photo."}
+                  ? "一鍵快選中歐各國代表食材（包括歐洲權威 Top 10 配料）、輸入首兩個字母即時搜尋，或上載雪櫃相片。"
+                  : "Quick-tap regional staples (including the Top 10 European benchmark), type two letters to search 90+ items, or snap your fridge."}
               </p>
             </div>
-            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-stone-100">
-              {["Butter · 牛油", "Olive Oil · 橄欖油", "Bok Choy · 白菜仔", "Parmigiano", "Firm Tofu · 豆腐"].map(
+            <div className="flex flex-wrap gap-1.5 pt-4 border-t border-stone-100">
+              {["Butter · 牛油", "Olive Oil · 橄欖油", "Parmigiano", "Bok Choy · 白菜仔"].map(
                 (chip) => (
                   <span
                     key={chip}
-                    className="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 text-xs font-medium"
+                    className="px-2.5 py-1 rounded bg-stone-50 border border-stone-200 text-stone-700 text-xs"
                   >
                     + {chip}
                   </span>
@@ -248,125 +278,137 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Step 2 — warm secondary surface block (4 cols) */}
-          <div className="md:col-span-4 rounded-3xl bg-stone-200/75 border border-stone-300/80 p-7 flex flex-col justify-between space-y-6">
+          {/* Card 02 */}
+          <div className="rounded-xl bg-white border border-stone-200 p-6 sm:p-8 shadow-clean flex flex-col justify-between space-y-6">
             <div className="space-y-3">
-              <span className="label-caps text-brand-600">Step 02</span>
-              <h3 className="text-xl font-bold text-stone-900">
-                {zh ? "AI 度身設計 3 款食譜" : "3 tailored recipes + AI Sous-Chef"}
+              <div className="flex items-center justify-between">
+                <span className="label-caps text-brand-500">02 / CURATION</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-stone-100 text-stone-700">
+                  Zero Waste
+                </span>
+              </div>
+              <h3 className="font-display text-lg font-semibold text-stone-900">
+                {zh ? "AI 主廚度身設計三款食譜" : "3 Tailored Recipes & Guided Timers"}
               </h3>
-              <p className="text-sm text-stone-700 leading-relaxed">
+              <p className="text-sm text-stone-600 leading-relaxed">
                 {zh
-                  ? "嚴格保證用晒你揀嘅食材，提供香港本地替代建議，並由你自訂造型嘅 AI 大廚逐步帶住煮。"
-                  : "Every suggestion incorporates 100% of your items, notes HK local substitutes, and guides you with built-in step timers."}
+                  ? "保證 100% 用盡您輸入的食材，附上香港本地替代食材建議，並提供逐步互動計時烹調模式。"
+                  : "Every dish uses 100% of your entered items, suggests Hong Kong local substitutes, and guides you step by step with built-in timers."}
               </p>
             </div>
-            <Link
-              href="/chef-settings"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-800"
-            >
-              {zh ? "自訂你的 AI 大廚造型 →" : "Customise your AI Chef avatar →"}
-            </Link>
+            <div className="pt-4 border-t border-stone-100">
+              <Link
+                href="/chef-settings"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-500 hover:text-stone-900 transition"
+              >
+                {zh ? "自訂專屬 AI 主廚造型 →" : "Personalize your AI Chef companion →"}
+              </Link>
+            </div>
           </div>
 
-          {/* Step 3 — espresso accent block (3 cols) */}
-          <div className="md:col-span-3 rounded-3xl bg-brand-500 text-stone-50 p-7 shadow-cafe flex flex-col justify-between space-y-6">
+          {/* Card 03 */}
+          <div className="rounded-xl bg-white border border-stone-200 p-6 sm:p-8 shadow-clean flex flex-col justify-between space-y-6">
             <div className="space-y-3">
-              <span className="label-caps text-caramel-300">Step 03</span>
-              <h3 className="text-xl font-bold">
-                {zh ? "超市格價 · 一鍵落單" : "Compare 4 stores & checkout"}
+              <div className="flex items-center justify-between">
+                <span className="label-caps text-brand-500">03 / FULFILLMENT</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-fresh-50 text-fresh-700 border border-fresh-100">
+                  4 HK Stores
+                </span>
+              </div>
+              <h3 className="font-display text-lg font-semibold text-stone-900">
+                {zh ? "超市即時格價與一鍵買齊" : "Compare Supermarkets & Order"}
               </h3>
-              <p className="text-sm text-stone-200 leading-relaxed">
+              <p className="text-sm text-stone-600 leading-relaxed">
                 {zh
-                  ? "剔除屋企已有調味料，即時比較香港超市總價，選擇送貨或自取。"
-                  : "Subtract what’s already in your pantry, pick the cheapest HK store, and choose delivery or pickup."}
+                  ? "自動扣除家中已有材料，即時比較香港各大超市總價，選擇送貨上門或門市自取。"
+                  : "Check off pantry items you already own, compare live basket totals across Hong Kong supermarkets, and choose delivery or pickup."}
               </p>
             </div>
-            <div className="pt-2 border-t border-brand-400/30 flex items-center justify-between text-xs text-stone-200 font-mono">
-              <span>Free delivery</span>
-              <span>≥ HK$350</span>
+            <div className="pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 font-mono">
+              <span>{zh ? "免運費門檻" : "Free delivery"}</span>
+              <span className="text-stone-900 font-semibold">≥ HK$ 350</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Evaluator Role Switcher (Bento Strip) ─── */}
+      {/* ─── Clean Role Switcher Strip for MVP Evaluation ─── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-stone-100 border border-stone-200 p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+        <div className="rounded-xl bg-white border border-stone-200 p-6 sm:p-8 shadow-clean">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-6 border-b border-stone-200">
             <div>
               <span className="label-caps text-brand-500">
-                {zh ? "MVP 評審快速體驗" : "Demo Sandbox · Instant Role Switch"}
+                {zh ? "MVP 評審快速體驗" : "DEMO SANDBOX · ROLE SWITCHER"}
               </span>
-              <h3 className="text-lg sm:text-xl font-bold text-stone-900 mt-0.5">
-                {zh ? "一鍵切換三種帳戶視角" : "Inspect all three portals without logging in"}
+              <h3 className="font-display text-lg sm:text-xl font-semibold text-stone-900 mt-0.5">
+                {zh ? "一鍵切換三種平台身分" : "Test Customer, Partner, and Admin views instantly"}
               </h3>
             </div>
-            <span className="text-xs text-stone-500">
-              {zh ? "顧客 · 超市商戶 · 平台管理員" : "Customer · Store Partner · Platform Admin"}
+            <span className="font-mono text-xs text-stone-500">
+              {zh ? "免密碼即時切換" : "One-click session switch"}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
             <button
               onClick={() => switchDemoRole("CUSTOMER")}
-              className="group p-5 rounded-2xl bg-white hover:bg-brand-500 hover:text-stone-50 border border-stone-200 text-left transition shadow-xs flex flex-col justify-between"
+              className="group p-5 rounded-lg bg-stone-50 hover:bg-stone-900 hover:text-white border border-stone-200 text-left transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="label-caps text-brand-500 group-hover:text-caramel-300">
-                    Customer
+                  <span className="label-caps text-brand-500 group-hover:text-brand-300">
+                    CUSTOMER
                   </span>
-                  <User className="w-4 h-4 text-stone-400 group-hover:text-stone-200" />
+                  <User className="w-4 h-4 text-stone-400 group-hover:text-stone-300" />
                 </div>
-                <h4 className="text-base font-bold mt-2">Alice Chan</h4>
-                <p className="font-mono text-xs text-stone-500 group-hover:text-stone-200 mt-0.5">
+                <h4 className="font-display text-base font-semibold mt-2">Alice Chan</h4>
+                <p className="font-mono text-xs text-stone-500 group-hover:text-stone-300 mt-0.5">
                   customer@cookcart.hk
                 </p>
               </div>
-              <span className="text-xs font-semibold text-brand-600 group-hover:text-stone-50 mt-4 inline-flex items-center gap-1">
+              <span className="text-xs font-medium text-brand-600 group-hover:text-white mt-4 inline-flex items-center gap-1">
                 {zh ? "切換至顧客視角 →" : "Switch to Customer →"}
               </span>
             </button>
 
             <button
               onClick={() => switchDemoRole("STORE_PARTNER")}
-              className="group p-5 rounded-2xl bg-white hover:bg-brand-500 hover:text-stone-50 border border-stone-200 text-left transition shadow-xs flex flex-col justify-between"
+              className="group p-5 rounded-lg bg-stone-50 hover:bg-stone-900 hover:text-white border border-stone-200 text-left transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="label-caps text-brand-500 group-hover:text-caramel-300">
-                    Store Partner
+                  <span className="label-caps text-brand-500 group-hover:text-brand-300">
+                    STORE PARTNER
                   </span>
-                  <Store className="w-4 h-4 text-stone-400 group-hover:text-stone-200" />
+                  <Store className="w-4 h-4 text-stone-400 group-hover:text-stone-300" />
                 </div>
-                <h4 className="text-base font-bold mt-2">ParkGrocer HK</h4>
-                <p className="font-mono text-xs text-stone-500 group-hover:text-stone-200 mt-0.5">
+                <h4 className="font-display text-base font-semibold mt-2">ParkGrocer HK</h4>
+                <p className="font-mono text-xs text-stone-500 group-hover:text-stone-300 mt-0.5">
                   store@cookcart.hk
                 </p>
               </div>
-              <span className="text-xs font-semibold text-brand-600 group-hover:text-stone-50 mt-4 inline-flex items-center gap-1">
+              <span className="text-xs font-medium text-brand-600 group-hover:text-white mt-4 inline-flex items-center gap-1">
                 {zh ? "切換至商戶後台 →" : "Switch to Partner →"}
               </span>
             </button>
 
             <button
               onClick={() => switchDemoRole("ADMIN")}
-              className="group p-5 rounded-2xl bg-white hover:bg-brand-500 hover:text-stone-50 border border-stone-200 text-left transition shadow-xs flex flex-col justify-between"
+              className="group p-5 rounded-lg bg-stone-50 hover:bg-stone-900 hover:text-white border border-stone-200 text-left transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="label-caps text-brand-500 group-hover:text-caramel-300">
-                    Admin
+                  <span className="label-caps text-brand-500 group-hover:text-brand-300">
+                    ADMIN
                   </span>
-                  <ShieldCheck className="w-4 h-4 text-stone-400 group-hover:text-stone-200" />
+                  <ShieldCheck className="w-4 h-4 text-stone-400 group-hover:text-stone-300" />
                 </div>
-                <h4 className="text-base font-bold mt-2">CookCart Admin</h4>
-                <p className="font-mono text-xs text-stone-500 group-hover:text-stone-200 mt-0.5">
+                <h4 className="font-display text-base font-semibold mt-2">BON TASTE Admin</h4>
+                <p className="font-mono text-xs text-stone-500 group-hover:text-stone-300 mt-0.5">
                   admin@cookcart.hk
                 </p>
               </div>
-              <span className="text-xs font-semibold text-brand-600 group-hover:text-stone-50 mt-4 inline-flex items-center gap-1">
+              <span className="text-xs font-medium text-brand-600 group-hover:text-white mt-4 inline-flex items-center gap-1">
                 {zh ? "切換至管理員 →" : "Switch to Admin →"}
               </span>
             </button>

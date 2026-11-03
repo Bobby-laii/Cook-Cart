@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCart } from "@/lib/cart/CartContext";
+import { BonTasteLogo } from "@/components/BonTasteLogo";
 import {
   UtensilsCrossed,
   ShoppingCart,
@@ -43,7 +44,7 @@ export function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-md border-b border-stone-200">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-stone-200">
       {/* Quick Demo Role Switcher Top Bar for MVP Evaluation */}
       <div className="bg-stone-900 text-stone-200 text-xs py-1.5 px-4 border-b border-stone-800 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -54,31 +55,28 @@ export function Navbar() {
           <div className="flex gap-1">
             <button
               onClick={() => switchDemoRole("CUSTOMER")}
-              className={`px-2.5 py-0.5 rounded-full text-xs transition font-medium ${
-                user?.role === "CUSTOMER"
-                  ? "bg-stone-50 text-stone-900 font-semibold"
+              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "CUSTOMER"
+                  ? "bg-white text-stone-900 font-semibold"
                   : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-              }`}
+                }`}
             >
               👤 {t("roleCustomer")}
             </button>
             <button
               onClick={() => switchDemoRole("STORE_PARTNER")}
-              className={`px-2.5 py-0.5 rounded-full text-xs transition font-medium ${
-                user?.role === "STORE_PARTNER"
-                  ? "bg-stone-50 text-stone-900 font-semibold"
+              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "STORE_PARTNER"
+                  ? "bg-white text-stone-900 font-semibold"
                   : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-              }`}
+                }`}
             >
               🏪 {t("rolePartner")}
             </button>
             <button
               onClick={() => switchDemoRole("ADMIN")}
-              className={`px-2.5 py-0.5 rounded-full text-xs transition font-medium ${
-                user?.role === "ADMIN"
-                  ? "bg-stone-50 text-stone-900 font-semibold"
+              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "ADMIN"
+                  ? "bg-white text-stone-900 font-semibold"
                   : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-              }`}
+                }`}
             >
               🛡️ {t("roleAdmin")}
             </button>
@@ -96,7 +94,7 @@ export function Navbar() {
           )}
           <button
             onClick={toggleLanguage}
-            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-100 font-medium"
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-100 font-medium"
             title="Switch Language (English / 繁體中文)"
           >
             <Globe className="w-3 h-3 text-caramel-300" />
@@ -105,26 +103,16 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Main Navigation */}
+      {/* Main Navigation (`design-clean`: white surface, ample whitespace, 8px radius) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          {/* Logo & Brand */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-stone-50 shadow-cafe group-hover:bg-brand-600 transition">
-              <UtensilsCrossed className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xl font-bold tracking-tight text-stone-900 group-hover:text-brand-600 transition">
-                {t("brandName")}
-              </span>
-              <span className="block label-caps text-[10px] text-stone-500 -mt-0.5">
-                Hong Kong · Kitchen
-              </span>
-            </div>
+          {/* Official BON TASTE Logo */}
+          <Link href="/" className="flex items-center gap-3">
+            <BonTasteLogo variant="navbar" />
           </Link>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-stone-100/80 p-1 rounded-full border border-stone-200">
+          <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname.startsWith(link.href);
@@ -132,11 +120,10 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${
-                    isActive
-                      ? "bg-brand-500 text-stone-50 shadow-xs"
-                      : "text-stone-600 hover:text-stone-900 hover:bg-stone-200/60"
-                  }`}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition ${isActive
+                      ? "bg-stone-900 text-white shadow-xs"
+                      : "text-stone-600 hover:text-stone-900 hover:bg-stone-100"
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   {link.label}
@@ -148,11 +135,10 @@ export function Navbar() {
             {(user?.role === "STORE_PARTNER" || user?.role === "ADMIN") && (
               <Link
                 href="/store-partner"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${
-                  pathname.startsWith("/store-partner")
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${pathname.startsWith("/store-partner")
                     ? "bg-brand-500 text-stone-50"
                     : "text-stone-700 hover:bg-stone-200/60"
-                }`}
+                  }`}
               >
                 <Store className="w-4 h-4" />
                 {t("navPartner")}
@@ -162,11 +148,10 @@ export function Navbar() {
             {user?.role === "ADMIN" && (
               <Link
                 href="/admin"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${
-                  pathname.startsWith("/admin")
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${pathname.startsWith("/admin")
                     ? "bg-brand-500 text-stone-50"
                     : "text-stone-700 hover:bg-stone-200/60"
-                }`}
+                  }`}
               >
                 <ShieldCheck className="w-4 h-4" />
                 {t("navAdmin")}

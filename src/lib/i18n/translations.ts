@@ -8,7 +8,7 @@ export type Language = "en" | "zh-HK";
 export const translations = {
   en: {
     // Brand & Header
-    brandName: "CookCart",
+    brandName: "BON TASTE",
     tagline: "AI Cooking & Grocery Shopping in Hong Kong",
     navChat: "AI Cooking Chat",
     navMyRecipes: "My Recipes",
@@ -179,7 +179,7 @@ export const translations = {
 
   "zh-HK": {
     // Brand & Header
-    brandName: "CookCart 煮之選",
+    brandName: "BON TASTE",
     tagline: "香港首選 AI 智能煮食與即時買餸助手",
     navChat: "AI 煮食對話",
     navMyRecipes: "我的食譜",

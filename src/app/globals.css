@@ -3,66 +3,72 @@
 @tailwind utilities;
 
 /*
- * Design System: Cafe + Bento (.agents/skills/design-cafe, design-bento)
- *   primary   #5D4432
- *   secondary #E9E3DD
- *   surface   #F9F7F5
- *   text      #3E2B1E
- *   success   #16A34A   warning #D97706   danger #DC2626
- *   fonts     Poppins (body/display), JetBrains Mono (label-caps / code)
- *   WCAG 2.2 AA: keyboard-first, visible focus states
+ * Design System: `design-clean` (.agents/skills/design-clean) + BON TASTE Logo Identity
+ *   - Surface:  #FFFFFF (cards) / #F8F9FA (canvas, matching the BON TASTE logo background)
+ *   - Ink:      #0F2A3D ("B O N" deep midnight navy)
+ *   - Primary:  #4E7B94 ("T A S T E" slate-blue)
+ *   - Accent:   #7DA3B8 (inner plate ring soft blue)
+ *   - Fonts:    Roboto (body), Poppins (UI display), Inconsolata (label-caps), Cormorant Garamond (serif)
+ *   - Grid:     8pt baseline spacing grid, WCAG 2.2 AA contrast & focus states
  */
 :root {
-  --cafe-primary: #5D4432;
-  --cafe-secondary: #E9E3DD;
-  --cafe-surface: #F9F7F5;
-  --cafe-text: #3E2B1E;
+  --bon-navy: #0F2A3D;
+  --bon-slate: #4E7B94;
+  --bon-ring: #7DA3B8;
+  --bon-surface: #FFFFFF;
+  --bon-canvas: #F8F9FA;
 }
 
 body {
-  color: var(--cafe-text);
-  background-color: var(--cafe-surface);
-  background-image: radial-gradient(rgba(93, 68, 50, 0.055) 1px, transparent 1px);
-  background-size: 24px 24px;
+  color: var(--bon-navy);
+  background-color: var(--bon-canvas);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  letter-spacing: -0.005em;
+  letter-spacing: 0.005em;
 }
 
 ::selection {
-  background: #DFC8B6;
-  color: #281C14;
+  background: #C5DCE8;
+  color: #0F2A3D;
 }
 
-/* Cafe skill rule: visible focus states for keyboard navigation */
+/* `design-clean` accessibility rule: WCAG 2.2 AA visible focus states */
 :focus-visible {
-  outline: 2px solid #5D4432;
+  outline: 2px solid #4E7B94;
   outline-offset: 2px;
 }
 
-/* Cafe label-caps token: JetBrains Mono, 0.75rem */
+/* `design-clean` label-caps token: Inconsolata, 0.75rem */
 .label-caps {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-family: var(--font-inconsolata), ui-monospace, monospace;
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-/* Custom scrollbar in warm coffee tones */
+/* Signature BON TASTE double hairline divider */
+.bon-double-rule {
+  position: relative;
+  height: 4px;
+  border-top: 1px solid #0F2A3D;
+  border-bottom: 1px solid #4E7B94;
+}
+
+/* Clean minimal scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F3EEE9;
+  background: #F1F5F8;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D8CDC2;
+  background: #CBD5DF;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B3A291;
+  background: #94A6B8;
 }
 
 /* Chef avatar studio micro-animations */

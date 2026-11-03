@@ -6,7 +6,7 @@
 
 export const APP_CONFIG = {
   // Brand name (changeable here)
-  appName: process.env.NEXT_PUBLIC_APP_NAME || "CookCart",
+  appName: process.env.NEXT_PUBLIC_APP_NAME || "BON TASTE",
   appTagline: "AI-Powered Cooking & Grocery Delivery in Hong Kong",
   currency: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY || "HKD",
   currencySymbol: "HK$",

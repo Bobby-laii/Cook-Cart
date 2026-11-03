@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { UtensilsCrossed, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
+import { BonTasteLogo } from "@/components/BonTasteLogo";
 
 export function Footer() {
   const { t } = useLanguage();
@@ -14,14 +15,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand info */}
           <div className="md:col-span-2 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white">
-                <UtensilsCrossed className="w-4 h-4" />
-              </div>
-              <span className="text-lg font-black text-white tracking-tight">
-                {t("brandName")}
-              </span>
-            </div>
+            <BonTasteLogo variant="footer" />
             <p className="text-sm text-stone-400 max-w-md">
               {t("tagline")}
             </p>
