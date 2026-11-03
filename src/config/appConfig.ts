@@ -27,9 +27,9 @@ export const APP_CONFIG = {
   // AI Service Defaults
   ai: {
     defaultProvider: "gemini", // 'gemini' | 'openai' | 'mock'
-    defaultModel: "gemini-1.5-flash",
+    defaultModel: "gemini-2.5-flash", // overridable with GEMINI_MODEL
     monthlySpendingCapHkd: 100.0, // HK$100 monthly limit
-    dailyUserRequestLimit: 30, // Max 30 AI queries per user per day
+    dailyUserRequestLimit: 30, // Max 30 chef messages per user per day; keeps the free Gemini quota shared
   },
 
   // Cuisine Categories.

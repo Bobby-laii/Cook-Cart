@@ -137,9 +137,6 @@ export function DishSuggestionCard({
                 <ChefHat className="w-3.5 h-3.5 text-stone-400" />
                 {suggestion.difficulty}
               </span>
-              <span className="text-emerald-700 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                HK$ {suggestion.estimatedCostHkd.toFixed(1)}
-              </span>
             </div>
 
             <h3 className="text-base sm:text-lg font-black text-stone-900 leading-snug">
@@ -252,14 +249,13 @@ export function DishSuggestionCard({
           </button>
         </div>
 
-        {/* Step-by-Step Cooking CTA & Ingredients/Store Comparison CTA */}
+        {/* Step-by-Step Cooking CTA & full recipe CTA */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => onSelectDish && onSelectDish(suggestion)}
             className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs transition"
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{language === "zh-HK" ? "食材與格價" : "Ingredients & Buy"}</span>
+            <span>{language === "zh-HK" ? "睇完整食譜" : "See full recipe"}</span>
           </button>
 
           <button

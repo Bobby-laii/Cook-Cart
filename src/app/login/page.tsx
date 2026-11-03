@@ -47,8 +47,8 @@ function LoginPageContent() {
           </h2>
           <p className="text-sm text-stone-600">
             {language === "zh-HK"
-              ? "登入以儲存食譜、建立購物車與追蹤訂單"
-              : "Sign in to save recipes, build your cart, and track orders"}
+              ? "登入以儲存食譜，同你嘅大廚傾偈"
+              : "Sign in to save recipes and chat with your chef"}
           </p>
         </div>
 

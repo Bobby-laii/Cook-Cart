@@ -5,210 +5,112 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useCart } from "@/lib/cart/CartContext";
 import { BonTasteLogo } from "@/components/BonTasteLogo";
-import {
-  UtensilsCrossed,
-  ShoppingCart,
-  Bookmark,
-  ShoppingBag,
-  Store,
-  ShieldCheck,
-  Globe,
-  User as UserIcon,
-  LogOut,
-  Menu,
-  X,
-  Sparkles,
-  Compass,
-  Bot,
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 export function Navbar() {
   const { language, setLanguage, t } = useLanguage();
   const { user, logout, switchDemoRole } = useAuth();
-  const { itemCount } = useCart();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const zh = language === "zh-HK";
 
-  const toggleLanguage = () => {
-    setLanguage(language === "en" ? "zh-HK" : "en");
-  };
+  const toggleLanguage = () => setLanguage(zh ? "en" : "zh-HK");
 
+  // Shops, orders and the partner/admin portals are hidden while Bon Taste is a
+  // cooking companion; their routes still exist for a later phase.
   const navLinks = [
-    { href: "/chat", label: t("navChat"), icon: Sparkles },
-    { href: "/explore", label: language === "zh-HK" ? "環球菜系" : "Explore Cuisines", icon: Compass },
-    { href: "/chef-settings", label: language === "zh-HK" ? "自訂大廚" : "My AI Chef", icon: Bot },
-    { href: "/my-recipes", label: t("navMyRecipes"), icon: Bookmark },
-    { href: "/orders", label: t("navOrders"), icon: ShoppingBag },
+    { href: "/", label: zh ? "餐牌" : "Menu" },
+    { href: "/chat", label: zh ? "問大廚" : "Ask the chef" },
+    { href: "/my-recipes", label: t("navMyRecipes") },
   ];
 
+  // "/" is a prefix of every path, so the menu link only counts as active on the home page itself.
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-stone-200">
-      {/* Quick Demo Role Switcher Top Bar for MVP Evaluation */}
-      <div className="bg-stone-900 text-stone-200 text-xs py-1.5 px-4 border-b border-stone-800 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="label-caps text-caramel-300 font-semibold flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            {t("quickDemoSwitch")}
-          </span>
-          <div className="flex gap-1">
+    <header className="sticky top-0 z-50 bg-stone-100/95 backdrop-blur border-b border-stone-200">
+      {/* Demo strip for MVP reviewers. Kept visually quiet so it reads as a tool, not the product. */}
+      <div className="bg-stone-200/70 text-stone-600 text-xs">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between gap-3">
+          {/* One-click demo account for reviewers; the store partner and admin demos are hidden with those portals. */}
+          {user ? (
+            <span className="truncate">
+              {t("roleCurrent")} <span className="text-stone-900">{user.name}</span>
+            </span>
+          ) : (
             <button
               onClick={() => switchDemoRole("CUSTOMER")}
-              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "CUSTOMER"
-                  ? "bg-white text-stone-900 font-semibold"
-                  : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-                }`}
+              className="shrink-0 hover:text-stone-900 underline-offset-4 hover:underline"
             >
-              👤 {t("roleCustomer")}
+              {zh ? "用示範帳戶試用" : "Try it with the demo account"}
             </button>
+          )}
+          <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => switchDemoRole("STORE_PARTNER")}
-              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "STORE_PARTNER"
-                  ? "bg-white text-stone-900 font-semibold"
-                  : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-                }`}
+              onClick={toggleLanguage}
+              className="hover:text-stone-900 underline-offset-4 hover:underline"
+              title="English / 繁體中文"
             >
-              🏪 {t("rolePartner")}
-            </button>
-            <button
-              onClick={() => switchDemoRole("ADMIN")}
-              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "ADMIN"
-                  ? "bg-white text-stone-900 font-semibold"
-                  : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-                }`}
-            >
-              🛡️ {t("roleAdmin")}
+              {zh ? "English" : "繁體中文"}
             </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          {user && (
-            <span className="hidden sm:inline font-mono text-[11px] text-stone-400">
-              {t("roleCurrent")}{" "}
-              <strong className="text-stone-100 font-medium">
-                {user.name} · {user.role}
-              </strong>
-            </span>
-          )}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-100 font-medium"
-            title="Switch Language (English / 繁體中文)"
-          >
-            <Globe className="w-3 h-3 text-caramel-300" />
-            {language === "en" ? "繁體中文" : "English"}
-          </button>
-        </div>
       </div>
 
-      {/* Main Navigation (`design-clean`: white surface, ample whitespace, 8px radius) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          {/* Official BON TASTE Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <BonTasteLogo variant="navbar" />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16 items-center gap-6">
+          <Link href="/" aria-label="Bon Taste home">
+            <BonTasteLogo />
           </Link>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-6 text-[0.95rem]">
             {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname.startsWith(link.href);
+              const active = isActive(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition ${isActive
-                      ? "bg-stone-900 text-white shadow-xs"
-                      : "text-stone-600 hover:text-stone-900 hover:bg-stone-100"
-                    }`}
+                  aria-current={active ? "page" : undefined}
+                  className={`py-1 border-b-2 transition ${
+                    active
+                      ? "border-brand-500 text-stone-900"
+                      : "border-transparent text-stone-600 hover:text-stone-900"
+                  }`}
                 >
-                  <Icon className="w-4 h-4" />
                   {link.label}
                 </Link>
               );
             })}
-
-            {/* Role specific portals */}
-            {(user?.role === "STORE_PARTNER" || user?.role === "ADMIN") && (
-              <Link
-                href="/store-partner"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${pathname.startsWith("/store-partner")
-                    ? "bg-brand-500 text-stone-50"
-                    : "text-stone-700 hover:bg-stone-200/60"
-                  }`}
-              >
-                <Store className="w-4 h-4" />
-                {t("navPartner")}
-              </Link>
-            )}
-
-            {user?.role === "ADMIN" && (
-              <Link
-                href="/admin"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${pathname.startsWith("/admin")
-                    ? "bg-brand-500 text-stone-50"
-                    : "text-stone-700 hover:bg-stone-200/60"
-                  }`}
-              >
-                <ShieldCheck className="w-4 h-4" />
-                {t("navAdmin")}
-              </Link>
-            )}
           </nav>
 
-          {/* Right Action Area: Cart & Auth */}
-          <div className="flex items-center gap-3">
-            {/* Cart Button */}
-            <Link
-              href="/cart"
-              className="relative p-2 text-stone-700 hover:text-brand-600 hover:bg-stone-100 rounded-full transition"
-              aria-label={t("navCart")}
-            >
-              <ShoppingCart className="w-6 h-6" />
-              {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-brand-500 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
-                  {itemCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth Menu */}
+          <div className="flex items-center gap-2 sm:gap-4">
             {user ? (
-              <div className="hidden sm:flex items-center gap-2">
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:text-red-600 hover:bg-red-50 text-sm font-medium transition"
-                  title={t("navLogout")}
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden lg:inline">{t("navLogout")}</span>
-                </button>
-              </div>
+              <button
+                onClick={logout}
+                className="hidden sm:inline text-sm text-stone-600 hover:text-stone-900"
+              >
+                {t("navLogout")}
+              </button>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/login"
-                  className="px-3 py-1.5 text-sm font-medium text-stone-700 hover:text-stone-900"
-                >
+              <div className="flex items-center gap-3">
+                <Link href="/login" className="text-sm text-stone-700 hover:text-stone-900">
                   {t("navLogin")}
                 </Link>
                 <Link
                   href="/register"
-                  className="px-3.5 py-1.5 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition"
+                  className="px-3.5 py-1.5 text-sm font-medium text-stone-50 bg-stone-900 hover:bg-brand-600 rounded-md transition"
                 >
                   {t("navRegister")}
                 </Link>
               </div>
             )}
 
-            {/* Mobile menu hamburger */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-stone-600 hover:text-stone-900 rounded-lg"
-              aria-label="Toggle Menu"
+              className="md:hidden p-2 -mr-2 text-stone-800"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -216,65 +118,29 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-stone-200 bg-white px-4 pt-3 pb-6 space-y-2">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium text-stone-700 hover:bg-stone-100"
-              >
-                <Icon className="w-5 h-5 text-brand-500" />
-                {link.label}
-              </Link>
-            );
-          })}
-
-          {(user?.role === "STORE_PARTNER" || user?.role === "ADMIN") && (
+        <nav className="md:hidden border-t border-stone-200 bg-stone-100 px-4 py-2">
+          {navLinks.map((link) => (
             <Link
-              href="/store-partner"
+              key={link.href}
+              href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium text-amber-800 hover:bg-amber-50"
+              className={`block py-3 border-b border-stone-200 last:border-0 font-serif text-xl ${
+                isActive(link.href) ? "text-brand-600" : "text-stone-900"
+              }`}
             >
-              <Store className="w-5 h-5 text-amber-600" />
-              {t("navPartner")}
+              {link.label}
             </Link>
-          )}
-
-          {user?.role === "ADMIN" && (
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium text-purple-800 hover:bg-purple-50"
-            >
-              <ShieldCheck className="w-5 h-5 text-purple-600" />
-              {t("navAdmin")}
-            </Link>
-          )}
-
-          <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
+          ))}
+          {user && (
             <button
-              onClick={toggleLanguage}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-stone-100 text-stone-800 text-sm font-semibold"
+              onClick={logout}
+              className="block w-full text-left py-3 text-sm text-stone-600"
             >
-              <Globe className="w-4 h-4 text-emerald-600" />
-              {language === "en" ? "切換至 繁體中文" : "Switch to English"}
+              {t("navLogout")}
             </button>
-            {user && (
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-sm font-semibold"
-              >
-                <LogOut className="w-4 h-4" />
-                {t("navLogout")}
-              </button>
-            )}
-          </div>
-        </div>
+          )}
+        </nav>
       )}
     </header>
   );

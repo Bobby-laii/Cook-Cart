@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Roboto, Poppins, Inconsolata, Cormorant_Garamond } from "next/font/google";
+import { Fraunces, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -8,40 +8,23 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OnboardingGate } from "@/components/avatar/OnboardingGate";
 
-// Typography tokens from `design-clean` (.agents/skills/design-clean):
-// primary=Roboto, display=Poppins, mono=Inconsolata + Cormorant Garamond for BON TASTE serif
-const roboto = Roboto({
+const serif = Fraunces({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-roboto",
+  axes: ["opsz", "SOFT"],
+  variable: "--font-serif",
   display: "swap",
 });
 
-const poppins = Poppins({
+const sans = Instrument_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const inconsolata = Inconsolata({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inconsolata",
-  display: "swap",
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cormorant",
+  variable: "--font-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "BON TASTE — AI Culinary & Grocery Concierge in Hong Kong",
+  title: "Bon Taste — what do you feel like eating?",
   description:
-    "Curated AI recipe recommendations using 100% of your ingredients, paired with live Hong Kong supermarket price comparison.",
+    "Pick a dish from a menu of real recipes from around the world, then cook it step by step with your own AI chef.",
 };
 
 export default function RootLayout({
@@ -52,9 +35,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${roboto.variable} ${poppins.variable} ${inconsolata.variable} ${cormorant.variable}`}
+      className={`${serif.variable} ${sans.variable}`}
     >
-      <body className="font-sans antialiased flex flex-col min-h-screen bg-[#F8F9FA] text-[#0F2A3D]">
+      <body className="font-sans antialiased">
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>

@@ -31,6 +31,12 @@ const chatRequestSchema = z.object({
 export async function POST(req: Request) {
   try {
     const session = await getCurrentSession();
+    // The chef needs an account: the daily message limit is counted per user, and
+    // the chef's look and personality are saved on the user. Recipes and cooking
+    // mode stay open to everyone.
+    if (!session?.userId) {
+      return NextResponse.json({ error: "Sign in to chat with your chef" }, { status: 401 });
+    }
     const body = await req.json();
     const parsed = chatRequestSchema.safeParse(body);
 

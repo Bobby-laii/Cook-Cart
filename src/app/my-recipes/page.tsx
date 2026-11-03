@@ -137,14 +137,16 @@ export default function MyRecipesPage() {
                     <span className="px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 font-bold uppercase">
                       {r.cuisine}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {r.cookTimeMinutes}m
-                      </span>
-                      <span>•</span>
-                      <span>{r.difficulty}</span>
-                    </div>
+                    {r.cookTimeMinutes > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {r.cookTimeMinutes}m
+                        </span>
+                        <span>•</span>
+                        <span>{r.difficulty}</span>
+                      </div>
+                    )}
                   </div>
 
                   <h3 className="text-lg font-bold text-stone-900 leading-snug">

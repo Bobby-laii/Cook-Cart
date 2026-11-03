@@ -2,73 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Design System: `design-clean` (.agents/skills/design-clean) + BON TASTE Logo Identity
- *   - Surface:  #FFFFFF (cards) / #F8F9FA (canvas, matching the BON TASTE logo background)
- *   - Ink:      #0F2A3D ("B O N" deep midnight navy)
- *   - Primary:  #4E7B94 ("T A S T E" slate-blue)
- *   - Accent:   #7DA3B8 (inner plate ring soft blue)
- *   - Fonts:    Roboto (body), Poppins (UI display), Inconsolata (label-caps), Cormorant Garamond (serif)
- *   - Grid:     8pt baseline spacing grid, WCAG 2.2 AA contrast & focus states
- */
-:root {
-  --bon-navy: #0F2A3D;
-  --bon-slate: #4E7B94;
-  --bon-ring: #7DA3B8;
-  --bon-surface: #FFFFFF;
-  --bon-canvas: #F8F9FA;
-}
-
+/* Cookbook page: warm paper, dark ink, tomato accent. Tokens live in tailwind.config.ts. */
 body {
-  color: var(--bon-navy);
-  background-color: var(--bon-canvas);
+  @apply bg-stone-100 text-stone-900;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  letter-spacing: 0.005em;
+  font-feature-settings: "ss01";
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 ::selection {
-  background: #C5DCE8;
-  color: #0F2A3D;
+  @apply bg-brand-100 text-stone-900;
 }
 
-/* `design-clean` accessibility rule: WCAG 2.2 AA visible focus states */
 :focus-visible {
-  outline: 2px solid #4E7B94;
-  outline-offset: 2px;
+  @apply outline outline-2 outline-offset-2 outline-brand-500;
 }
 
-/* `design-clean` label-caps token: Inconsolata, 0.75rem */
+/* Prices line up in columns without switching to a code font. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small section label, like the "Serves 4" line on a recipe page. */
 .label-caps {
-  font-family: var(--font-inconsolata), ui-monospace, monospace;
   font-size: 0.75rem;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-/* Signature BON TASTE double hairline divider */
-.bon-double-rule {
-  position: relative;
-  height: 4px;
-  border-top: 1px solid #0F2A3D;
-  border-bottom: 1px solid #4E7B94;
-}
-
-/* Clean minimal scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #F1F5F8;
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5DF;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94A6B8;
 }
 
 /* Chef avatar studio micro-animations */

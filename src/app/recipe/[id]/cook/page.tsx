@@ -7,6 +7,8 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
 import { DishSuggestion, RecipeIngredient, RecipeStep } from "@/types";
+import { convertAmount, convertTemperatures } from "@/lib/units";
+import { useUnitSystem } from "@/lib/useUnitSystem";
 import {
   ArrowLeft,
   ArrowRight,
@@ -98,6 +100,8 @@ export default function StepByStepCookingPage() {
   const L = (en: string, zhText: string) => (zh ? zhText : en);
 
   const [dish, setDish] = useState<DishSuggestion | null>(null);
+  // Same metric/US choice the cook made on the recipe page.
+  const [units] = useUnitSystem();
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
@@ -225,7 +229,7 @@ export default function StepByStepCookingPage() {
 
   const displayTitle = zh ? dish.titleZh || dish.title : dish.title;
   const stepTitle = zh && currentStep.titleZh ? currentStep.titleZh : currentStep.title;
-  const stepText = zh && currentStep.textZh ? currentStep.textZh : currentStep.text;
+  const stepText = convertTemperatures(zh && currentStep.textZh ? currentStep.textZh : currentStep.text, units);
   const progressPercent = Math.round(((completedSteps.size) / steps.length) * 100);
 
   const activeTimer = timers[stepNumber];
@@ -440,14 +444,18 @@ export default function StepByStepCookingPage() {
                 <span className="px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-700 text-xs font-bold uppercase tracking-wider">
                   {dish.cuisine}
                 </span>
-                <span className="text-xs font-semibold text-stone-500 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-stone-400" />
-                  {dish.cookTimeMinutes} {L("mins", "分鐘")}
-                </span>
-                <span className="text-xs font-semibold text-stone-500 flex items-center gap-1">
-                  <ChefHat className="w-3.5 h-3.5 text-stone-400" />
-                  {dish.difficulty}
-                </span>
+                {dish.cookTimeMinutes > 0 && (
+                  <>
+                    <span className="text-xs font-semibold text-stone-500 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-stone-400" />
+                      {dish.cookTimeMinutes} {L("mins", "分鐘")}
+                    </span>
+                    <span className="text-xs font-semibold text-stone-500 flex items-center gap-1">
+                      <ChefHat className="w-3.5 h-3.5 text-stone-400" />
+                      {dish.difficulty}
+                    </span>
+                  </>
+                )}
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-stone-900">{displayTitle}</h1>
             </div>
@@ -811,7 +819,10 @@ export default function StepByStepCookingPage() {
                           <span className="font-semibold">{name}</span>
                         </div>
                         <span className="text-[11px] text-stone-500 font-medium">
-                          {item.amount} {item.unit}
+                          {(() => {
+                            const shown = convertAmount(item.amount, item.unit, units);
+                            return `${Math.round(shown.amount * 100) / 100} ${shown.unit}`.trim();
+                          })()}
                         </span>
                       </li>
                     );

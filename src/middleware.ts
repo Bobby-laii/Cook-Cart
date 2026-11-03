@@ -12,8 +12,9 @@ export async function middleware(req: NextRequest) {
   const isAdminRoute = pathname.startsWith("/admin");
   // Protect Store Partner routes
   const isStorePartnerRoute = pathname.startsWith("/store-partner");
-  // Protect authenticated user routes (cart checkout, order history, chef settings)
+  // Protect authenticated user routes (chef chat, cart checkout, order history, chef settings)
   const isUserProtectedRoute =
+    pathname.startsWith("/chat") ||
     pathname.startsWith("/checkout") ||
     pathname.startsWith("/orders") ||
     pathname.startsWith("/my-recipes") ||
@@ -67,6 +68,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/chat/:path*",
     "/admin/:path*",
     "/store-partner/:path*",
     "/checkout/:path*",

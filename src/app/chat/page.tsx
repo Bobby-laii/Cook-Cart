@@ -393,8 +393,8 @@ function ChatPageContent() {
             </div>
             <p className="text-[11px] leading-relaxed text-stone-600">
               {language === "zh-HK"
-                ? "像 ChatGPT / Gemini 般無所不談的廚房避風港。兼備深厚環球烹調、食材選購與鍋具知識。"
-                : "Your supportive safe space to talk about daily life and master any cooking question."}
+                ? "你嘅廚房拍檔：問佢點煮、點替代材料，或者一路煮一路傾兩句。"
+                : "Your kitchen companion: ask how to cook anything, what to swap, or just chat while you cook."}
             </p>
             <Link
               href="/onboarding/chef?next=/chat"
