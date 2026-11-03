@@ -3,18 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RecipeStep } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import {
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Play,
-  Pause,
-  RotateCcw,
-  Bell,
-  Sun,
-  Flame,
-  CheckCircle,
-} from "lucide-react";
+import { X, Play, Pause, RotateCcw, Sun } from "lucide-react";
 
 interface CookingModeModalProps {
   recipeTitle: string;
@@ -151,61 +140,71 @@ export function CookingModeModal({ recipeTitle, steps, onClose }: CookingModeMod
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-stone-950 text-white flex flex-col justify-between p-4 sm:p-8 animate-fadeIn">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between border-b border-stone-800 pb-4 max-w-5xl mx-auto w-full">
-        <div>
-          <span className="text-xs uppercase tracking-wider text-brand-400 font-bold flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-brand-500" />
-            {language === "zh-HK" ? "沉浸式烹飪模式" : "Interactive Cooking Mode"}
-          </span>
-          <h2 className="text-lg sm:text-xl font-bold truncate max-w-md sm:max-w-xl text-stone-200">
-            {recipeTitle}
-          </h2>
-        </div>
+  const zh = language === "zh-HK";
+  const isLastStep = currentStepIdx >= steps.length - 1;
+  const stepTitle = zh && currentStep.titleZh ? currentStep.titleZh : currentStep.title;
+  const stepText = zh && currentStep.textZh ? currentStep.textZh : currentStep.text;
 
-        <div className="flex items-center gap-3">
-          {wakeLockActive && (
-            <div className="hidden sm:flex items-center gap-1 text-[11px] text-amber-400 bg-amber-950/60 border border-amber-800 px-2.5 py-1 rounded-full">
-              <Sun className="w-3.5 h-3.5" />
-              <span>{t("screenStayAwakeNotice")}</span>
-            </div>
-          )}
+  const secondaryBtn =
+    "inline-flex items-center justify-center h-[52px] px-5 rounded-md border border-stone-300 bg-stone-50 text-stone-900 font-bold hover:bg-stone-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+  const primaryBtn =
+    "inline-flex items-center justify-center h-[52px] px-6 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-lg font-bold transition-colors";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-stone-100 text-stone-900 flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      aria-label={zh ? "烹飪模式" : "Cooking mode"}
+    >
+      {/* Top bar */}
+      <div className="border-b border-stone-200 bg-stone-50">
+        <div className="max-w-4xl mx-auto w-full px-5 sm:px-6 py-2 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-stone-500">{zh ? "烹飪模式" : "Cooking mode"}</p>
+            <h2 className="font-bold truncate">{recipeTitle}</h2>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 transition"
-            aria-label="Exit Cooking Mode"
+            className="w-12 h-12 flex-shrink-0 inline-flex items-center justify-center rounded-md text-stone-900 hover:bg-stone-100 transition-colors"
+            aria-label={zh ? "離開烹飪模式" : "Exit cooking mode"}
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6" aria-hidden />
           </button>
         </div>
       </div>
 
-      {/* Main Large Step Display */}
-      <div className="max-w-4xl mx-auto w-full my-auto py-8 space-y-6">
-        <div className="flex items-center gap-2">
-          <span className="px-3.5 py-1 rounded-full bg-brand-500 text-white text-sm font-black">
-            {t("step")} {currentStepIdx + 1} / {steps.length}
-          </span>
-          <h3 className="text-xl sm:text-3xl font-extrabold text-stone-100">
-            {language === "zh-HK" && currentStep.titleZh
-              ? currentStep.titleZh
-              : currentStep.title}
-          </h3>
-        </div>
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto w-full px-5 sm:px-6 py-6 space-y-5">
+          {wakeLockActive && (
+            <p className="text-sm text-stone-500 flex items-center gap-1.5">
+              <Sun className="w-4 h-4" aria-hidden />
+              {t("screenStayAwakeNotice")}
+            </p>
+          )}
 
-        {/* Large Readable Text (Accessibility requirement 6 & 4.3) */}
-        <p className="text-2xl sm:text-4xl lg:text-5xl font-medium text-stone-200 leading-snug tracking-tight">
-          {language === "zh-HK" && currentStep.textZh
-            ? currentStep.textZh
-            : currentStep.text}
-        </p>
+          <section
+            key={currentStepIdx}
+            className="enamel-rim p-6 sm:p-8 space-y-4 cc-fade-in"
+            aria-live="polite"
+          >
+            <p className="text-sm text-stone-500">
+              {zh
+                ? `第 ${currentStepIdx + 1} 步，共 ${steps.length} 步`
+                : `Step ${currentStepIdx + 1} of ${steps.length}`}
+            </p>
+            {stepTitle && (
+              <h3 className="text-[17px] sm:text-xl leading-snug font-bold text-stone-600">{stepTitle}</h3>
+            )}
+            <p className="text-[28px] sm:text-[34px] leading-[1.3] font-bold">{stepText}</p>
+          </section>
 
-        {/* Suggested Timer for this step if specified */}
-        {currentStep.timerSeconds && currentStep.timerSeconds > 0 && (
-          <div className="pt-4 flex items-center gap-3">
+          {/* Suggested timer for this step */}
+          {currentStep.timerSeconds && currentStep.timerSeconds > 0 && (
             <button
+              type="button"
               onClick={() =>
                 handleStartTimerForStep(
                   currentStep.step,
@@ -213,97 +212,99 @@ export function CookingModeModal({ recipeTitle, steps, onClose }: CookingModeMod
                   currentStep.title
                 )
               }
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-base font-bold shadow-lg transition"
+              className="w-full inline-flex items-center justify-center gap-2 h-14 rounded-md bg-butter-400 hover:bg-butter-300 text-stone-900 text-lg font-bold transition-colors"
             >
-              <Bell className="w-5 h-5" />
+              <Play className="w-5 h-5" aria-hidden />
               <span>
-                {language === "zh-HK"
-                  ? `啟動此步驟計時 (${formatTime(currentStep.timerSeconds)})`
-                  : `Start Timer (${formatTime(currentStep.timerSeconds)})`}
+                {zh
+                  ? `開始計時 ${formatTime(currentStep.timerSeconds)}`
+                  : `Start ${formatTime(currentStep.timerSeconds)} timer`}
               </span>
             </button>
-          </div>
-        )}
+          )}
 
-        {/* Active Timers Panel */}
-        {timers.length > 0 && (
-          <div className="mt-8 p-4 rounded-2xl bg-stone-900 border border-stone-800 space-y-3">
-            <span className="text-xs uppercase tracking-wider text-stone-400 font-bold">
-              {language === "zh-HK" ? "運行中之計時器" : "Active Timers"}
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {timers.map((timer) => (
-                <div
-                  key={timer.id}
-                  className={`p-3.5 rounded-xl border flex items-center justify-between ${
-                    timer.remainingSeconds === 0
-                      ? "bg-red-950/80 border-red-500 text-red-200 animate-pulse"
-                      : "bg-stone-800 border-stone-700 text-stone-100"
-                  }`}
-                >
-                  <div>
-                    <p className="text-xs text-stone-400 font-medium truncate max-w-[150px]">
-                      {timer.label}
-                    </p>
-                    <p className="text-2xl font-black font-mono tracking-wider">
-                      {formatTime(timer.remainingSeconds)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleToggleTimer(timer.id)}
-                      className="p-2 rounded-lg bg-stone-700 hover:bg-stone-600 text-white"
-                      title={timer.isRunning ? "Pause" : "Resume"}
-                    >
-                      {timer.isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </button>
-                    <button
-                      onClick={() => handleResetTimer(timer.id)}
-                      className="p-2 rounded-lg bg-stone-700 hover:bg-stone-600 text-stone-300"
-                      title="Reset"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          {/* Timers */}
+          {timers.length > 0 && (
+            <section className="space-y-3" aria-label={zh ? "計時器" : "Timers"}>
+              <h3 className="text-[22px] leading-tight font-bold">{zh ? "計時器" : "Timers"}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {timers.map((timer) => {
+                  const up = timer.remainingSeconds === 0;
+                  return (
+                    <div key={timer.id} className="bg-butter-400 text-stone-900 rounded-3xl p-5 space-y-3">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-sm truncate">
+                          {zh ? `第 ${timer.stepNumber} 步` : `Step ${timer.stepNumber}`}
+                        </p>
+                        <p className="text-sm font-bold" aria-live="polite">
+                          {up
+                            ? zh ? "時間到" : "Time's up"
+                            : timer.isRunning
+                            ? zh ? "計時中" : "Running"
+                            : zh ? "已暫停" : "Paused"}
+                        </p>
+                      </div>
+                      <p className="font-mono font-bold leading-none text-[64px] tracking-tight" role="timer">
+                        {formatTime(timer.remainingSeconds)}
+                      </p>
+                      <div className="flex gap-2">
+                        {!up && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTimer(timer.id)}
+                            className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-md bg-stone-900 text-white font-bold hover:bg-stone-800 transition-colors"
+                          >
+                            {timer.isRunning ? <Pause className="w-5 h-5" aria-hidden /> : <Play className="w-5 h-5" aria-hidden />}
+                            {timer.isRunning ? (zh ? "暫停" : "Pause") : zh ? "繼續" : "Resume"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleResetTimer(timer.id)}
+                          className={`inline-flex items-center justify-center gap-2 h-12 px-4 rounded-md font-bold transition-colors ${
+                            up
+                              ? "flex-1 bg-stone-900 text-white hover:bg-stone-800"
+                              : "border-2 border-stone-900/25 hover:bg-butter-300"
+                          }`}
+                        >
+                          <RotateCcw className="w-5 h-5" aria-hidden />
+                          {zh ? "重設" : "Reset"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </div>
       </div>
 
-      {/* Bottom Large Navigation Buttons */}
-      <div className="max-w-5xl mx-auto w-full pt-4 border-t border-stone-800 flex items-center justify-between gap-4">
-        <button
-          onClick={() => setCurrentStepIdx(Math.max(0, currentStepIdx - 1))}
-          disabled={currentStepIdx === 0}
-          className="flex-1 max-w-[200px] py-4 rounded-2xl bg-stone-800 hover:bg-stone-700 disabled:opacity-30 text-white text-base font-bold flex items-center justify-center gap-2 transition"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          <span>{t("back")}</span>
-        </button>
-
-        <span className="text-sm font-bold text-stone-500">
-          {currentStepIdx + 1} / {steps.length}
-        </span>
-
-        {currentStepIdx < steps.length - 1 ? (
+      {/* Back / Next in thumb reach */}
+      <div className="border-t border-stone-200 bg-stone-50 pb-safe">
+        <div className="max-w-4xl mx-auto w-full px-5 sm:px-6 py-3 flex gap-3">
           <button
-            onClick={() => setCurrentStepIdx(currentStepIdx + 1)}
-            className="flex-1 max-w-[200px] py-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-base font-bold flex items-center justify-center gap-2 shadow-lg transition"
+            type="button"
+            onClick={() => setCurrentStepIdx(Math.max(0, currentStepIdx - 1))}
+            disabled={currentStepIdx === 0}
+            className={`${secondaryBtn} flex-1`}
           >
-            <span>{t("next")}</span>
-            <ChevronRight className="w-5 h-5" />
+            {t("back")}
           </button>
-        ) : (
-          <button
-            onClick={onClose}
-            className="flex-1 max-w-[200px] py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-base font-bold flex items-center justify-center gap-2 shadow-lg transition"
-          >
-            <CheckCircle className="w-5 h-5" />
-            <span>{language === "zh-HK" ? "烹飪完成！" : "Finish Cooking"}</span>
-          </button>
-        )}
+          {isLastStep ? (
+            <button type="button" onClick={onClose} className={`${primaryBtn} flex-[2]`}>
+              {zh ? "完成烹飪" : "Finish cooking"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCurrentStepIdx(currentStepIdx + 1)}
+              className={`${primaryBtn} flex-[2]`}
+            >
+              {t("next")}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

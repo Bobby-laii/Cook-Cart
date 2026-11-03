@@ -51,3 +51,53 @@ describe("TheMealDB meal to dish", () => {
         expect(dish.sourceName).toBe("TheMealDB");
     });
 });
+
+describe("TheMealDB untrusted links", () => {
+    const base = {
+        idMeal: "1",
+        strMeal: "Test",
+        strMealThumb: "https://www.themealdb.com/images/media/meals/x.jpg",
+        strInstructions: "Cook.",
+    };
+
+    it("drops a javascript: source link and falls back to the TheMealDB page", () => {
+        const dish = mealToDish({ ...base, strSource: "javascript:alert(document.cookie)" });
+        expect(dish.sourceUrl).toBe("https://www.themealdb.com/meal/1");
+    });
+
+    it("keeps a normal https source link", () => {
+        const dish = mealToDish({ ...base, strSource: "https://example.com/recipe" });
+        expect(dish.sourceUrl).toBe("https://example.com/recipe");
+    });
+
+    it("only accepts photos from TheMealDB over https", () => {
+        expect(mealToDish({ ...base, strMealThumb: "data:image/svg+xml,<svg onload=alert(1)>" }).imageUrl).toBeUndefined();
+        expect(mealToDish({ ...base, strMealThumb: "https://evil.example/x.jpg" }).imageUrl).toBeUndefined();
+        expect(mealToDish(base).imageUrl).toBe(base.strMealThumb);
+    });
+});
+
+describe("menu data TheMealDB lacks", () => {
+    it("adds the Chinese name and oven flag for known dishes", () => {
+        const dish = mealToDish({
+            idMeal: "52772",
+            strMeal: "Teriyaki Chicken Casserole",
+            strMealThumb: "https://www.themealdb.com/images/media/meals/x.jpg",
+            strInstructions: "Preheat oven to 350° F.",
+        });
+        expect(dish.titleZh).toBe("照燒雞焗飯");
+        expect(dish.needsOven).toBe(true);
+    });
+
+    it("detects an oven from the steps for dishes not in the data file", () => {
+        const dish = mealToDish({
+            idMeal: "99999999",
+            strMeal: " New Dish ",
+            strMealThumb: "https://www.themealdb.com/images/media/meals/x.jpg",
+            strInstructions: "Bake for 20 minutes.",
+        });
+        expect(dish.title).toBe("New Dish");
+        expect(dish.titleZh).toBe("New Dish");
+        expect(dish.needsOven).toBe(true);
+    });
+});

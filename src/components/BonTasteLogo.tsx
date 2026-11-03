@@ -1,8 +1,9 @@
 import React from "react";
 
 /**
- * Bowl mark: a rice bowl seen from the side with a cherry tomato on top.
- * Ink for the bowl, tomato for the one accent, matching the rest of the system.
+ * Enamel pot mark: a cobalt pot with a white enamel rim, two handles and a butter
+ * lid knob. Butter is the system's "live" colour, so the knob reads as "something
+ * is cooking". The same drawing is used for the app icon (src/app/icons).
  */
 export function BonTasteMark({ size = 28, className = "" }: { size?: number; className?: string }) {
   return (
@@ -15,25 +16,23 @@ export function BonTasteMark({ size = 28, className = "" }: { size?: number; cla
       className={className}
       aria-hidden="true"
     >
-      <circle cx="16" cy="9" r="4.25" className="fill-brand-500" />
-      <path d="M15.2 4.6c.6-.9 1.6-1.3 2.6-1.1" className="stroke-fresh-600" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M4 15h24a12 12 0 0 1-24 0Z" className="fill-stone-900" />
-      <path d="M12 27.5h8" className="stroke-stone-900" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="16" cy="7" r="2.6" fill="#F5C842" />
+      <path d="M6 11.5h20v1.8H6z" fill="#2A4FBF" />
+      <path d="M7 14h18v7.5a6.5 6.5 0 0 1-6.5 6.5h-5A6.5 6.5 0 0 1 7 21.5V14Z" fill="#2A4FBF" />
+      <path d="M8.6 16.2h14.8" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M7 16.5H4.2a1.6 1.6 0 0 0 0 3.2H7M25 16.5h2.8a1.6 1.6 0 0 1 0 3.2H25" stroke="#2A4FBF" strokeWidth="1.8" />
     </svg>
   );
 }
 
-/** Wordmark lockup used in the navbar and footer. */
+/** Wordmark lockup used in the app bar. */
 export function BonTasteLogo({ size = "md", className = "" }: { size?: "md" | "lg"; className?: string }) {
   const large = size === "lg";
   return (
     <span className={`inline-flex items-center gap-2 select-none ${className}`} aria-label="Bon Taste">
-      <BonTasteMark size={large ? 34 : 26} />
-      <span
-        className={`font-serif text-stone-900 leading-none tracking-tight ${large ? "text-3xl" : "text-[1.4rem]"}`}
-        style={{ fontVariationSettings: '"opsz" 72, "SOFT" 50' }}
-      >
-        <span className="font-semibold">Bon</span> <span className="italic font-normal">Taste</span>
+      <BonTasteMark size={large ? 36 : 28} />
+      <span className={`font-bold tracking-tight text-brand-600 leading-none ${large ? "text-3xl" : "text-xl"}`}>
+        Bon Taste
       </span>
     </span>
   );

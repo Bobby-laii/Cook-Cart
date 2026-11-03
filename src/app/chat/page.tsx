@@ -8,14 +8,7 @@ import { QuickStartForm } from "@/components/QuickStartForm";
 import { DishSuggestionCard } from "@/components/DishSuggestionCard";
 import { DishSuggestion } from "@/types";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
-import {
-  Sparkles,
-  Send,
-  Plus,
-  MessageSquare,
-  Trash2,
-  Settings,
-} from "lucide-react";
+import { Send, Plus, MessageSquare, Trash2, Settings, Loader2, X } from "lucide-react";
 import Link from "next/link";
 
 interface ChatMessage {
@@ -60,14 +53,13 @@ function ChatPageContent() {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [thinkingIndex, setThinkingIndex] = useState(0);
+  const [savedOpen, setSavedOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeChefName = user?.chefName || "Chef Cart";
   const activeChefAvatar = user?.chefAvatarUrl || "🧑‍🍳";
   const activeChefConfig = user?.chefAvatarConfig ?? null;
-  // When the chef has a designed SVG avatar, don't append the emoji to greetings.
-  const greetingAvatar = activeChefConfig ? "" : ` ${activeChefAvatar}`;
 
   // Rotate companion thoughts naturally while thinking
   useEffect(() => {
@@ -80,6 +72,16 @@ function ChatPageContent() {
     }, 2200);
     return () => clearInterval(interval);
   }, [isLoading]);
+
+  // Close the saved chats sheet with Escape.
+  useEffect(() => {
+    if (!savedOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSavedOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [savedOpen]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -147,12 +149,12 @@ function ChatPageContent() {
     setConversationId(newId);
 
     const welcomeEn = cuisineHint
-      ? `Hello! I'm your personal chef and companion, ${activeChefName}${greetingAvatar}. I see you're exploring ${cuisineHint} cuisine! Pick your ingredients above or ask me anything about ${cuisineHint} dishes, cookware, or how your day is going.`
-      : `Hello! I'm your personal chef and everyday companion, ${activeChefName}${greetingAvatar}. Whether you want to chat about your day, relax, or ask me anything about recipes, ingredients, and cookware, I'm always here for you. How can I help today?`;
+      ? `Hello! I'm your personal chef and companion, ${activeChefName}. I see you're exploring ${cuisineHint} cuisine! Pick your ingredients above or ask me anything about ${cuisineHint} dishes, cookware, or how your day is going.`
+      : `Hello! I'm your personal chef and everyday companion, ${activeChefName}. Whether you want to chat about your day, relax, or ask me anything about recipes, ingredients, and cookware, I'm always here for you. How can I help today?`;
 
     const welcomeZh = cuisineHint
-      ? `您好！我是您的專屬廚伴 ${activeChefName}${greetingAvatar}。看到您正探索「${cuisineHint}」料理！歡迎在上方挑選食材，或隨時向我詢問正宗做法、調味秘訣，甚至聊聊今天的生活點滴！`
-      : `您好！我是您的專屬廚伴 ${activeChefName}${greetingAvatar}。無論你想聊聊今天過得怎樣、尋求心靈放鬆，抑或探索各種菜式做法、食材挑選與鍋具心得，我都隨時在這裡陪伴你！今天想聊點甚麼呢？`;
+      ? `您好！我是您的專屬廚伴 ${activeChefName}。看到您正探索「${cuisineHint}」料理！歡迎在上方挑選食材，或隨時向我詢問正宗做法、調味秘訣，甚至聊聊今天的生活點滴！`
+      : `您好！我是您的專屬廚伴 ${activeChefName}。無論你想聊聊今天過得怎樣、尋求心靈放鬆，抑或探索各種菜式做法、食材挑選與鍋具心得，我都隨時在這裡陪伴你！今天想聊點甚麼呢？`;
 
     setMessages([
       {
@@ -320,139 +322,183 @@ function ChatPageContent() {
     }
   };
 
+  const zh = language === "zh-HK";
+  const hasConversation = messages.some((m) => m.role === "user");
+
+  const savedChatsList = (onPicked?: () => void) =>
+    conversations.length === 0 ? (
+      <p className="text-sm text-stone-500 py-2">
+        {zh ? "暫時未有儲存嘅對話。" : "No saved chats yet."}
+      </p>
+    ) : (
+      <ul className="space-y-1">
+        {conversations.map((c) => {
+          const active = conversationId === c.id;
+          return (
+            <li
+              key={c.id}
+              className={`flex items-center rounded-md ${
+                active ? "bg-brand-50 text-brand-700" : "text-stone-700 hover:bg-stone-100"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  loadConversationHistory(c.id);
+                  onPicked?.();
+                }}
+                aria-current={active ? "true" : undefined}
+                className={`flex-1 min-w-0 min-h-12 px-3 text-left text-sm flex items-center gap-2 ${
+                  active ? "font-bold" : ""
+                }`}
+              >
+                <MessageSquare className="w-4 h-4 shrink-0 text-stone-400" aria-hidden />
+                <span className="truncate">{c.title}</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleDeleteConversation(e, c.id)}
+                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-md text-stone-400 hover:text-danger"
+                aria-label={zh ? `刪除對話：${c.title}` : `Delete chat: ${c.title}`}
+                title={zh ? "刪除對話" : "Delete chat"}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    );
+
+  const newChatLabel = zh ? "新對話" : "New chat";
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Sidebar: Conversations & New Chat (Desktop) */}
-        <aside className="hidden lg:block lg:col-span-3 space-y-4">
+    <div className="max-w-6xl mx-auto px-5 lg:px-8 pt-4 lg:pt-6">
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+        {/* Sidebar: saved chats and the chef (desktop) */}
+        <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-6 lg:self-start">
           <button
+            type="button"
             onClick={() => startNewChat()}
-            className="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition"
+            className="w-full h-[52px] px-4 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2 transition"
           >
-            <Plus className="w-4 h-4" />
-            <span>{language === "zh-HK" ? "新煮食對話" : "New Cooking Chat"}</span>
+            <Plus className="w-5 h-5" aria-hidden />
+            <span>{newChatLabel}</span>
           </button>
 
-          <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs space-y-2">
-            <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
-              {language === "zh-HK" ? "歷史對話記錄" : "Saved Chats"}
-            </h3>
-            {conversations.length === 0 ? (
-              <p className="text-xs text-stone-400 italic py-2">
-                {language === "zh-HK" ? "暫無歷史對話" : "No saved chats yet."}
-              </p>
-            ) : (
-              <div className="space-y-1 max-h-[500px] overflow-y-auto">
-                {conversations.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => loadConversationHistory(c.id)}
-                    className={`p-2.5 rounded-lg text-xs font-medium cursor-pointer flex items-center justify-between group transition ${
-                      conversationId === c.id
-                        ? "bg-brand-50 text-brand-800 font-bold border border-brand-200"
-                        : "text-stone-700 hover:bg-stone-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate pr-2">
-                      <MessageSquare className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
-                      <span className="truncate">{c.title}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteConversation(e, c.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-red-600 rounded transition flex-shrink-0"
-                      title={language === "zh-HK" ? "刪除對話" : "Delete chat"}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <section className="rounded-2xl border border-stone-200 bg-stone-50 p-3">
+            <h2 className="px-2 pt-1 pb-2 font-bold text-stone-900">
+              {zh ? "已儲存對話" : "Saved chats"}
+            </h2>
+            <div className="max-h-[460px] overflow-y-auto">{savedChatsList()}</div>
+          </section>
 
-          {/* Personal Chef Profile Widget */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200/80 text-xs text-stone-700 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          {/* The chef */}
+          <section className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={44} title={activeChefName} />
-                <div>
-                  <h4 className="font-bold text-stone-900 text-sm">{activeChefName}</h4>
-                  <span className="text-[10px] text-amber-700 font-medium">
-                    {language === "zh-HK" ? "專屬陪伴 AI 大廚" : "Personal Companion Chef"}
-                  </span>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-stone-900 truncate">{activeChefName}</h2>
+                  <p className="text-sm text-stone-500">{zh ? "你嘅專屬大廚" : "Your own chef"}</p>
                 </div>
               </div>
               <Link
                 href="/chef-settings"
-                className="p-1.5 rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-amber-700 hover:border-amber-300 transition"
-                title="Customize Chef"
+                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-md text-stone-500 hover:text-brand-600 hover:bg-stone-100 transition"
+                title={zh ? "大廚設定" : "Chef settings"}
+                aria-label={zh ? "大廚設定" : "Chef settings"}
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="w-5 h-5" />
               </Link>
             </div>
-            <p className="text-[11px] leading-relaxed text-stone-600">
-              {language === "zh-HK"
+            <p className="text-sm text-stone-600">
+              {zh
                 ? "你嘅廚房拍檔：問佢點煮、點替代材料，或者一路煮一路傾兩句。"
                 : "Your kitchen companion: ask how to cook anything, what to swap, or just chat while you cook."}
             </p>
-            <Link
-              href="/onboarding/chef?next=/chat"
-              className="block w-full text-center py-1.5 px-3 rounded-lg bg-white hover:bg-amber-100/60 border border-amber-200 text-amber-800 font-semibold text-xs transition"
-            >
-              {language === "zh-HK" ? "打扮我的大廚 →" : "Design Chef's Look →"}
-            </Link>
-            <Link
-              href="/chef-settings"
-              className="block w-full text-center py-1.5 px-3 rounded-lg text-amber-800 hover:bg-amber-100/60 font-semibold text-xs transition"
-            >
-              {language === "zh-HK" ? "自訂大廚形象與性格 →" : "Customize Chef Avatar →"}
-            </Link>
-          </div>
+            <div className="space-y-1">
+              <Link
+                href="/onboarding/chef?next=/chat"
+                className="flex items-center justify-center h-12 px-3 rounded-md border border-stone-200 text-brand-600 font-bold text-sm hover:border-brand-500 transition"
+              >
+                {zh ? "打扮我的大廚" : "Design your chef's look"}
+              </Link>
+              <Link
+                href="/chef-settings"
+                className="flex items-center justify-center h-12 px-3 rounded-md text-brand-600 font-bold text-sm hover:bg-stone-100 transition"
+              >
+                {zh ? "自訂大廚形象與性格" : "Customise your chef"}
+              </Link>
+            </div>
+          </section>
         </aside>
 
-        {/* Main Chat & Quick Start Area */}
-        <main className="lg:col-span-9 space-y-6">
-          {/* Quick-Start Form at the top */}
-          <QuickStartForm
-            onSubmit={handleQuickStartSubmit}
-            isLoading={isLoading}
-            initialCuisine={initialCuisineParam}
-          />
-
-          {/* Chat Messages Feed */}
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 sm:p-6 space-y-6 min-h-[450px] flex flex-col justify-between">
-            <div className="space-y-6 flex-1">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex gap-3 sm:gap-4 ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
+        {/* Chat column */}
+        <div className="lg:col-span-8 xl:col-span-9">
+          <div className="max-w-2xl mx-auto">
+            {/* Phone header: chef, saved chats, new chat */}
+            <div className="lg:hidden flex items-center justify-between gap-2 pb-3">
+              <Link href="/chef-settings" className="flex items-center gap-2 min-w-0 min-h-12">
+                <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={32} title={activeChefName} />
+                <span className="font-bold text-stone-900 truncate">{activeChefName}</span>
+              </Link>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSavedOpen(true)}
+                  className="h-12 px-3 rounded-md text-sm font-bold text-stone-700 hover:bg-stone-200/60 flex items-center gap-2"
+                  aria-haspopup="dialog"
                 >
-                  {msg.role === "assistant" && (
-                    <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={36} title={activeChefName} className="shadow-xs" />
-                  )}
+                  <MessageSquare className="w-4 h-4" aria-hidden />
+                  {zh ? "已儲存對話" : "Saved chats"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startNewChat()}
+                  className="w-12 h-12 rounded-md text-brand-600 hover:bg-stone-200/60 flex items-center justify-center"
+                  aria-label={newChatLabel}
+                  title={newChatLabel}
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
 
-                  <div
-                    className={`max-w-2xl rounded-2xl p-4 text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-stone-900 text-white rounded-tr-none"
-                        : "bg-stone-50 border border-stone-200 text-stone-800 rounded-tl-none space-y-4"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+            <QuickStartForm
+              onSubmit={handleQuickStartSubmit}
+              isLoading={isLoading}
+              initialCuisine={initialCuisineParam}
+              collapsed={hasConversation}
+            />
 
-                    {/* AI Structured Suggestions (3 Cards) */}
+            {/* Messages. Bottom padding keeps the last message clear of the fixed input bar on phone. */}
+            <div
+              className="pt-5 space-y-5 pb-[calc(var(--tabbar-space)+6rem)] md:pb-4"
+              aria-live="polite"
+            >
+              {messages.map((msg, idx) =>
+                msg.role === "user" ? (
+                  <div key={idx} className="flex justify-end">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-500 text-white px-4 py-3">
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={idx} className="space-y-3">
+                    <div className="flex items-end gap-2">
+                      <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={28} title={activeChefName} />
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-stone-50 border border-stone-200 text-stone-900 px-4 py-3">
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+
+                    {/* Dish suggestions from the chef */}
                     {msg.structuredSuggestions && msg.structuredSuggestions.length > 0 && (
-                      <div className="pt-2 space-y-3">
-                        <div className="flex items-center justify-between text-xs font-bold text-brand-900 pb-1 border-b border-brand-200">
-                          <span className="flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-brand-600" />
-                            {t("suggestionsTitle")}
-                          </span>
-                        </div>
-
+                      <div className="space-y-3 md:pl-9">
+                        <h3 className="font-bold text-stone-900">
+                          {zh ? "用晒你所有食材嘅菜式" : "Dishes that use all your ingredients"}
+                        </h3>
                         <div className="grid grid-cols-1 gap-4">
                           {msg.structuredSuggestions.map((suggestion) => (
                             <DishSuggestionCard
@@ -463,32 +509,21 @@ function ChatPageContent() {
                             />
                           ))}
                         </div>
-
-                        <p className="text-[11px] text-stone-500 italic pt-1">
-                          {t("aiDisclaimer")}
-                        </p>
+                        <p className="text-sm text-stone-500">{t("aiDisclaimer")}</p>
                       </div>
                     )}
                   </div>
-
-                  {msg.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-stone-200 text-stone-700 flex items-center justify-center flex-shrink-0 font-bold text-xs">
-                      👤
-                    </div>
-                  )}
-                </div>
-              ))}
+                )
+              )}
 
               {/* Thinking state */}
               {isLoading && (
-                <div className="flex gap-3 items-center text-stone-500 text-sm">
-                  <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={36} title={activeChefName} />
-                  <div className="p-3.5 rounded-2xl bg-stone-100 text-stone-700 text-xs sm:text-sm font-medium flex items-center gap-2 shadow-xs border border-stone-200/60">
-                    <Sparkles className="w-4 h-4 text-brand-600 animate-spin" />
-                    <span key={thinkingIndex} className="cc-fade-in font-medium">
-                      {language === "zh-HK"
-                        ? THINKING_PHRASES_ZH[thinkingIndex]
-                        : THINKING_PHRASES_EN[thinkingIndex]}
+                <div className="flex items-end gap-2">
+                  <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={28} title={activeChefName} />
+                  <div className="rounded-2xl rounded-bl-md bg-stone-50 border border-stone-200 text-stone-600 px-4 py-3 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 text-brand-500 animate-spin motion-reduce:animate-none" aria-hidden />
+                    <span key={thinkingIndex} className="cc-fade-in">
+                      {zh ? THINKING_PHRASES_ZH[thinkingIndex] : THINKING_PHRASES_EN[thinkingIndex]}
                     </span>
                   </div>
                 </div>
@@ -497,38 +532,95 @@ function ChatPageContent() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Bottom Message Input Bar */}
-            <form onSubmit={handleSendMessage} className="pt-4 border-t border-stone-100 flex gap-2">
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder={
-                  language === "zh-HK"
-                    ? "聊聊日常心情，或詢問烹飪技巧、食材選購與鍋具心得..."
-                    : "Chat about your day, or ask about recipes, cookware, and Hong Kong groceries..."
-                }
-                className="flex-1 px-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !inputMessage.trim()}
-                className="px-5 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold shadow-md transition disabled:opacity-50 flex items-center gap-1.5"
+            {/* Message input: fixed above the tab bar on phone, sticky at the bottom of the column from md up */}
+            <div className="fixed inset-x-0 above-tabbar z-20 md:sticky md:inset-x-auto border-t border-stone-200 md:border-t-0 bg-stone-100">
+              <form
+                onSubmit={handleSendMessage}
+                className="max-w-2xl mx-auto px-5 md:px-0 py-3 md:pb-5 flex items-center gap-2"
               >
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">{language === "zh-HK" ? "發送" : "Send"}</span>
-              </button>
-            </form>
+                <label htmlFor="chat-input" className="sr-only">
+                  {zh ? "傳訊息俾大廚" : "Message your chef"}
+                </label>
+                <input
+                  id="chat-input"
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder={zh ? "問你嘅大廚任何嘢" : "Ask your chef anything"}
+                  className="flex-1 min-w-0 h-12 px-4 rounded-md border border-stone-200 bg-stone-50 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-500"
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="shrink-0 w-[52px] h-[52px] rounded-md bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center transition disabled:bg-stone-200 disabled:text-stone-500"
+                  aria-label={zh ? "發送" : "Send"}
+                  title={zh ? "發送" : "Send"}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
           </div>
-        </main>
+        </div>
       </div>
+
+      {/* Saved chats sheet (phone and tablet) */}
+      {savedOpen && (
+        <div className="lg:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="saved-chats-title">
+          <button
+            type="button"
+            className="absolute inset-0 bg-stone-900/40"
+            aria-label={zh ? "關閉" : "Close"}
+            onClick={() => setSavedOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] flex flex-col rounded-t-2xl bg-stone-50 pb-safe">
+            <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 border-b border-stone-200">
+              <h2 id="saved-chats-title" className="text-[22px] font-bold text-stone-900">
+                {zh ? "已儲存對話" : "Saved chats"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSavedOpen(false)}
+                className="w-12 h-12 -mr-3 rounded-md flex items-center justify-center text-stone-500 hover:text-stone-900"
+                aria-label={zh ? "關閉" : "Close"}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-3">{savedChatsList(() => setSavedOpen(false))}</div>
+            <div className="px-5 pt-2 pb-4 border-t border-stone-200">
+              <button
+                type="button"
+                onClick={() => {
+                  startNewChat();
+                  setSavedOpen(false);
+                }}
+                className="w-full h-[52px] rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2"
+              >
+                <Plus className="w-5 h-5" aria-hidden />
+                {newChatLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChatLoading() {
+  const { language } = useLanguage();
+  return (
+    <div className="p-10 text-center text-sm text-stone-500">
+      {language === "zh-HK" ? "載入緊對話……" : "Loading chat…"}
     </div>
   );
 }
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="p-10 text-center text-sm text-stone-500">Loading chat...</div>}>
+    <Suspense fallback={<ChatLoading />}>
       <ChatPageContent />
     </Suspense>
   );

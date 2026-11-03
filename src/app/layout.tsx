@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Fraunces, Instrument_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Atkinson_Hyperlegible } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -8,15 +8,10 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OnboardingGate } from "@/components/avatar/OnboardingGate";
 
-const serif = Fraunces({
+// Designed for low-vision readers: the same problem as reading a step from across a kitchen.
+const sans = Atkinson_Hyperlegible({
   subsets: ["latin"],
-  axes: ["opsz", "SOFT"],
-  variable: "--font-serif",
-  display: "swap",
-});
-
-const sans = Instrument_Sans({
-  subsets: ["latin"],
+  weight: ["400", "700"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -25,6 +20,22 @@ export const metadata: Metadata = {
   title: "Bon Taste — what do you feel like eating?",
   description:
     "Pick a dish from a menu of real recipes from around the world, then cook it step by step with your own AI chef.",
+  applicationName: "Bon Taste",
+  // The manifest (src/app/manifest.ts) and the icons (src/app/icon.tsx, apple-icon.tsx,
+  // icons/[size]) are linked automatically by their file conventions.
+  appleWebApp: {
+    capable: true,
+    title: "Bon Taste",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F4F6F8",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -35,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${serif.variable} ${sans.variable}`}
+      className={sans.variable}
     >
       <body className="font-sans antialiased">
         <LanguageProvider>
@@ -43,7 +54,7 @@ export default function RootLayout({
             <CartProvider>
               <OnboardingGate />
               <Navbar />
-              <main className="flex-1 w-full">{children}</main>
+              <main className="flex-1 w-full pb-tabbar">{children}</main>
               <Footer />
             </CartProvider>
           </AuthProvider>

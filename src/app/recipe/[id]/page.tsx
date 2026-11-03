@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { CookingModeModal } from "@/components/CookingModeModal";
 import { RecipeIngredient, RecipeStep, DishSuggestion } from "@/types";
 import { MEALDB_ID_PREFIX } from "@/lib/recipes/mealdb";
-import { Clock, ListChecks, Flame, AlertCircle } from "lucide-react";
+import { Check, Clock, ListChecks, AlertCircle } from "lucide-react";
 import { convertAmount, convertTemperatures } from "@/lib/units";
 import { useUnitSystem } from "@/lib/useUnitSystem";
 
@@ -92,7 +92,7 @@ export default function RecipeDetailPage() {
 
   if (!dish) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-4xl mx-auto px-5 py-16 text-center">
         <p className="text-stone-500">{t("loading")}</p>
       </div>
     );
@@ -188,118 +188,102 @@ export default function RecipeDetailPage() {
   const zh = language === "zh-HK";
 
   return (
-    <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-24">
-      {/* Opening: photo and title side by side, like the first page of a recipe */}
-      <header className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-14 items-center">
+    <article className="pb-[calc(var(--tabbar-space)+6.5rem)] md:pb-24">
+      {/* Opening: on a phone the photo runs edge to edge; from md up it sits beside the title. */}
+      <header className="max-w-6xl mx-auto md:px-6 lg:px-8 md:pt-10 grid gap-5 md:gap-10 md:grid-cols-[1.1fr_1fr] lg:gap-14 md:items-center">
         {dish.imageUrl && (
           <img
             src={dish.imageUrl}
             alt={displayTitle}
             width={700}
             height={700}
-            className="w-full aspect-[4/3] object-cover rounded-md lg:order-2"
+            className="w-full aspect-[4/3] object-cover bg-stone-200 md:rounded-lg md:order-2"
           />
         )}
 
-        <div>
-          <p className="text-sm text-stone-500">
-            {dish.cuisine}
-            {/* A live recipe is real but does not necessarily use everything the user
-                picked, so "uses all your ingredients" would be a false claim there.
-                Show the source instead, which the source's terms also expect. */}
-            {hasRealSteps ? (
-              dish.sourceUrl ? (
-                <>
-                  {" · "}
-                  <a
-                    href={dish.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-4 decoration-stone-300 hover:text-stone-900"
-                  >
-                    {zh ? "來源" : "from"} {dish.sourceName || (zh ? "外部網站" : "external site")}
-                  </a>
-                </>
-              ) : null
-            ) : (
-              <span className="text-fresh-700">{zh ? " · 用晒你所有食材" : " · uses all your ingredients"}</span>
-            )}
-          </p>
-
-          <h1
-            className="mt-3 font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-stone-900"
-            style={{ fontVariationSettings: '"opsz" 144, "SOFT" 30' }}
-          >
-            {displayTitle}
-          </h1>
+        <div className={`px-5 md:px-0 ${dish.imageUrl ? "" : "pt-6 md:pt-0"}`}>
+          <h1 className="text-[32px] md:text-[40px] leading-[1.1] font-bold text-stone-900">{displayTitle}</h1>
 
           {displayDesc && displayDesc !== dish.cuisine && (
-            <p className="mt-4 text-lg text-stone-600 leading-relaxed max-w-xl">{displayDesc}</p>
+            <p className="mt-3 text-stone-600 max-w-xl">{displayDesc}</p>
           )}
 
-          <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-[15px] text-stone-600">
+            <li>{dish.cuisine}</li>
             {/* 0 means the source gave no time or difficulty (menu dishes); hide rather than guess. */}
             {dish.cookTimeMinutes > 0 && (
               <>
-                <div>
-                  <dt className="text-stone-500">{zh ? "時間" : "Time"}</dt>
-                  <dd className="font-medium text-stone-900">{dish.cookTimeMinutes} {t("mins")}</dd>
-                </div>
-                <div>
-                  <dt className="text-stone-500">{zh ? "難度" : "Difficulty"}</dt>
-                  <dd className="font-medium text-stone-900">{dish.difficulty}</dd>
-                </div>
+                <li>{zh ? `${dish.cookTimeMinutes} 分鐘` : `${dish.cookTimeMinutes} min`}</li>
+                <li>{dish.difficulty}</li>
               </>
             )}
-            <div>
-              <dt className="text-stone-500">{zh ? "材料" : "Ingredients"}</dt>
-              <dd className="font-medium text-stone-900">{allIngredients.length}</dd>
-            </div>
-            <div>
-              <dt className="text-stone-500">{zh ? "步驟" : "Steps"}</dt>
-              <dd className="font-medium text-stone-900">{steps.length}</dd>
-            </div>
-          </dl>
+            <li>{zh ? `${allIngredients.length} 樣材料` : `${allIngredients.length} ingredients`}</li>
+            <li>{zh ? `${steps.length} 個步驟` : `${steps.length} steps`}</li>
+            {dish.needsOven && <li className="text-stone-900 font-bold">{zh ? "需要焗爐" : "Needs an oven"}</li>}
+          </ul>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          {/* A live recipe is real but does not necessarily use everything the user
+              picked, so "uses all your ingredients" would be a false claim there.
+              Show the source instead, which the source's terms also expect. */}
+          {hasRealSteps ? (
+            dish.sourceUrl ? (
+              <p className="mt-2 text-[15px] text-stone-500">
+                <a
+                  href={dish.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 decoration-stone-300 hover:text-stone-900"
+                >
+                  {zh ? "來源：" : "Recipe from "}
+                  {dish.sourceName || (zh ? "外部網站" : "an external site")}
+                </a>
+              </p>
+            ) : null
+          ) : (
+            <p className="mt-2 text-[15px] text-fresh-700">
+              {zh ? "用晒你所有食材" : "Uses all your ingredients"}
+            </p>
+          )}
+
+          {/* Actions: a sticky bar above the tab bar on a phone, inline from md up. */}
+          <div className="fixed inset-x-0 above-tabbar z-30 bg-stone-50 border-t border-stone-200 px-5 py-3 flex gap-3 md:static md:z-auto md:mt-8 md:p-0 md:bg-transparent md:border-0">
             <button
               onClick={() => router.push(`/recipe/${dish.id}/cook`)}
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-medium transition"
+              className="flex-1 md:flex-none inline-flex items-center justify-center h-[52px] px-5 whitespace-nowrap rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold transition-colors"
             >
-              <Flame className="w-4 h-4" />
               {zh ? "開始煮" : "Start cooking"}
             </button>
             <button
               onClick={shareShoppingList}
               disabled={itemsToBuy.length === 0}
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-md border border-stone-900 text-stone-900 hover:bg-stone-900 hover:text-stone-50 font-medium transition disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 h-[52px] px-4 whitespace-nowrap rounded-md border border-stone-300 bg-stone-50 text-stone-900 font-bold hover:border-stone-500 transition-colors disabled:opacity-40"
             >
-              <ListChecks className="w-4 h-4" />
+              <ListChecks className="w-5 h-5" aria-hidden="true" />
               {listCopied ? (zh ? "已複製清單" : "List copied") : zh ? "購物清單" : "Shopping list"}
             </button>
           </div>
         </div>
       </header>
 
-      <div className="mt-16 grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+      <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 mt-10 md:mt-14 grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         {/* Ingredients, with "already have it" ticks that shape the shopping list */}
         <section className="lg:sticky lg:top-28 lg:self-start">
-          <div className="flex items-end justify-between gap-4 border-b border-stone-300 pb-3">
-            <h2 className="font-serif text-3xl text-stone-900">{zh ? "材料" : "Ingredients"}</h2>
-            <div className="flex items-center gap-1 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-[22px] leading-tight font-bold text-stone-900">{zh ? "材料" : "Ingredients"}</h2>
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setServings(Math.max(1, servings - 1))}
-                className="w-8 h-8 rounded-full border border-stone-300 text-stone-700 hover:border-stone-900"
+                className="w-11 h-11 rounded-full border border-stone-200 bg-stone-50 text-xl text-stone-900 hover:border-stone-400"
                 aria-label={zh ? "減少份量" : "Fewer servings"}
               >
                 −
               </button>
-              <span className="w-20 text-center font-mono text-stone-900 whitespace-nowrap" aria-live="polite">
+              <span className="w-24 text-center font-mono text-[15px] text-stone-900 whitespace-nowrap" aria-live="polite">
                 {zh ? `${servings} ${t("servings")}` : `Serves ${servings}`}
               </span>
               <button
                 onClick={() => setServings(Math.min(10, servings + 1))}
-                className="w-8 h-8 rounded-full border border-stone-300 text-stone-700 hover:border-stone-900"
+                className="w-11 h-11 rounded-full border border-stone-200 bg-stone-50 text-xl text-stone-900 hover:border-stone-400"
                 aria-label={zh ? "增加份量" : "More servings"}
               >
                 +
@@ -307,44 +291,54 @@ export default function RecipeDetailPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-1 text-sm" role="group" aria-label={zh ? "單位" : "Units"}>
+          <div
+            className="mt-4 inline-flex p-1 rounded-full bg-stone-200"
+            role="group"
+            aria-label={zh ? "單位" : "Units"}
+          >
             {(["metric", "us"] as const).map((system) => (
               <button
                 key={system}
                 onClick={() => setUnits(system)}
                 aria-pressed={units === system}
-                className={`px-3 py-1 rounded-full border transition ${
-                  units === system
-                    ? "bg-stone-900 border-stone-900 text-stone-50"
-                    : "border-stone-300 text-stone-600 hover:border-stone-900"
+                className={`h-10 px-5 rounded-full text-[15px] transition-colors ${
+                  units === system ? "bg-stone-50 text-stone-900 font-bold" : "text-stone-600 hover:text-stone-900"
                 }`}
               >
-                {system === "metric" ? (zh ? "公制 g · ml · °C" : "Metric g · ml · °C") : zh ? "美制 cup · oz · °F" : "US cup · oz · °F"}
+                {system === "metric" ? (zh ? "公制（克、毫升）" : "Metric") : zh ? "美制（杯、安士）" : "US cups"}
               </button>
             ))}
           </div>
 
-          <p className="mt-3 text-sm text-stone-500">
+          <p className="mt-4 text-sm text-stone-500">
             {zh ? "剔走屋企已經有嘅，佢就唔會加入購物清單。" : "Tick what you already have at home, so it stays off the shopping list."}
           </p>
 
-          <ul className="mt-2">
+          <ul className="mt-3 rounded-2xl bg-stone-50 divide-y divide-stone-200 overflow-hidden">
             {allIngredients.map((item) => {
               const have = pantryItems.has(item.name);
               const displayName = zh ? item.nameZh || item.name : item.name;
               return (
-                <li key={item.name} className="border-b border-stone-200">
-                  <label className="flex items-center gap-3 py-3 cursor-pointer select-none">
+                <li key={item.name}>
+                  <label className="flex items-center gap-3 min-h-[52px] px-4 py-2.5 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={have}
                       onChange={() => togglePantry(item.name)}
-                      className="w-4 h-4 rounded border-stone-400 accent-fresh-600 shrink-0"
+                      className="peer sr-only"
                     />
-                    <span className={`flex-1 ${have ? "text-stone-400 line-through" : "text-stone-900"}`}>
+                    <span
+                      aria-hidden="true"
+                      className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors peer-focus-visible:outline peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500 ${
+                        have ? "bg-fresh-600 border-fresh-600 text-white" : "border-stone-300 bg-stone-50"
+                      }`}
+                    >
+                      {have && <Check className="w-4 h-4" strokeWidth={3} />}
+                    </span>
+                    <span className={`flex-1 ${have ? "text-stone-500 line-through" : "text-stone-900"}`}>
                       {displayName}
                     </span>
-                    <span className={`font-mono text-sm ${have ? "text-stone-400" : "text-stone-600"}`}>
+                    <span className={`font-mono text-[15px] text-right ${have ? "text-stone-400" : "text-stone-600"}`}>
                       {shownAmount(item)}
                     </span>
                   </label>
@@ -353,8 +347,8 @@ export default function RecipeDetailPage() {
             })}
           </ul>
 
-          <div className="mt-5 flex items-center justify-between gap-4">
-            <p className="text-sm text-stone-600">
+          <div className="mt-3 flex items-center justify-between gap-4">
+            <p className="text-sm text-stone-500">
               {zh
                 ? `要買 ${itemsToBuy.length} 樣（共 ${allIngredients.length} 樣）`
                 : `${itemsToBuy.length} of ${allIngredients.length} to buy`}
@@ -362,36 +356,31 @@ export default function RecipeDetailPage() {
             <button
               onClick={shareShoppingList}
               disabled={itemsToBuy.length === 0}
-              className="inline-flex items-center gap-1.5 text-brand-600 font-medium hover:text-brand-700 disabled:text-stone-400"
+              className="h-12 px-1 text-brand-600 font-bold hover:text-brand-700 disabled:text-stone-400"
             >
-              <ListChecks className="w-4 h-4" />
-              {listCopied ? (zh ? "已複製" : "Copied") : zh ? "分享清單" : "Share the list"}
+              {listCopied ? (zh ? "已複製" : "Copied") : zh ? "分享清單" : "Share list"}
             </button>
           </div>
         </section>
 
         {/* Method */}
         <section>
-          <h2 className="font-serif text-3xl text-stone-900 border-b border-stone-300 pb-3">
-            {zh ? "做法" : "Method"}
-          </h2>
-          <ol className="mt-2">
-            {steps.map((st) => (
-              <li key={st.step} className="grid grid-cols-[2.5rem_1fr] gap-4 py-6 border-b border-stone-200">
-                <span className="font-serif text-3xl leading-none text-brand-500" aria-hidden="true">
-                  {st.step}
+          <h2 className="text-[22px] leading-tight font-bold text-stone-900">{zh ? "做法" : "Method"}</h2>
+          <ol className="mt-5 space-y-7">
+            {steps.map((st, idx) => (
+              <li key={`${idx}-${st.step}`} className="grid grid-cols-[2.25rem_1fr] gap-3">
+                <span className="font-mono text-[22px] leading-[1.2] font-bold text-brand-500" aria-hidden="true">
+                  {idx + 1}
                 </span>
                 <div>
                   {/* Generic "Step n" titles add nothing next to the numeral, so only real titles show. */}
                   {!/^step \d+$/i.test(st.title) && (
-                    <h3 className="font-semibold text-stone-900 mb-1.5">
-                      {zh && st.titleZh ? st.titleZh : st.title}
-                    </h3>
+                    <h3 className="font-bold text-stone-900 mb-1">{zh && st.titleZh ? st.titleZh : st.title}</h3>
                   )}
-                  <p className="text-stone-700 leading-relaxed">{convertTemperatures(zh && st.textZh ? st.textZh : st.text, units)}</p>
+                  <p className="text-stone-700">{convertTemperatures(zh && st.textZh ? st.textZh : st.text, units)}</p>
                   {st.timerSeconds && (
-                    <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-brand-700">
-                      <Clock className="w-3.5 h-3.5" />
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-stone-600">
+                      <Clock className="w-4 h-4" aria-hidden="true" />
                       {zh
                         ? `計時 ${Math.floor(st.timerSeconds / 60)} 分鐘`
                         : `Set a timer for ${Math.floor(st.timerSeconds / 60)} min`}
@@ -403,8 +392,8 @@ export default function RecipeDetailPage() {
           </ol>
 
           {/* Food safety reminder (Requirement 4.2) */}
-          <p className="mt-8 text-sm text-stone-500 flex gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <p className="mt-10 text-sm text-stone-500 flex gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
             {zh
               ? "雞肉同豬肉要煮到中心溫度至少 75°C。生熟食物要分開處理。"
               : "Cook chicken and pork to at least 75°C (165°F) inside. Keep raw and cooked food apart while you prep."}

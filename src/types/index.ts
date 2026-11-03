@@ -71,6 +71,8 @@ export interface DishSuggestion {
   // source and link back to it, which most recipe APIs require for attribution.
   sourceUrl?: string;
   sourceName?: string;
+  // True when the recipe bakes or roasts; drives the "no oven" kitchen setting.
+  needsOven?: boolean;
 }
 
 export interface StoreComparisonResult {

@@ -4,18 +4,7 @@ import React, { useState } from "react";
 import { DishSuggestion } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
-import {
-  Clock,
-  ChefHat,
-  CheckCircle2,
-  ThumbsUp,
-  ThumbsDown,
-  Bookmark,
-  ArrowRight,
-  ShoppingBag,
-  Flame,
-  Utensils,
-} from "lucide-react";
+import { Check, Clock, ThumbsUp, ThumbsDown, Bookmark, Utensils } from "lucide-react";
 
 interface DishSuggestionCardProps {
   suggestion: DishSuggestion;
@@ -43,7 +32,11 @@ export function DishSuggestionCard({
 
   const handleSaveRecipe = async () => {
     if (!user) {
-      alert("Please sign in or use the demo role switcher to save recipes.");
+      alert(
+        language === "zh-HK"
+          ? "請先登入，或者用示範角色切換，先可以收藏食譜。"
+          : "Please sign in or use the demo role switcher to save recipes."
+      );
       return;
     }
 
@@ -117,76 +110,49 @@ export function DishSuggestionCard({
     }
   };
 
+  const zh = language === "zh-HK";
+  const stepCount = suggestion.steps?.length || 4;
+
   return (
-    <div className="bg-white rounded-2xl border border-stone-200/90 shadow-sm hover:shadow-md transition-all p-4 sm:p-5 space-y-4">
-      {/* Main Horizontal Split: Left (Title + Details + Ingredients) | Right (Framed Dish Picture) */}
-      <div className="flex flex-col-reverse sm:flex-row items-stretch justify-between gap-4 sm:gap-5">
-        {/* LEFT SIDE: Title at top, details & ingredients stacked neatly */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between space-y-3">
-          {/* Line 1: Dish Title + Meta Badges */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-700 text-[11px] font-bold uppercase tracking-wider">
-                {suggestion.cuisine}
-              </span>
-              <span className="flex items-center gap-1 text-xs font-semibold text-stone-500">
-                <Clock className="w-3.5 h-3.5 text-stone-400" />
-                {suggestion.cookTimeMinutes} {t("mins")}
-              </span>
-              <span className="flex items-center gap-1 text-xs font-semibold text-stone-500">
-                <ChefHat className="w-3.5 h-3.5 text-stone-400" />
-                {suggestion.difficulty}
-              </span>
-            </div>
+    <div className="bg-stone-50 rounded-2xl border border-stone-200 p-4 sm:p-5">
+      <div className="flex flex-col-reverse sm:flex-row items-stretch gap-4 sm:gap-5">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[19px] leading-snug font-bold text-stone-900">{displayTitle}</h3>
 
-            <h3 className="text-base sm:text-lg font-black text-stone-900 leading-snug">
-              {displayTitle}
-            </h3>
-          </div>
-
-          {/* Line 2: Dish Description */}
-          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed line-clamp-2">
-            {displayDesc}
+          <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
+            <span>{suggestion.cuisine}</span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-4 h-4" aria-hidden="true" />
+              {zh ? `${suggestion.cookTimeMinutes} 分鐘` : `${suggestion.cookTimeMinutes} min`}
+            </span>
+            <span>{suggestion.difficulty}</span>
           </p>
 
-          {/* Line 3: Compact Ingredients & Extra Needed Pills */}
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center flex-wrap gap-1.5">
-              <span className="inline-flex items-center gap-1 font-bold text-emerald-800">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                {t("usedIngredients")}:
+          {displayDesc && (
+            <p className="mt-2 text-[15px] text-stone-600 line-clamp-2">{displayDesc}</p>
+          )}
+
+          <div className="mt-3 space-y-2 text-sm">
+            <p className="text-stone-700">
+              <span className="inline-flex items-center gap-1 font-bold text-fresh-700 mr-1.5">
+                <Check className="w-4 h-4" strokeWidth={3} aria-hidden="true" />
+                {zh ? "用到你有嘅：" : "Uses what you have:"}
               </span>
-              {suggestion.usedUserIngredients.map((ing) => (
-                <span
-                  key={ing}
-                  className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200/80 font-semibold text-emerald-900"
-                >
-                  {ing}
-                </span>
-              ))}
-            </div>
+              {suggestion.usedUserIngredients.join(zh ? "、" : ", ")}
+            </p>
 
             {suggestion.extraIngredientsNeeded.length > 0 && (
-              <div className="flex items-center flex-wrap gap-1.5">
-                <span className="inline-flex items-center gap-1 font-bold text-amber-800">
-                  <ShoppingBag className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                  {t("extraNeeded")}:
-                </span>
-                {suggestion.extraIngredientsNeeded.map((extra) => (
-                  <span
-                    key={extra.name}
-                    className="px-2 py-0.5 rounded-md bg-amber-50/90 border border-amber-200/70 text-stone-700 font-medium"
-                  >
-                    {language === "zh-HK" ? extra.nameZh || extra.name : extra.name}
-                  </span>
-                ))}
-              </div>
+              <p className="text-stone-700">
+                <span className="font-bold text-stone-900 mr-1.5">{zh ? "仲要買：" : "You'll also need:"}</span>
+                {suggestion.extraIngredientsNeeded
+                  .map((extra) => (zh ? extra.nameZh || extra.name : extra.name))
+                  .join(zh ? "、" : ", ")}
+              </p>
             )}
           </div>
         </div>
 
-        {/* RIGHT SIDE: Framed Dish Picture Box */}
-        <div className="w-full sm:w-36 md:w-44 h-40 sm:h-auto sm:min-h-[148px] flex-shrink-0 rounded-xl overflow-hidden border border-stone-200 bg-stone-100 relative shadow-xs">
+        <div className="w-full sm:w-36 md:w-44 h-44 sm:h-auto sm:min-h-[148px] shrink-0 rounded-lg overflow-hidden bg-stone-200">
           {suggestion.imageUrl && !imgFailed ? (
             <img
               src={suggestion.imageUrl}
@@ -196,83 +162,63 @@ export function DishSuggestionCard({
               onError={() => setImgFailed(true)}
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 gap-1 p-3 text-center">
-              <Utensils className="w-7 h-7 text-amber-500/70" />
-              <span className="text-[11px] font-semibold text-stone-500 line-clamp-2">
-                {displayTitle}
-              </span>
+            <div className="w-full h-full flex items-center justify-center text-stone-400">
+              <Utensils className="w-8 h-8" aria-hidden="true" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2">
-        {/* Rating & Bookmark buttons */}
+      <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setRating(rating === "up" ? null : "up")}
-            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
-              rating === "up"
-                ? "bg-emerald-100 border-emerald-300 text-emerald-800"
-                : "border-stone-200 text-stone-500 hover:bg-stone-50"
+            aria-pressed={rating === "up"}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+              rating === "up" ? "bg-fresh-50 text-fresh-700" : "text-stone-500 hover:bg-stone-100"
             }`}
             title={t("thumbsUp")}
+            aria-label={t("thumbsUp")}
           >
-            <ThumbsUp className="w-3.5 h-3.5" />
+            <ThumbsUp className="w-5 h-5" />
           </button>
           <button
             onClick={() => setRating(rating === "down" ? null : "down")}
-            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
-              rating === "down"
-                ? "bg-red-100 border-red-300 text-red-800"
-                : "border-stone-200 text-stone-500 hover:bg-stone-50"
+            aria-pressed={rating === "down"}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+              rating === "down" ? "bg-stone-200 text-stone-900" : "text-stone-500 hover:bg-stone-100"
             }`}
             title={t("thumbsDown")}
+            aria-label={t("thumbsDown")}
           >
-            <ThumbsDown className="w-3.5 h-3.5" />
+            <ThumbsDown className="w-5 h-5" />
           </button>
           <button
             onClick={handleSaveRecipe}
             disabled={saving || saved}
-            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
-              saved
-                ? "bg-amber-100 border-amber-300 text-amber-800"
-                : "border-stone-200 text-stone-600 hover:bg-stone-50"
+            className={`h-11 px-3 rounded-full flex items-center gap-1.5 text-sm font-bold transition-colors ${
+              saved ? "text-brand-600" : "text-stone-600 hover:bg-stone-100"
             }`}
-            title={t("saveToMyRecipes")}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-amber-600 text-amber-600" : ""}`} />
-            <span className="hidden sm:inline">
-              {saved ? t("savedSuccess") : t("saveToMyRecipes")}
-            </span>
+            <Bookmark className={`w-5 h-5 ${saved ? "fill-brand-500 text-brand-500" : ""}`} aria-hidden="true" />
+            {saved ? (zh ? "已收藏" : "Saved") : zh ? "收藏" : "Save"}
           </button>
         </div>
 
-        {/* Step-by-Step Cooking CTA & full recipe CTA */}
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <button
             onClick={() => onSelectDish && onSelectDish(suggestion)}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs transition"
+            className="flex-1 sm:flex-none h-12 px-4 rounded-md border border-stone-300 bg-stone-50 hover:border-stone-500 text-stone-900 font-bold text-[15px] transition-colors"
           >
-            <span>{language === "zh-HK" ? "睇完整食譜" : "See full recipe"}</span>
+            {zh ? "睇食譜" : "See recipe"}
           </button>
-
           <button
             onClick={() =>
-              onStartCooking
-                ? onStartCooking(suggestion)
-                : onSelectDish && onSelectDish(suggestion)
+              onStartCooking ? onStartCooking(suggestion) : onSelectDish && onSelectDish(suggestion)
             }
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm shadow-md transition group"
+            className="flex-1 sm:flex-none h-12 px-5 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold text-[15px] transition-colors"
           >
-            <Flame className="w-3.5 h-3.5" />
-            <span>
-              {language === "zh-HK"
-                ? `開始逐步教學 (${suggestion.steps?.length || 4} 步)`
-                : `Start Step-by-Step Cooking (${suggestion.steps?.length || 4} Steps)`}
-            </span>
-            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+            {zh ? `開始煮（${stepCount} 步）` : `Start cooking (${stepCount} steps)`}
           </button>
         </div>
       </div>

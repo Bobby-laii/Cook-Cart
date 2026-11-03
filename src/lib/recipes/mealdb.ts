@@ -11,6 +11,7 @@
  */
 
 import type { DishSuggestion, RecipeIngredient, RecipeStep } from "@/types";
+import { MENU_META } from "@/lib/recipes/mealdbMeta";
 
 const MEALDB = "https://www.themealdb.com/api/json/v1/1";
 export const MEALDB_ID_PREFIX = "mealdb-";
@@ -35,6 +36,9 @@ export const MENU_CUISINES = [
 export interface MenuDish {
     id: string;
     title: string;
+    /** Traditional Chinese name from MENU_META; falls back to the English title. */
+    titleZh: string;
+    needsOven: boolean;
     cuisine: string;
     imageUrl: string;
 }
@@ -52,6 +56,27 @@ export type MealDbMeal = MealDbSummary & {
     strSource?: string | null;
     [key: string]: string | null | undefined;
 };
+
+/**
+ * TheMealDB is third-party data. Its source links end up in an <a href> and its
+ * photos in an <img src>, so only plain web links are kept: a "javascript:" or
+ * "data:" value would otherwise run in the page when clicked.
+ */
+export function safeHttpUrl(value: string | null | undefined): string | undefined {
+    if (!value) return undefined;
+    try {
+        const url = new URL(value);
+        return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Photos must come from TheMealDB's own image host. */
+export function safeMealDbImage(value: string | null | undefined): string | undefined {
+    const url = safeHttpUrl(value);
+    return url && new URL(url).hostname === "www.themealdb.com" && url.startsWith("https://") ? url : undefined;
+}
 
 async function getJson<T>(path: string): Promise<T | null> {
     try {
@@ -77,12 +102,22 @@ export async function fetchMenu(): Promise<MenuDish[]> {
             const data = await getJson<{ meals: MealDbSummary[] | null }>(
                 `filter.php?a=${encodeURIComponent(area)}`
             );
-            return (data?.meals ?? []).map((m) => ({
-                id: `${MEALDB_ID_PREFIX}${m.idMeal}`,
-                title: m.strMeal,
-                cuisine: area,
-                imageUrl: m.strMealThumb,
-            }));
+            return (data?.meals ?? []).flatMap((m) => {
+                const imageUrl = safeMealDbImage(m.strMealThumb);
+                // A dish without a usable photo is left off the menu rather than shown broken.
+                return imageUrl
+                    ? [
+                          {
+                              id: `${MEALDB_ID_PREFIX}${m.idMeal}`,
+                              title: m.strMeal.trim(),
+                              titleZh: MENU_META[m.idMeal]?.zh ?? m.strMeal.trim(),
+                              needsOven: MENU_META[m.idMeal]?.oven ?? false,
+                              cuisine: area,
+                              imageUrl,
+                          },
+                      ]
+                    : [];
+            });
         })
     );
     return lists.flat();
@@ -150,21 +185,23 @@ export function mealToDish(meal: MealDbMeal): DishSuggestion {
     const cuisine = meal.strArea || "World";
     return {
         id: `${MEALDB_ID_PREFIX}${meal.idMeal}`,
-        title: meal.strMeal,
-        titleZh: meal.strMeal,
+        title: meal.strMeal.trim(),
+        titleZh: MENU_META[meal.idMeal]?.zh ?? meal.strMeal.trim(),
+        needsOven: MENU_META[meal.idMeal]?.oven ?? /\boven\b|\bbak(e|ed|ing)\b/i.test(meal.strInstructions ?? ""),
         cuisine,
         cookTimeMinutes: 0,
         difficulty: "Medium",
         servings: 2,
-        description: [cuisine, meal.strCategory].filter(Boolean).join(" · "),
+        // The cuisine already shows next to the title; the source has no real description.
+        description: "",
         descriptionZh: "",
         usedUserIngredients: [],
         extraIngredientsNeeded: ingredients,
         estimatedCostHkd: 0,
         availabilityNote: "",
-        imageUrl: meal.strMealThumb,
+        imageUrl: safeMealDbImage(meal.strMealThumb),
         steps: splitInstructions(meal.strInstructions ?? ""),
-        sourceUrl: meal.strSource || `https://www.themealdb.com/meal/${meal.idMeal}`,
+        sourceUrl: safeHttpUrl(meal.strSource) ?? `https://www.themealdb.com/meal/${meal.idMeal}`,
         sourceName: "TheMealDB",
     };
 }

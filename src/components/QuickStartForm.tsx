@@ -9,7 +9,7 @@ import {
   isEuropeanCuisine,
   TOP_50_EUROPEAN_INGREDIENTS,
 } from "@/config/regionalIngredients";
-import { X, Check, ChevronDown, Loader2 } from "lucide-react";
+import { X, Check, ChevronDown, Loader2, Plus } from "lucide-react";
 
 interface QuickStartFormProps {
   onSubmit: (formData: {
@@ -24,11 +24,18 @@ interface QuickStartFormProps {
   }) => void;
   isLoading: boolean;
   initialCuisine?: string;
+  /** Collapse to the summary bar (e.g. once the conversation has messages). */
+  collapsed?: boolean;
 }
 
-export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickStartFormProps) {
+export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed = false }: QuickStartFormProps) {
   const { t, language } = useLanguage();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(!collapsed);
+
+  // Follow the parent: fold away once a conversation starts, open again for a new chat.
+  useEffect(() => {
+    setIsExpanded(!collapsed);
+  }, [collapsed]);
 
   // Form states
   const [cuisine, setCuisine] = useState("cantonese");
@@ -177,42 +184,45 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
   })();
 
   const fieldClass =
-    "rounded-md border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-stone-600";
+    "rounded-md border border-stone-200 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-500";
 
-  // Collapsed after the first search so the suggestions get the screen; the
+  // Collapsed once a conversation is under way so the messages get the screen; the
   // summary keeps what was asked for visible.
   if (!isExpanded) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-300 pb-4">
-        <p className="text-stone-700">
-          <span className="font-serif text-xl text-stone-900">{zh ? "你嘅雪櫃" : "Your fridge"}</span>
-          <span className="ml-3 text-sm">
-            {ingredients.length > 0 ? ingredients.join(", ") : zh ? "未加食材" : "No ingredients yet"} ·{" "}
-            {servings} {t("people")} · {cuisineDisplayName}
-          </span>
-        </p>
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <div className="min-w-0">
+          <p className="font-bold text-stone-900">{zh ? "用食材搵菜式" : "Search by ingredients"}</p>
+          <p className="text-sm text-stone-500 truncate">
+            {ingredients.length > 0
+              ? zh
+                ? `${ingredients.join("、")}，${servings} ${t("people")}，${cuisineDisplayName}`
+                : `${ingredients.join(", ")} for ${servings} ${t("people")}, ${cuisineDisplayName}`
+              : zh
+                ? "話我知你有咩食材，我建議三道菜。"
+                : "Tell me what you have and I'll suggest three dishes."}
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setIsExpanded(true)}
-          className="text-sm text-stone-700 underline underline-offset-4 hover:text-brand-600"
+          aria-expanded={false}
+          className="shrink-0 h-12 px-4 rounded-md border border-stone-200 bg-stone-50 text-stone-900 font-bold hover:border-brand-500 hover:text-brand-600 transition"
         >
-          {zh ? "修改" : "Edit"}
+          {ingredients.length > 0 ? (zh ? "修改" : "Edit") : zh ? "打開" : "Open"}
         </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-5">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1
-            className="font-serif text-4xl sm:text-5xl text-stone-900 tracking-tight"
-            style={{ fontVariationSettings: '"opsz" 144, "SOFT" 30' }}
-          >
+          <h2 className="text-[22px] leading-tight font-bold text-stone-900">
             {zh ? "雪櫃有乜？" : "What's in the fridge?"}
-          </h1>
-          <p className="mt-3 text-stone-600 max-w-xl">
+          </h2>
+          <p className="mt-1 text-sm text-stone-500 max-w-xl">
             {zh
               ? "加入你手上有嘅食材。我哋會建議三道菜，每道都用晒佢哋。"
               : "Add what you have. We'll suggest three dishes, each using all of it."}
@@ -221,14 +231,15 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
         <button
           type="button"
           onClick={() => setIsExpanded(false)}
-          className="shrink-0 mt-2 text-sm text-stone-500 hover:text-stone-900"
+          aria-expanded={true}
+          className="shrink-0 h-12 -mt-2 -mr-2 px-3 rounded-md text-sm text-stone-500 hover:text-stone-900"
         >
           {zh ? "收起" : "Hide"}
         </button>
       </header>
 
       {/* Ingredients: the one required input, so it comes first and gets the space. */}
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div ref={inputContainerRef} className="relative">
           <label htmlFor="ingredient-input" className="sr-only">
             {t("ingredientsLabel")}
@@ -259,20 +270,20 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
                 }
               }}
               placeholder={zh ? "輸入食材，例如：雞蛋、白菜仔、豆腐" : "Type an ingredient, e.g. eggs, bok choy, tofu"}
-              className={`${fieldClass} flex-1 px-4 py-3 text-base placeholder:text-stone-400`}
+              className={`${fieldClass} flex-1 min-w-0 h-12 px-4 text-base placeholder:text-stone-400`}
               autoComplete="off"
             />
             <button
               type="button"
               onClick={() => handleAddIngredient()}
-              className="px-5 py-3 rounded-md bg-stone-900 hover:bg-stone-700 text-stone-50 font-medium transition"
+              className="h-12 px-5 rounded-md border border-brand-500 text-brand-600 font-bold hover:bg-brand-50 transition"
             >
               {t("addIngredientBtn")}
             </button>
           </div>
 
           {showSuggestions && matchingSuggestions.length > 0 && (
-            <ul className="absolute z-30 left-0 right-0 sm:right-24 top-full mt-1 bg-stone-50 rounded-md border border-stone-300 shadow-page max-h-64 overflow-y-auto py-1">
+            <ul className="absolute z-30 left-0 right-0 sm:right-24 top-full mt-1 bg-stone-50 rounded-md border border-stone-200 max-h-64 overflow-y-auto py-1">
               {matchingSuggestions.map((item, idx) => {
                 const main = zh ? item.zh : item.en;
                 const sub = zh ? item.en : item.zh;
@@ -281,7 +292,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
                     <button
                       type="button"
                       onClick={() => handleAddIngredient(main)}
-                      className={`w-full px-4 py-2 text-left flex items-baseline gap-2 hover:bg-stone-200/60 ${
+                      className={`w-full min-h-12 px-4 py-3 text-left flex items-baseline gap-2 hover:bg-stone-100 ${
                         idx === 0 ? "bg-stone-100" : ""
                       }`}
                     >
@@ -301,13 +312,13 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
             {ingredients.map((item) => (
               <li
                 key={item}
-                className="inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full bg-stone-900 text-stone-50 text-sm"
+                className="inline-flex items-center gap-1 pl-3 pr-1 py-1 rounded-full bg-brand-500 text-white text-sm"
               >
                 {item}
                 <button
                   type="button"
                   onClick={() => handleRemoveIngredient(item)}
-                  className="p-0.5 rounded-full hover:bg-stone-700"
+                  className="p-1.5 rounded-full hover:bg-brand-600"
                   aria-label={zh ? `移除${item}` : `Remove ${item}`}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -331,9 +342,10 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
                   key={chip.en}
                   type="button"
                   onClick={() => handleAddIngredient(label)}
-                  className="px-3 py-1 rounded-full border border-stone-300 text-sm text-stone-700 hover:border-stone-900 hover:text-stone-900 transition"
+                  className="inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full border border-stone-200 bg-stone-50 text-sm text-stone-700 hover:border-brand-500 hover:text-brand-600 transition"
                 >
-                  + {label}
+                  <Plus className="w-3.5 h-3.5" aria-hidden />
+                  {label}
                 </button>
               );
             })}
@@ -343,14 +355,14 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
       </section>
 
       {/* Who and what style, as one readable line */}
-      <section className="flex flex-wrap items-center gap-x-6 gap-y-4 border-t border-stone-300 pt-6">
+      <section className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-stone-200 pt-4">
         <div className="flex items-center gap-3">
           <span className="text-stone-700">{zh ? "煮俾" : "Cooking for"}</span>
           <div className={`${fieldClass} flex items-center`}>
             <button
               type="button"
               onClick={() => setServings(Math.max(1, servings - 1))}
-              className="w-9 h-10 text-lg text-stone-600 hover:text-stone-900"
+              className="w-11 h-12 text-lg text-stone-600 hover:text-stone-900"
               aria-label={zh ? "減少人數" : "Fewer people"}
             >
               −
@@ -361,7 +373,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
             <button
               type="button"
               onClick={() => setServings(Math.min(10, servings + 1))}
-              className="w-9 h-10 text-lg text-stone-600 hover:text-stone-900"
+              className="w-11 h-12 text-lg text-stone-600 hover:text-stone-900"
               aria-label={zh ? "增加人數" : "More people"}
             >
               +
@@ -374,7 +386,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
           <select
             value={cuisine}
             onChange={(e) => setCuisine(e.target.value)}
-            className={`${fieldClass} h-10 pl-3 pr-8`}
+            className={`${fieldClass} h-12 pl-3 pr-8`}
           >
             {/* One language only, driven by the user's choice. Country-agnostic styles
                 ("Asian Food", "Western Food") are grouped apart as a deliberate choice. */}
@@ -401,28 +413,30 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
       </section>
 
       {/* Less-used settings, folded away with their current values in the summary */}
-      <details className="group border-y border-stone-300">
-        <summary className="flex items-center justify-between gap-3 py-4 cursor-pointer list-none text-stone-700 hover:text-stone-900">
+      <details className="group border-y border-stone-200">
+        <summary className="flex items-center justify-between gap-3 min-h-12 py-3 cursor-pointer list-none text-stone-700 hover:text-stone-900">
           <span>
-            <span className="font-medium text-stone-900">{zh ? "廚房同時間" : "Kitchen & time"}</span>
-            <span className="ml-3 text-sm text-stone-500">
-              {timeLabel} · {skillLabel} ·{" "}
-              {APP_CONFIG.equipmentList
-                .filter((eq) => equipment.includes(eq.id))
-                .map((eq) => (zh ? eq.labelZh : eq.label))
-                .join(", ")}
+            <span className="font-bold text-stone-900">{zh ? "廚房同時間" : "Kitchen and time"}</span>
+            <span className="block text-sm text-stone-500">
+              {[
+                timeLabel,
+                skillLabel,
+                ...APP_CONFIG.equipmentList
+                  .filter((eq) => equipment.includes(eq.id))
+                  .map((eq) => (zh ? eq.labelZh : eq.label)),
+              ].join(zh ? "、" : ", ")}
             </span>
           </span>
           <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
         </summary>
 
-        <div className="grid gap-6 pb-6 sm:grid-cols-3">
+        <div className="grid gap-5 pb-5 sm:grid-cols-3">
           <label className="space-y-2">
             <span className="block text-sm font-medium text-stone-900">{t("cookingTimeLabel")}</span>
             <select
               value={cookingTimeLimit}
               onChange={(e) => setCookingTimeLimit(e.target.value)}
-              className={`${fieldClass} w-full h-10 px-3`}
+              className={`${fieldClass} w-full h-12 px-3`}
             >
               <option value="any">{t("anyTime")}</option>
               <option value="30 mins">{t("quickUnder30")}</option>
@@ -436,7 +450,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
             <select
               value={skillLevel}
               onChange={(e) => setSkillLevel(e.target.value)}
-              className={`${fieldClass} w-full h-10 px-3`}
+              className={`${fieldClass} w-full h-12 px-3`}
             >
               {APP_CONFIG.skillLevels.map((lvl) => (
                 <option key={lvl.id} value={lvl.id}>
@@ -459,10 +473,10 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
                     type="button"
                     onClick={() => handleToggleEquipment(eq.id)}
                     aria-pressed={on}
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm border transition ${
+                    className={`inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full text-sm border transition ${
                       on
-                        ? "bg-stone-900 border-stone-900 text-stone-50"
-                        : "border-stone-300 text-stone-600 hover:border-stone-900"
+                        ? "bg-brand-500 border-brand-500 text-white"
+                        : "border-stone-200 bg-stone-50 text-stone-700 hover:border-brand-500"
                     }`}
                   >
                     {on && <Check className="w-3.5 h-3.5" />}
@@ -475,13 +489,13 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
         </div>
       </details>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
           disabled={isLoading || ingredients.length === 0}
-          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-medium transition disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-2 h-[52px] px-6 w-full sm:w-auto rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold transition disabled:bg-stone-200 disabled:text-stone-500 disabled:cursor-not-allowed"
         >
-          {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />}
           {isLoading ? t("aiThinking") : zh ? "建議三道菜" : "Suggest 3 dishes"}
         </button>
         {ingredients.length === 0 && !isLoading && (
