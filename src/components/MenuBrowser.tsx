@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { MENU_CUISINES, cuisineLabel } from "@/lib/recipes/cuisines";
 import { CUISINE_GUIDE } from "@/lib/recipes/cuisineGuide";
 import type { MenuDish } from "@/lib/recipes/mealdb";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { TonightPicks } from "@/components/home/TonightPicks";
 import { CravingQuizModal } from "@/components/home/CravingQuizModal";
 import {
@@ -24,7 +24,9 @@ const NO_OVEN_KEY = "bontaste_no_oven";
 const QUIZ_POPUP_THRESHOLD = 3;
 
 /**
- * Home: "Tonight" (three calm picks for this evening) and the full menu below it.
+ * Home: prominent Search bar at the top, "Tonight" (three calm picks for this evening),
+ * and the full menu below it. When typing in the search bar, matching dishes appear
+ * immediately below the search bar.
  */
 export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   const router = useRouter();
@@ -111,14 +113,20 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     [dishes]
   );
 
+  const isSearching = query.trim().length > 0;
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return orderedDishes.filter(
-      (d) =>
-        (cuisine === "all" || d.cuisine === cuisine) &&
-        (!noOven || !d.needsOven) &&
-        (!q || d.title.toLowerCase().includes(q))
-    );
+    return orderedDishes.filter((d) => {
+      if (cuisine !== "all" && d.cuisine !== cuisine) return false;
+      if (noOven && d.needsOven) return false;
+      if (!q) return true;
+      return (
+        d.title.toLowerCase().includes(q) ||
+        (d.description && d.description.toLowerCase().includes(q)) ||
+        cuisineLabel(d.cuisine).toLowerCase().includes(q)
+      );
+    });
   }, [orderedDishes, cuisine, query, noOven]);
 
   // The selected cuisine's intro and first dishes (picks that fit a no-oven kitchen).
@@ -178,16 +186,64 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 pt-2 md:pt-10">
-      <TonightPicks
-        picks={picks}
-        onOpen={openDish}
-        opening={opening}
-        onShuffle={handleShuffle}
-        quiz={quiz}
-        onOpenQuiz={() => setQuizOpen(true)}
-        onClearQuiz={handleClearQuiz}
-      />
+    <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 pt-2 md:pt-6">
+      {/* Top search bar right under the header so users can search immediately */}
+      <div className="mb-7 md:mb-9">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <label className="relative block flex-1 max-w-xl">
+            <span className="sr-only">Search dishes</span>
+            <Search
+              className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShown(PAGE_SIZE);
+              }}
+              placeholder="Search dishes, ingredients, or cuisines..."
+              className={field("pl-11 pr-10")}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setShown(PAGE_SIZE);
+                }}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-stone-500 hover:text-stone-900 rounded-md"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
+            )}
+          </label>
+
+          <p className="text-small text-stone-500 shrink-0">
+            Have ingredients?{" "}
+            <Link
+              href="/chat"
+              className="text-stone-900 font-medium underline underline-offset-4 decoration-stone-300 hover:decoration-stone-900"
+            >
+              Ask the chef
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {!isSearching && (
+        <TonightPicks
+          picks={picks}
+          onOpen={openDish}
+          opening={opening}
+          onShuffle={handleShuffle}
+          quiz={quiz}
+          onOpenQuiz={() => setQuizOpen(true)}
+          onClearQuiz={handleClearQuiz}
+        />
+      )}
 
       <CravingQuizModal
         open={quizOpen}
@@ -202,41 +258,20 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
         </p>
       )}
 
-      <section aria-labelledby="menu-title" className="mt-14 md:mt-20 pt-8 md:pt-10 border-t border-stone-200">
-        <div className="md:flex md:items-end md:justify-between md:gap-8">
+      <section
+        aria-labelledby="menu-title"
+        className={isSearching ? "pt-2" : "mt-14 md:mt-20 pt-8 md:pt-10 border-t border-stone-200"}
+      >
+        <div className="flex items-end justify-between gap-4">
           <h2 id="menu-title" className="font-display font-medium text-[28px] md:text-[32px] leading-[1.15] text-stone-900">
-            The menu
+            {isSearching ? `Results for "${query.trim()}"` : "The menu"}
           </h2>
-          <div className="mt-4 md:mt-0 md:w-96 shrink-0">
-            <label className="relative block">
-              <span className="sr-only">Search dishes</span>
-              <Search
-                className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setShown(PAGE_SIZE);
-                }}
-                placeholder="Search dishes"
-                className={field("pl-11")}
-              />
-            </label>
-          </div>
+          {isSearching && (
+            <span className="text-small text-stone-500">
+              {filtered.length} {filtered.length === 1 ? "dish" : "dishes"}
+            </span>
+          )}
         </div>
-
-        <p className="mt-3 text-small text-stone-500 md:text-right">
-          Already have ingredients?{" "}
-          <Link
-            href="/chat"
-            className="text-stone-900 underline underline-offset-4 decoration-stone-300 hover:decoration-stone-900"
-          >
-            Search by ingredients
-          </Link>
-        </p>
 
         <div className="mt-4 flex flex-col gap-2">
           {/* 37 cuisines: one scrolling row at every width, not four wrapped rows. */}
@@ -269,7 +304,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
           </label>
         </div>
 
-        {guide && (
+        {guide && !isSearching && (
           <section aria-labelledby="cuisine-guide" className="mt-6 border-b border-stone-200 pb-8 cc-fade-in" key={cuisine}>
             <h3 id="cuisine-guide" className="font-display font-medium text-[26px] leading-tight text-stone-900">
               {cuisineLabel(cuisine)} cooking

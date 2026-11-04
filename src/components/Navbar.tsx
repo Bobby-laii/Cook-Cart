@@ -12,11 +12,41 @@ import { button, iconButton } from "@/components/ui/styles";
 
 /**
  * How far the header travels before it is fully compact, in px.
- * At the top of the page (`--p: 0`), the logo is large and prominent; as the user
- * scrolls down (`--p: 1`), the header and logo smoothly shrink into a compact bar.
+ * Crucially, both PhoneHeader and DesktopHeader use `sticky` with `top: -COLLAPSE`
+ * and `paddingTop: COLLAPSE`, and animate ONLY with CSS `transform` (`scale` + `translateY`).
+ * Because the DOM box height of `<header>` never changes, scrolling can never trigger
+ * a layout-shift feedback loop (oscillating bigger/smaller).
  */
-const COLLAPSE = 48;
-const LIFT = 16;
+const COLLAPSE = 44;
+const LIFT = 14;
+
+function useScrollCollapse(ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      const y = Math.max(0, window.scrollY);
+      const p = reduce.matches ? (y > COLLAPSE / 2 ? 1 : 0) : Math.min(1, y / COLLAPSE);
+      el.style.setProperty("--p", p.toFixed(3));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    reduce.addEventListener("change", update);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      reduce.removeEventListener("change", update);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [ref]);
+}
 
 export function Navbar() {
   const { t } = useLanguage();
@@ -93,8 +123,9 @@ export function Navbar() {
 }
 
 /**
- * Desktop header: starts with a large, prominent logo at the top of the page and
- * smoothly shrinks into a compact sticky bar as you scroll down.
+ * Desktop header: uses the same fixed-height sticky technique as PhoneHeader
+ * (`top: -COLLAPSE`, `paddingTop: COLLAPSE`, and transform scale) so the logo
+ * starts at 42px and shrinks to 22px as you scroll without ever changing layout height.
  */
 function DesktopHeader({
   navLinks,
@@ -111,39 +142,31 @@ function DesktopHeader({
   onRegister: boolean;
   t: (key: any) => string;
 }) {
-  const [scrolled, setScrolled] = useState(false);
+  const ref = useRef<HTMLElement>(null);
+  useScrollCollapse(ref);
 
-  useEffect(() => {
-    const onScroll = () => {
-      const isDown = window.scrollY > 28;
-      setScrolled((prev) => (prev !== isDown ? isDown : prev));
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const lift = `translateY(calc((1 - var(--p)) * -${LIFT}px))`;
 
   return (
     <header
-      className={`hidden md:block sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b transition-all duration-300 ${
-        scrolled ? "border-stone-200 py-0" : "border-transparent py-3"
-      }`}
+      ref={ref}
+      className="hidden md:block sticky z-50 bg-stone-50/95 backdrop-blur-sm"
+      style={
+        {
+          "--p": 0,
+          top: -COLLAPSE,
+          paddingTop: `${COLLAPSE}px`,
+        } as React.CSSProperties
+      }
     >
-      <div
-        className={`max-w-6xl mx-auto px-6 lg:px-8 flex items-center justify-between gap-6 transition-all duration-300 ${
-          scrolled ? "h-14" : "h-20"
-        }`}
-      >
+      <div className="relative max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
         <Link
           href="/"
           aria-label="Bon Taste home"
-          className="flex items-center rounded-lg origin-left transition-transform duration-300"
+          className="flex items-center h-12 rounded-lg origin-left will-change-transform"
+          style={{ transform: `${lift} scale(calc(1 - var(--p) * 0.46))` }}
         >
-          <span
-            className={`inline-flex items-center gap-[0.32em] leading-none text-stone-900 select-none transition-all duration-300 ${
-              scrolled ? "text-[22px]" : "text-[42px]"
-            }`}
-          >
+          <span className="inline-flex items-center gap-[0.32em] text-[42px] leading-none text-stone-900 select-none">
             <BonTasteMark size="0.98em" className="shrink-0 -mt-[0.08em]" />
             <span className="font-display font-medium tracking-[-0.01em] whitespace-nowrap">
               Bon Taste
@@ -151,7 +174,11 @@ function DesktopHeader({
           </span>
         </Link>
 
-        <nav aria-label="Main" className="flex items-center gap-1 text-small">
+        <nav
+          aria-label="Main"
+          className="flex items-center gap-1 text-small will-change-transform"
+          style={{ transform: lift }}
+        >
           {navLinks.map((link) => {
             const active = isActive(link.href);
             return (
@@ -169,7 +196,7 @@ function DesktopHeader({
           })}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 will-change-transform" style={{ transform: lift }}>
           <ThemeSwitch />
           {user ? (
             <AccountMenu />
@@ -196,43 +223,24 @@ function DesktopHeader({
           )}
         </div>
       </div>
+
+      <div
+        aria-hidden="true"
+        className="h-px bg-stone-200"
+        style={{ opacity: "clamp(0, calc((var(--p) - 0.5) * 2), 1)" }}
+      />
     </header>
   );
 }
 
 /**
- * Phone header: starts with a bold 44px logo at the top of the page and smoothly
- * scales down to 20px as the user scrolls (`--p` from 0 to 1).
+ * Phone header: starts with a bold 42px logo at the top of the page and smoothly
+ * scales down to 20px as the user scrolls (`--p` from 0 to 1), without changing layout height.
  */
 function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: boolean }) {
   const { t } = useLanguage();
   const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame = 0;
-
-    const update = () => {
-      frame = 0;
-      const y = Math.max(0, window.scrollY);
-      const p = reduce.matches ? (y > COLLAPSE / 2 ? 1 : 0) : Math.min(1, y / COLLAPSE);
-      el.style.setProperty("--p", p.toFixed(3));
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    reduce.addEventListener("change", update);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      reduce.removeEventListener("change", update);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
+  useScrollCollapse(ref);
 
   const lift = `translateY(calc((1 - var(--p)) * -${LIFT}px))`;
 
@@ -252,10 +260,10 @@ function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: 
         <Link
           href="/"
           aria-label="Bon Taste home"
-          className="flex items-center h-12 min-w-0 rounded-lg origin-left"
-          style={{ transform: `${lift} scale(calc(1 - var(--p) * 0.54))` }}
+          className="flex items-center h-12 min-w-0 rounded-lg origin-left will-change-transform"
+          style={{ transform: `${lift} scale(calc(1 - var(--p) * 0.52))` }}
         >
-          <span className="inline-flex items-center gap-[0.3em] text-[44px] leading-none text-stone-900 select-none">
+          <span className="inline-flex items-center gap-[0.3em] text-[42px] leading-none text-stone-900 select-none">
             <BonTasteMark size="0.98em" className="shrink-0 -mt-[0.08em]" />
             <span className="font-display font-medium tracking-[-0.01em] whitespace-nowrap">
               Bon Taste
@@ -263,7 +271,7 @@ function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: 
           </span>
         </Link>
 
-        <div className="shrink-0 -mr-2 flex items-center" style={{ transform: lift }}>
+        <div className="shrink-0 -mr-2 flex items-center will-change-transform" style={{ transform: lift }}>
           <ThemeSwitch />
           {signedIn ? (
             <AccountMenu />
