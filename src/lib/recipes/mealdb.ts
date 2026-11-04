@@ -193,12 +193,31 @@ function sectionHeader(line: string): string | null {
     return null;
 }
 
+const VULGAR: Record<string, string> = {
+    "1/2": "½", "1/3": "⅓", "2/3": "⅔", "1/4": "¼", "3/4": "¾",
+    "1/8": "⅛", "3/8": "⅜", "5/8": "⅝", "7/8": "⅞",
+};
+
+/**
+ * "1 1/2 cups" → "1½ cups", "1/4 tsp" → "¼ tsp". Leaves dates ("1/2/2024"), ratios
+ * inside longer numbers and fractions with no kitchen glyph ("1/5") alone.
+ */
+export function prettyFractions(text: string): string {
+    return text.replace(/(?<![\d/])(?:(\d+)[ -])?(\d)\/(\d)(?![\d/])/g, (match, whole, a, b) => {
+        const glyph = VULGAR[`${a}/${b}`];
+        if (!glyph) return match;
+        return whole ? `${whole}${glyph}` : glyph;
+    });
+}
+
 /**
  * Turn TheMealDB's single instructions blob into numbered steps.
  * - "1." / "Step 1:" numbering is stripped; a line that is only a number is dropped.
  * - A section header ("Marinate the beef:") becomes the title of the step after it.
  * - Steps without a header keep the generic title "Step n" (the UI hides it).
  * - Each step gets a timer when its text names a duration (see parseTimerSeconds).
+ * - Typed fractions ("1/2 teaspoon") become kitchen fractions ("½ teaspoon"), so the
+ *   method reads like the ingredient list.
  */
 export function splitInstructions(instructions: string): RecipeStep[] {
     const steps: RecipeStep[] = [];
@@ -220,7 +239,7 @@ export function splitInstructions(instructions: string): RecipeStep[] {
         steps.push({
             step: n,
             title: pendingTitle ?? `Step ${n}`,
-            text: line,
+            text: prettyFractions(line),
             ...(timerSeconds ? { timerSeconds } : {}),
         });
         pendingTitle = null;

@@ -343,3 +343,19 @@ describe("menu descriptions", () => {
         expect(mealToDish({ ...BEEF_AND_BROCCOLI, idMeal: "99999999" }).description).toBe("");
     });
 });
+
+import { prettyFractions } from "@/lib/recipes/mealdb";
+
+describe("prettyFractions", () => {
+  it("turns typed fractions in step text into kitchen fractions", () => {
+    expect(prettyFractions("1/2 teaspoon cornstarch, 1/8 teaspoon pepper")).toBe("½ teaspoon cornstarch, ⅛ teaspoon pepper");
+    expect(prettyFractions("Add 1 1/2 cups of water")).toBe("Add 1½ cups of water");
+    expect(prettyFractions("2-1/4 cups flour")).toBe("2¼ cups flour");
+  });
+
+  it("leaves dates, odd fractions and plain numbers alone", () => {
+    expect(prettyFractions("Made on 1/2/2024")).toBe("Made on 1/2/2024");
+    expect(prettyFractions("Cut into 1/5 slices")).toBe("Cut into 1/5 slices");
+    expect(prettyFractions("Bake for 20 minutes")).toBe("Bake for 20 minutes");
+  });
+});
