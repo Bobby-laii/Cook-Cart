@@ -1,7 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Hand, Mic, X } from "lucide-react";
+import { button } from "@/components/ui/styles";
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export interface FarViewTimer {
   remainingSeconds: number;
@@ -48,8 +52,38 @@ export function FarView({
   onClose: () => void;
   onToggleTimer?: () => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Like the bottom sheets: focus starts on Close, Tab stays inside, and focus goes
+  // back to the button that opened the far view when it closes.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const returnTo = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus({ preventScroll: true });
+    return () => returnTo?.focus?.({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      const panel = panelRef.current;
+      if (e.key !== "Tab" || !panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const inside = panel.contains(document.activeElement);
+      if (e.shiftKey && (!inside || document.activeElement === first)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -60,7 +94,7 @@ export function FarView({
   const timerDone = timer ? 1 - timer.remainingSeconds / Math.max(1, timer.totalSeconds) : 0;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Far view" className="fixed inset-0 z-[60] flex flex-col bg-stone-50 text-stone-900">
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Far view" className="fixed inset-0 z-[60] flex flex-col bg-stone-50 text-stone-900">
       {/* Progress runs the full width at the top, so it reads from anywhere in the room. */}
       <div className="h-3 bg-stone-200" aria-hidden>
         <div className="h-full bg-fresh-500 transition-[width] duration-500 ease-out" style={{ width: `${progress * 100}%` }} />
@@ -72,8 +106,9 @@ export function FarView({
         </p>
         <button
           type="button"
+          ref={closeRef}
           onClick={onClose}
-          className="inline-flex h-14 items-center gap-2 rounded-full bg-stone-100 px-5 text-lg font-bold"
+          className={button("secondary", "md", "h-14 rounded-full px-5 text-lg")}
         >
           <X className="h-6 w-6" aria-hidden />
           Close

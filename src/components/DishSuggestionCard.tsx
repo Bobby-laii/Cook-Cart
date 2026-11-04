@@ -5,12 +5,15 @@ import { DishSuggestion } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Check, Clock, ThumbsUp, ThumbsDown, Bookmark, Utensils } from "lucide-react";
+import { button, errorText, iconButton } from "@/components/ui/styles";
 
 interface DishSuggestionCardProps {
   suggestion: DishSuggestion;
   onSelectDish?: (dish: DishSuggestion) => void;
   onStartCooking?: (dish: DishSuggestion) => void;
 }
+
+const SAVE_FAILED = "Couldn't save it just now.";
 
 export function DishSuggestionCard({
   suggestion,
@@ -25,6 +28,8 @@ export function DishSuggestionCard({
   const [saving, setSaving] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [saveNote, setSaveNote] = useState("");
+
+  const saveFailed = saveNote === SAVE_FAILED;
 
   const displayTitle = suggestion.title;
   const displayDesc = suggestion.description;
@@ -96,11 +101,11 @@ export function DishSuggestionCard({
         setSaved(true);
         setSaveNote("");
       } else {
-        setSaveNote("Couldn't save it just now.");
+        setSaveNote(SAVE_FAILED);
       }
     } catch (e) {
       console.error("Save error", e);
-      setSaveNote("Couldn't save it just now.");
+      setSaveNote(SAVE_FAILED);
     } finally {
       setSaving(false);
     }
@@ -136,7 +141,7 @@ export function DishSuggestionCard({
 
       <h3 className="mt-4 font-display font-medium text-[24px] leading-[1.2] text-stone-900">{displayTitle}</h3>
       {metaLine && (
-        <p className="mt-1 flex items-center gap-1.5 text-[15px] text-stone-500">
+        <p className="mt-1 flex items-center gap-1.5 text-small text-stone-500">
           <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
           {metaLine}
         </p>
@@ -144,7 +149,7 @@ export function DishSuggestionCard({
 
       {displayDesc && <p className="mt-2 text-stone-700 line-clamp-3">{displayDesc}</p>}
 
-      <div className="mt-3 space-y-1.5 text-[15px]">
+      <div className="mt-3 space-y-1.5 text-small">
         {suggestion.usedUserIngredients.length > 0 && (
           <p className="text-stone-700">
             <span className="inline-flex items-center gap-1 font-bold text-fresh-700 mr-1.5">
@@ -166,7 +171,7 @@ export function DishSuggestionCard({
         <button
           type="button"
           onClick={() => onSelectDish && onSelectDish(suggestion)}
-          className="h-[52px] px-6 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold transition-colors"
+          className={button("primary", "md")}
         >
           See the recipe
         </button>
@@ -174,7 +179,7 @@ export function DishSuggestionCard({
           <button
             type="button"
             onClick={() => onStartCooking(suggestion)}
-            className="h-[52px] px-5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold transition-colors"
+            className={button("secondary", "md", "px-5")}
           >
             {stepCount > 0 ? `Start cooking, ${stepCount} steps` : "Start cooking"}
           </button>
@@ -186,9 +191,11 @@ export function DishSuggestionCard({
           type="button"
           onClick={() => setRating(rating === "up" ? null : "up")}
           aria-pressed={rating === "up"}
-          className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
+          className={iconButton(
+            "ghost",
+            "sm",
             rating === "up" ? "text-fresh-700" : "text-stone-500 hover:text-stone-900"
-          }`}
+          )}
           title={t("thumbsUp")}
           aria-label={t("thumbsUp")}
         >
@@ -198,9 +205,11 @@ export function DishSuggestionCard({
           type="button"
           onClick={() => setRating(rating === "down" ? null : "down")}
           aria-pressed={rating === "down"}
-          className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
+          className={iconButton(
+            "ghost",
+            "sm",
             rating === "down" ? "text-stone-900" : "text-stone-500 hover:text-stone-900"
-          }`}
+          )}
           title={t("thumbsDown")}
           aria-label={t("thumbsDown")}
         >
@@ -210,15 +219,21 @@ export function DishSuggestionCard({
           type="button"
           onClick={handleSaveRecipe}
           disabled={saving || saved}
-          className={`h-12 px-3 rounded-lg flex items-center gap-1.5 text-[15px] font-bold transition-colors ${
-            saved ? "text-stone-900" : "text-stone-500 hover:text-stone-900"
-          }`}
+          className={button(
+            "ghost",
+            "sm",
+            // "Saved" is a finished state, not an unavailable one, so it stays at full strength.
+            saved ? "gap-1.5 px-3 text-stone-900 disabled:cursor-default disabled:opacity-100" : "gap-1.5 px-3 text-stone-500 hover:text-stone-900"
+          )}
         >
           <Bookmark className={`w-5 h-5 ${saved ? "fill-stone-900" : ""}`} aria-hidden="true" />
           {saved ? "Saved" : "Save"}
         </button>
         {saveNote && (
-          <p className="ml-2 text-sm text-stone-500" role="status">
+          <p
+            className={saveFailed ? `ml-2 ${errorText}` : "ml-2 text-caption text-stone-500"}
+            role={saveFailed ? "alert" : "status"}
+          >
             {saveNote}
           </p>
         )}

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { button, cx, errorText, field } from "@/components/ui/styles";
 
-const inputClass =
-  "h-[52px] w-full rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none";
-const labelClass = "mb-2 block text-[15px] font-bold text-stone-900";
-const hintClass = "mt-2 text-[14px] text-stone-500";
+const inputClass = field();
+const labelClass = "mb-2 block text-small font-bold text-stone-900";
+const hintClass = "mt-2 text-caption text-stone-500";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -60,12 +60,12 @@ export default function RegisterPage() {
   return (
     <div className="mx-auto w-full max-w-md px-5 pb-12 pt-8 sm:pt-16">
       <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900">Create an account</h1>
-      <p className="mt-2 text-[17px] text-stone-500">
+      <p className="mt-2 text-body text-stone-500">
         Keep the recipes you love and meet your own chef.
       </p>
 
       {error && (
-        <div role="alert" className="mt-6 flex items-start gap-2 text-[15px] text-danger">
+        <div role="alert" className={cx("mt-6 flex items-start gap-2", errorText)}>
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
           <span>{error}</span>
         </div>
@@ -124,7 +124,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="border-t border-stone-200 pt-5">
-          <p className="text-[15px] text-stone-500">
+          <p className="text-small text-stone-500">
             Optional. Your chef keeps these in mind when suggesting dishes.
           </p>
         </div>
@@ -160,14 +160,14 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand-500 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+          className={button("primary", "md", "w-full")}
         >
           {loading && <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden />}
           {loading ? "Creating your account..." : "Create account"}
         </button>
       </form>
 
-      <p className="mt-8 text-[15px] text-stone-500">
+      <p className="mt-8 text-small text-stone-500">
         {"Already have an account? "}
         <Link href="/login" className="font-bold text-stone-900 underline underline-offset-4">
           Sign in

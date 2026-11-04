@@ -10,6 +10,7 @@ import { DishSuggestion } from "@/types";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
 import { Send, Plus, MessageSquare, Trash2, Settings, Loader2, X } from "lucide-react";
 import Link from "next/link";
+import { button, cx, field, iconButton } from "@/components/ui/styles";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -312,7 +313,7 @@ function ChatPageContent() {
 
   const savedChatsList = (onPicked?: () => void) =>
     conversations.length === 0 ? (
-      <p className="text-[15px] text-stone-500 py-2">No saved chats yet.</p>
+      <p className="text-small text-stone-500 py-2">No saved chats yet.</p>
     ) : (
       <ul className="space-y-0.5">
         {conversations.map((c) => {
@@ -331,9 +332,7 @@ function ChatPageContent() {
                   onPicked?.();
                 }}
                 aria-current={active ? "true" : undefined}
-                className={`flex-1 min-w-0 min-h-12 px-3 text-left text-[15px] flex items-center gap-2 ${
-                  active ? "font-bold" : ""
-                }`}
+                className={cx("flex-1 min-w-0 min-h-12 px-3 text-left text-small flex items-center gap-2", active && "font-bold")}
               >
                 <MessageSquare className="w-4 h-4 shrink-0 text-stone-500" aria-hidden />
                 <span className="truncate">{c.title}</span>
@@ -341,7 +340,7 @@ function ChatPageContent() {
               <button
                 type="button"
                 onClick={(e) => handleDeleteConversation(e, c.id)}
-                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-lg text-stone-500 hover:text-danger"
+                className={iconButton("ghost", "sm", "shrink-0 text-stone-500 hover:bg-transparent hover:text-danger")}
                 aria-label={`Delete chat: ${c.title}`}
                 title="Delete chat"
               >
@@ -370,19 +369,19 @@ function ChatPageContent() {
             </div>
             <Link
               href="/chef-settings"
-              className="shrink-0 w-12 h-12 -mr-2 flex items-center justify-center rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+              className={iconButton("ghost", "sm", "shrink-0 -mr-2 text-stone-500 hover:text-stone-900")}
               title="Chef settings"
               aria-label="Chef settings"
             >
               <Settings className="w-5 h-5" aria-hidden />
             </Link>
           </div>
-          <p className="mt-3 text-[15px] text-stone-500">
+          <p className="mt-3 text-small text-stone-500">
             Ask how to cook anything, what to swap, or whether it is done.
           </p>
           <Link
             href="/onboarding/chef?next=/chat"
-            className="mt-1 inline-flex items-center min-h-12 text-[15px] text-stone-900 underline underline-offset-4 decoration-stone-300 hover:decoration-stone-900"
+            className="mt-1 inline-flex items-center min-h-12 text-small text-stone-900 underline underline-offset-4 decoration-stone-300 hover:decoration-stone-900"
           >
             {"Change your chef's look"}
           </Link>
@@ -390,7 +389,7 @@ function ChatPageContent() {
           <button
             type="button"
             onClick={() => startNewChat()}
-            className="mt-6 w-full h-[52px] px-4 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold flex items-center justify-center gap-2 transition-colors"
+            className={button("secondary", "md", "mt-6 w-full px-4")}
           >
             <Plus className="w-5 h-5" aria-hidden />
             <span>{newChatLabel}</span>
@@ -417,7 +416,7 @@ function ChatPageContent() {
                 <button
                   type="button"
                   onClick={() => setSavedOpen(true)}
-                  className="h-12 px-3 rounded-lg text-[15px] text-stone-900 hover:bg-stone-100 flex items-center gap-2"
+                  className={button("ghost", "sm", "px-3 font-normal")}
                   aria-haspopup="dialog"
                 >
                   <MessageSquare className="w-4 h-4" aria-hidden />
@@ -426,7 +425,7 @@ function ChatPageContent() {
                 <button
                   type="button"
                   onClick={() => startNewChat()}
-                  className="w-12 h-12 rounded-lg text-stone-900 hover:bg-stone-100 flex items-center justify-center"
+                  className={iconButton("ghost", "sm")}
                   aria-label={newChatLabel}
                   title={newChatLabel}
                 >
@@ -518,14 +517,14 @@ function ChatPageContent() {
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   placeholder="Ask anything about cooking"
-                  className="flex-1 min-w-0 h-12 px-4 rounded-lg border border-transparent bg-stone-100 text-stone-900 focus:outline-none focus:bg-stone-50 focus:border-stone-900"
+                  className={field("flex-1 min-w-0 w-auto")}
                   autoComplete="off"
                   enterKeyHint="send"
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !inputMessage.trim()}
-                  className="shrink-0 w-12 h-12 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 flex items-center justify-center transition-colors disabled:bg-stone-200 disabled:text-stone-500"
+                  className={iconButton("primary", "md", "shrink-0")}
                   aria-label="Send"
                   title="Send"
                 >
@@ -554,7 +553,7 @@ function ChatPageContent() {
               <button
                 type="button"
                 onClick={() => setSavedOpen(false)}
-                className="w-12 h-12 -mr-3 rounded-lg flex items-center justify-center text-stone-500 hover:text-stone-900"
+                className={iconButton("ghost", "sm", "-mr-3 text-stone-500 hover:text-stone-900")}
                 aria-label="Close"
               >
                 <X className="w-5 h-5" aria-hidden />
@@ -568,7 +567,7 @@ function ChatPageContent() {
                   startNewChat();
                   setSavedOpen(false);
                 }}
-                className="w-full h-[52px] rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold flex items-center justify-center gap-2"
+                className={button("primary", "md", "w-full")}
               >
                 <Plus className="w-5 h-5" aria-hidden />
                 {newChatLabel}
@@ -582,7 +581,7 @@ function ChatPageContent() {
 }
 
 function ChatLoading() {
-  return <div className="p-10 text-center text-[15px] text-stone-500">Loading the chat</div>;
+  return <div className="p-10 text-center text-small text-stone-500">Loading the chat</div>;
 }
 
 export default function ChatPage() {

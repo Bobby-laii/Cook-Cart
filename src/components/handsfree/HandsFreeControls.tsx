@@ -4,6 +4,7 @@ import React from "react";
 import { Hand, Maximize2, Mic } from "lucide-react";
 import type { CameraState } from "@/lib/handsfree/useWaveGesture";
 import type { MicState } from "@/lib/handsfree/useVoiceCommands";
+import { chip, errorText } from "@/components/ui/styles";
 
 const CAMERA_NOTE: Partial<Record<CameraState, string>> = {
   starting: "Starting the camera…",
@@ -21,7 +22,8 @@ function Toggle({
   icon,
   label,
 }: {
-  on: boolean;
+  /** Left out for a plain action (Far view), which is not an on/off switch. */
+  on?: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
@@ -31,9 +33,7 @@ function Toggle({
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`inline-flex h-12 items-center gap-2 rounded-full px-4 font-bold transition-colors duration-150 ${
-        on ? "bg-brand-500 text-white" : "bg-stone-100 text-stone-900 hover:bg-stone-200"
-      }`}
+      className={chip(Boolean(on), "gap-2 font-bold")}
     >
       {icon}
       {label}
@@ -63,19 +63,25 @@ export function HandsFreeControls({
   onFarView: () => void;
 }) {
   const note = (wave && CAMERA_NOTE[camera]) || (voice && MIC_NOTE[mic]) || "";
+  // "Starting the camera…" is progress, not a problem.
+  const starting = note !== "" && wave && camera === "starting";
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         <Toggle on={wave} onClick={onToggleWave} icon={<Hand className="h-5 w-5" aria-hidden />} label="Wave" />
         <Toggle on={voice} onClick={onToggleVoice} icon={<Mic className="h-5 w-5" aria-hidden />} label="Voice" />
-        <Toggle on={false} onClick={onFarView} icon={<Maximize2 className="h-5 w-5" aria-hidden />} label="Far view" />
+        <Toggle onClick={onFarView} icon={<Maximize2 className="h-5 w-5" aria-hidden />} label="Far view" />
       </div>
-      {note ? (
-        <p className="text-sm text-danger" role="status">
+      {note && starting ? (
+        <p className="text-small text-stone-500" role="status">
+          {note}
+        </p>
+      ) : note ? (
+        <p className={errorText} role="alert">
           {note}
         </p>
       ) : wave ? (
-        <p className="text-sm text-stone-500">The camera only looks for a wave. Nothing is recorded or sent.</p>
+        <p className="text-small text-stone-500">The camera only looks for a wave. Nothing is recorded or sent.</p>
       ) : null}
     </div>
   );

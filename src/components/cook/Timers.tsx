@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Pause, Play, Plus, RotateCcw, Timer, X } from "lucide-react";
 import { formatClock, formatDuration } from "./cookHelpers";
+import { button, chip, iconButton } from "@/components/ui/styles";
 
 export interface CookTimer {
   id: string;
@@ -116,7 +117,7 @@ export function StepTimerButton({
           >
             {formatClock(left)}
           </span>
-          <span className="text-[15px] font-bold mt-1" aria-live="polite">
+          <span className="text-small font-bold mt-1" aria-live="polite">
             {state}
           </span>
         </span>
@@ -126,7 +127,7 @@ export function StepTimerButton({
           type="button"
           onClick={onReset}
           aria-label="Reset timer"
-          className="w-14 flex-shrink-0 inline-flex items-center justify-center rounded-md border border-stone-200 text-stone-900 hover:bg-stone-100 transition-colors"
+          className={iconButton("secondary", "sm", "h-auto w-14 flex-shrink-0")}
         >
           <RotateCcw className="w-6 h-6" aria-hidden />
         </button>
@@ -165,7 +166,7 @@ export function TimerRow({
           type="button"
           onClick={onToggle}
           aria-label={running ? `Pause ${timer.label}` : `Resume ${timer.label}`}
-          className="w-12 h-12 inline-flex items-center justify-center rounded-md"
+          className={iconButton("ghost", "sm", "text-current hover:bg-stone-900/10")}
         >
           {running ? <Pause className="w-5 h-5" aria-hidden /> : <Play className="w-5 h-5" aria-hidden />}
         </button>
@@ -174,7 +175,7 @@ export function TimerRow({
         type="button"
         onClick={onDismiss}
         aria-label={`Remove ${timer.label}`}
-        className="w-12 h-12 inline-flex items-center justify-center rounded-md"
+        className={iconButton("ghost", "sm", "text-current hover:bg-stone-900/10")}
       >
         <X className="w-5 h-5" aria-hidden />
       </button>
@@ -193,7 +194,7 @@ export function AddTimerControl({ onAdd }: { onAdd: (seconds: number) => void })
         type="button"
         onClick={() => setOpen(true)}
         aria-expanded={false}
-        className="inline-flex items-center gap-2 h-12 px-1 text-stone-500 font-bold hover:text-stone-900 transition-colors"
+        className={button("ghost", "sm", "-ml-4 text-stone-500 hover:text-stone-900")}
       >
         <Plus className="w-5 h-5" aria-hidden />
         Add a timer
@@ -210,7 +211,7 @@ export function AddTimerControl({ onAdd }: { onAdd: (seconds: number) => void })
             onAdd(sec);
             setOpen(false);
           }}
-          className="h-12 px-4 rounded-full bg-stone-100 text-stone-900 font-bold hover:bg-stone-200 transition-colors"
+          className={chip(false, "font-bold")}
         >
           {formatDuration(sec)}
         </button>
@@ -219,7 +220,7 @@ export function AddTimerControl({ onAdd }: { onAdd: (seconds: number) => void })
         type="button"
         onClick={() => setOpen(false)}
         aria-label="Cancel adding a timer"
-        className="w-12 h-12 inline-flex items-center justify-center rounded-full text-stone-500 hover:bg-stone-100"
+        className={iconButton("ghost", "sm", "rounded-full text-stone-500")}
       >
         <X className="w-5 h-5" aria-hidden />
       </button>

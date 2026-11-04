@@ -16,6 +16,7 @@ import {
   randomChefAvatar,
   randomChefName,
 } from "@/lib/avatar/chefAvatar";
+import { button, chip, cx, errorText, field } from "@/components/ui/styles";
 
 type Step = 1 | 2 | 3;
 
@@ -152,16 +153,12 @@ function ChefOnboardingContent() {
     }
   };
 
-  const primaryBtn =
-    "inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60 sm:w-auto";
-  const secondaryBtn =
-    "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-4 text-[15px] font-bold text-stone-900 transition-colors hover:border-stone-500";
-  const quietBtn =
-    "inline-flex min-h-[48px] w-full items-center justify-center rounded-lg px-4 text-[15px] font-bold text-stone-500 transition-colors hover:text-stone-900 disabled:opacity-50 sm:w-auto";
+  const primaryBtn = button("primary", "md", "w-full sm:w-auto");
+  const quietBtn = button("ghost", "sm", "w-full text-stone-500 hover:text-stone-900 sm:w-auto");
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center gap-2 text-[15px] text-stone-500">
+      <div className="flex min-h-[70vh] items-center justify-center gap-2 text-small text-stone-500">
         <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> {"Preparing the kitchen..."}
       </div>
     );
@@ -176,9 +173,9 @@ function ChefOnboardingContent() {
           <ChefAvatar config={config} size={220} className="cc-pop mx-auto h-48 w-48 rounded-full sm:h-56 sm:w-56" title={displayName} mood="idle" />
           <div>
             <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900">{`This is ${displayName}`}</h1>
-            <p className="mt-1 text-[15px] text-stone-500">{personalityInfo.label}</p>
+            <p className="mt-1 text-small text-stone-500">{personalityInfo.label}</p>
           </div>
-          <p className="border-t border-stone-200 pt-5 text-[17px] leading-relaxed text-stone-900">{personalityInfo.greeting}</p>
+          <p className="border-t border-stone-200 pt-5 text-body leading-relaxed text-stone-900">{personalityInfo.greeting}</p>
           <button type="button" onClick={() => router.push(nextUrl)} className={primaryBtn}>
             {goingToChat ? `Chat with ${displayName}` : "Done"}
           </button>
@@ -208,16 +205,16 @@ function ChefOnboardingContent() {
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-5">
-          <p className="text-[14px] text-stone-500">{`Step ${step} of 2`}</p>
+          <p className="text-caption text-stone-500">{`Step ${step} of 2`}</p>
           <h1 className="mt-1 font-display text-[34px] font-medium leading-[1.1] text-stone-900 sm:text-[40px]">{title}</h1>
-          <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-stone-500">{intro}</p>
+          <p className="mt-2 max-w-xl text-body leading-relaxed text-stone-500">{intro}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
           {/* Live preview */}
           <aside className="lg:col-span-5">
             <div className="flex flex-col items-center lg:sticky lg:top-6">
-              <div className="mb-4 flex min-h-[56px] w-full items-center justify-center rounded-lg bg-stone-100 px-4 py-3 text-center text-[15px] leading-snug text-stone-900">
+              <div className="mb-4 flex min-h-[56px] w-full items-center justify-center rounded-lg bg-stone-100 px-4 py-3 text-center text-small leading-snug text-stone-900">
                 <span key={bubble} className="cc-fade-in inline-block">
                   {bubble}
                 </span>
@@ -234,18 +231,18 @@ function ChefOnboardingContent() {
               </div>
 
               <p className="mt-3 font-display text-[24px] font-medium text-stone-900">{displayName}</p>
-              {step === 2 && <p className="text-[14px] text-stone-500">{personalityInfo.label}</p>}
+              {step === 2 && <p className="text-caption text-stone-500">{personalityInfo.label}</p>}
 
               {step === 1 && (
                 <div className="mt-4 flex w-full gap-2 sm:w-auto">
-                  <button type="button" onClick={randomize} className={`${secondaryBtn} flex-1 sm:flex-none`}>
+                  <button type="button" onClick={randomize} className={button("secondary", "sm", "flex-1 sm:flex-none")}>
                     <Dices
                       className={`h-5 w-5 text-stone-900 transition-transform duration-500 motion-reduce:transition-none ${diceSpin ? "rotate-[360deg]" : ""}`}
                       aria-hidden
                     />
                     Surprise me
                   </button>
-                  <button type="button" onClick={reset} className={`${secondaryBtn} flex-1 sm:flex-none`}>
+                  <button type="button" onClick={reset} className={button("secondary", "sm", "flex-1 sm:flex-none")}>
                     <RotateCcw className="h-5 w-5 text-stone-500" aria-hidden />
                     Reset
                   </button>
@@ -261,7 +258,7 @@ function ChefOnboardingContent() {
             ) : (
               <div className="space-y-7">
                 <div>
-                  <label htmlFor="chef-name" className="mb-2 block text-[17px] font-bold text-stone-900">
+                  <label htmlFor="chef-name" className="mb-2 block text-body font-bold text-stone-900">
                     Chef name
                   </label>
                   <input
@@ -277,10 +274,10 @@ function ChefOnboardingContent() {
                     placeholder={DEFAULT_CHEF_NAME}
                     aria-invalid={Boolean(error)}
                     aria-describedby={error ? "chef-name-error" : undefined}
-                    className="h-[52px] w-full rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none"
+                    className={field()}
                   />
                   {error && (
-                    <p id="chef-name-error" className="mt-2 text-[15px] font-bold text-danger">
+                    <p id="chef-name-error" role="alert" className={cx("mt-2", errorText)}>
                       {error}
                     </p>
                   )}
@@ -291,7 +288,7 @@ function ChefOnboardingContent() {
                         setChefName((n) => randomChefName(n));
                         if (error) setError("");
                       }}
-                      className="min-h-[48px] inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-4 text-[15px] font-bold text-stone-900 transition-colors hover:border-stone-500"
+                      className={chip(false, "gap-2 font-bold")}
                     >
                       <Dices className="h-4 w-4" aria-hidden />
                       Random name
@@ -307,9 +304,7 @@ function ChefOnboardingContent() {
                             if (error) setError("");
                           }}
                           aria-pressed={active}
-                          className={`min-h-[48px] rounded-full border px-4 text-[15px] transition-colors ${
-                            active ? "border-brand-500 bg-brand-500 font-bold text-white" : "border-stone-200 bg-stone-50 text-stone-900 hover:border-stone-500"
-                          }`}
+                          className={chip(active)}
                         >
                           {n}
                         </button>
@@ -319,7 +314,7 @@ function ChefOnboardingContent() {
                 </div>
 
                 <fieldset>
-                  <legend className="mb-3 text-[17px] font-bold text-stone-900">How your chef talks</legend>
+                  <legend className="mb-3 text-body font-bold text-stone-900">How your chef talks</legend>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {CHEF_PERSONALITIES.map((p) => {
                       const active = personality === p.id;
@@ -337,10 +332,10 @@ function ChefOnboardingContent() {
                           }`}
                         >
                           <span className="mb-1 flex items-center justify-between gap-2">
-                            <span className="text-[17px] font-bold text-stone-900">{p.label}</span>
+                            <span className="text-body font-bold text-stone-900">{p.label}</span>
                             {active && <Check className="h-5 w-5 shrink-0 text-stone-900" strokeWidth={2.5} aria-hidden />}
                           </span>
-                          <span className="block text-[15px] leading-relaxed text-stone-500">{p.description}</span>
+                          <span className="block text-small leading-relaxed text-stone-500">{p.description}</span>
                         </button>
                       );
                     })}
@@ -387,7 +382,7 @@ function ChefOnboardingContent() {
 
 export default function ChefOnboardingPage() {
   return (
-    <Suspense fallback={<div className="p-10 text-center text-[15px] text-stone-500">Loading...</div>}>
+    <Suspense fallback={<div className="p-10 text-center text-small text-stone-500">Loading...</div>}>
       <ChefOnboardingContent />
     </Suspense>
   );

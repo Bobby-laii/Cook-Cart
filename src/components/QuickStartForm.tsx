@@ -10,6 +10,7 @@ import {
   TOP_50_EUROPEAN_INGREDIENTS,
 } from "@/config/regionalIngredients";
 import { X, Check, ChevronDown, Loader2, Plus, Minus } from "lucide-react";
+import { button, chip, field, iconButton } from "@/components/ui/styles";
 
 export interface QuickStartData {
   cuisine: string;
@@ -178,9 +179,6 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
           ? t("quickUnder45")
           : t("quickUnder60");
 
-  const fieldClass =
-    "rounded-lg border border-transparent bg-stone-100 text-stone-900 focus:outline-none focus:bg-stone-50 focus:border-stone-900";
-
   // Folded once a conversation is under way so the messages get the screen; the
   // summary keeps what was asked for visible.
   if (!isExpanded) {
@@ -198,7 +196,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
           type="button"
           onClick={() => setIsExpanded(true)}
           aria-expanded={false}
-          className="shrink-0 h-12 px-4 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold transition-colors"
+          className={button("secondary", "sm", "shrink-0")}
         >
           {ingredients.length > 0 ? "Change" : "Open"}
         </button>
@@ -220,7 +218,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
             type="button"
             onClick={() => setIsExpanded(false)}
             aria-expanded={true}
-            className="shrink-0 h-12 -mt-2 -mr-2 px-3 rounded-lg text-[15px] text-stone-500 hover:text-stone-900"
+            className={button("ghost", "sm", "shrink-0 -mt-2 -mr-2 px-3 font-normal text-stone-500 hover:text-stone-900")}
           >
             Hide
           </button>
@@ -258,7 +256,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
               }
             }}
             placeholder="Eggs, rice, tomatoes"
-            className={`${fieldClass} w-full h-[52px] px-4 text-base`}
+            className={field()}
             autoComplete="off"
             enterKeyHint="done"
           />
@@ -285,7 +283,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
         <button
           type="submit"
           disabled={!canSubmit}
-          className="inline-flex items-center justify-center gap-2 h-[52px] px-6 shrink-0 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold transition-colors disabled:bg-stone-200 disabled:text-stone-500 disabled:cursor-not-allowed"
+          className={button("primary", "md", "shrink-0")}
         >
           {isLoading && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
           {isLoading ? "Finding dishes" : "Find dishes"}
@@ -298,13 +296,13 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
           {ingredients.map((item) => (
             <li
               key={item}
-              className="inline-flex items-center gap-1 pl-3.5 pr-1 min-h-10 rounded-full bg-stone-900 text-stone-50 text-[15px]"
+              className={chip(true, "gap-0 pr-0")}
             >
               {item}
               <button
                 type="button"
                 onClick={() => handleRemoveIngredient(item)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-700"
+                className={iconButton("ghost", "sm", "rounded-full text-white hover:bg-white/15")}
                 aria-label={`Remove ${item}`}
               >
                 <X className="w-4 h-4" aria-hidden="true" />
@@ -317,17 +315,17 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
       {/* Quick add, one tap each */}
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Quick add">
         {popularChips
-          .filter((chip) => !ingredients.some((i) => i.toLowerCase() === chip.en.toLowerCase()))
-          .map((chip) => (
+          .filter((item) => !ingredients.some((i) => i.toLowerCase() === item.en.toLowerCase()))
+          .map((item) => (
             <button
-              key={chip.en}
+              key={item.en}
               type="button"
-              onClick={() => handleAddIngredient(chip.en)}
-              aria-label={`Add ${chip.en}`}
-              className="inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full bg-stone-100 text-[15px] text-stone-700 hover:bg-stone-200 transition-colors"
+              onClick={() => handleAddIngredient(item.en)}
+              aria-label={`Add ${item.en}`}
+              className={chip(false)}
             >
               <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-              {chip.en}
+              {item.en}
             </button>
           ))}
       </div>
@@ -358,14 +356,14 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
         {showOptions && (
           <div id="quickstart-options" className="grid gap-5 pb-5 sm:grid-cols-2">
             <div className="space-y-2">
-              <span id="servings-label" className="block text-[15px] font-bold text-stone-900">
+              <span id="servings-label" className="block text-small font-bold text-stone-900">
                 Cooking for
               </span>
-              <div className={`${fieldClass} inline-flex items-center`} role="group" aria-labelledby="servings-label">
+              <div className={field("inline-flex h-auto w-auto items-center px-0")} role="group" aria-labelledby="servings-label">
                 <button
                   type="button"
                   onClick={() => setServings(Math.max(1, servings - 1))}
-                  className="w-12 h-12 flex items-center justify-center text-stone-700 hover:text-stone-900"
+                  className={iconButton("ghost", "sm", "hover:bg-stone-200")}
                   aria-label="Fewer people"
                 >
                   <Minus className="w-4 h-4" aria-hidden="true" />
@@ -376,7 +374,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
                 <button
                   type="button"
                   onClick={() => setServings(Math.min(10, servings + 1))}
-                  className="w-12 h-12 flex items-center justify-center text-stone-700 hover:text-stone-900"
+                  className={iconButton("ghost", "sm", "hover:bg-stone-200")}
                   aria-label="More people"
                 >
                   <Plus className="w-4 h-4" aria-hidden="true" />
@@ -385,11 +383,11 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
             </div>
 
             <label className="space-y-2">
-              <span className="block text-[15px] font-bold text-stone-900">Style</span>
+              <span className="block text-small font-bold text-stone-900">Style</span>
               <select
                 value={cuisine}
                 onChange={(e) => setCuisine(e.target.value)}
-                className={`${fieldClass} w-full h-12 pl-3 pr-8`}
+                className={field("pr-8")}
               >
                 <optgroup label="No particular country">
                   {APP_CONFIG.cuisines
@@ -413,11 +411,11 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
             </label>
 
             <label className="space-y-2">
-              <span className="block text-[15px] font-bold text-stone-900">{t("cookingTimeLabel")}</span>
+              <span className="block text-small font-bold text-stone-900">{t("cookingTimeLabel")}</span>
               <select
                 value={cookingTimeLimit}
                 onChange={(e) => setCookingTimeLimit(e.target.value)}
-                className={`${fieldClass} w-full h-12 px-3`}
+                className={field()}
               >
                 <option value="any">{t("anyTime")}</option>
                 <option value="30 mins">{t("quickUnder30")}</option>
@@ -427,11 +425,11 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
             </label>
 
             <label className="space-y-2">
-              <span className="block text-[15px] font-bold text-stone-900">{t("skillLevelLabel")}</span>
+              <span className="block text-small font-bold text-stone-900">{t("skillLevelLabel")}</span>
               <select
                 value={skillLevel}
                 onChange={(e) => setSkillLevel(e.target.value)}
-                className={`${fieldClass} w-full h-12 px-3`}
+                className={field()}
               >
                 {APP_CONFIG.skillLevels.map((lvl) => (
                   <option key={lvl.id} value={lvl.id}>
@@ -442,7 +440,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
             </label>
 
             <fieldset className="sm:col-span-2">
-              <legend className="text-[15px] font-bold text-stone-900 mb-2">What your kitchen has</legend>
+              <legend className="text-small font-bold text-stone-900 mb-2">What your kitchen has</legend>
               <div className="flex flex-wrap gap-2">
                 {APP_CONFIG.equipmentList.map((eq) => {
                   const on = equipment.includes(eq.id);
@@ -452,9 +450,7 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
                       type="button"
                       onClick={() => handleToggleEquipment(eq.id)}
                       aria-pressed={on}
-                      className={`inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full text-[15px] transition-colors ${
-                        on ? "bg-stone-900 text-stone-50" : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                      }`}
+                      className={chip(on)}
                     >
                       {on && <Check className="w-3.5 h-3.5" aria-hidden="true" />}
                       {eq.label}

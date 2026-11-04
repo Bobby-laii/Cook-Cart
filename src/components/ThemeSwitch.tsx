@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { Moon, Sun } from "lucide-react";
+import { iconButton } from "@/components/ui/styles";
 
 export type ThemeChoice = "auto" | "light" | "dark";
 
@@ -73,7 +74,7 @@ export function ThemeSwitch() {
       onClick={flip}
       aria-label={label}
       title={label}
-      className="w-12 h-12 flex items-center justify-center rounded-lg text-stone-900 hover:bg-stone-100 transition-colors"
+      className={iconButton("ghost", "sm")}
     >
       <Icon className="w-[22px] h-[22px]" strokeWidth={1.6} aria-hidden="true" />
     </button>

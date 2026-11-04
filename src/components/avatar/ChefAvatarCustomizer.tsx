@@ -20,9 +20,9 @@ import {
   OUTFIT_COLORS,
   OUTFIT_STYLES,
   SKIN_TONES,
-  luminance,
   optionLabel,
 } from "@/lib/avatar/chefAvatar";
+import { chip, cx } from "@/components/ui/styles";
 
 type TabId = "face" | "expression" | "hair" | "outfit" | "headwear" | "backdrop";
 type ColorField = "skinTone" | "hairColor" | "outfitColor" | "accentColor" | "headwearColor";
@@ -58,7 +58,7 @@ function useEditor(): EditorCtx {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-[17px] font-bold leading-snug text-stone-900">{title}</h3>
+      <h3 className="text-body font-bold leading-snug text-stone-900">{title}</h3>
       {children}
     </section>
   );
@@ -86,12 +86,12 @@ function OptionGrid<K extends keyof ChefAvatarConfig>({
             type="button"
             onClick={() => set(field, opt)}
             aria-pressed={active}
-            className={`relative flex min-h-[48px] flex-col items-center gap-1.5 rounded-[14px] border-2 px-1.5 pb-2 pt-2.5 transition-colors focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+            className={`relative flex min-h-[48px] flex-col items-center gap-1.5 rounded-[14px] border-2 px-1.5 pb-2 pt-2.5 transition-colors ${
               active ? "border-brand-500 bg-brand-50" : "border-stone-200 bg-stone-50 hover:border-brand-300"
             }`}
           >
             <ChefAvatar config={{ ...value, [field]: opt }} size={64} className="rounded-full" />
-            <span className={`text-sm leading-tight text-center ${active ? "font-bold text-brand-600" : "text-stone-700"}`}>{label}</span>
+            <span className={`text-caption leading-tight text-center ${active ? "font-bold text-brand-600" : "text-stone-700"}`}>{label}</span>
             {active && (
               <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white">
                 <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
@@ -108,33 +108,46 @@ function Swatches({ field, colors }: { field: ColorField; colors: string[] }) {
   const { value, set } = useEditor();
   const current = value[field];
   const isCustom = !colors.includes(current);
-  const ring = "outline outline-[3px] outline-offset-2 outline-brand-500";
+  // "Selected" is a ring (box-shadow), so the global focus outline still shows on top of it.
+  const ring = "ring-2 ring-stone-900 ring-offset-2 ring-offset-stone-50";
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      {colors.map((color) => {
+      {colors.map((color, i) => {
         const active = current === color;
         return (
           <button
             key={color}
             type="button"
             onClick={() => set(field, color)}
-            aria-label={color}
+            aria-label={`Colour ${i + 1}`}
+            title={`Colour ${i + 1}`}
             aria-pressed={active}
-            className={`h-12 w-12 rounded-full border-2 border-stone-900/15 transition-[outline-color] ${active ? ring : "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-brand-500"}`}
+            className={cx("flex h-12 w-12 items-center justify-center rounded-full border-2 border-stone-900/15", active && ring)}
             style={{ backgroundColor: color }}
           >
-            {active && <Check className="mx-auto h-5 w-5" strokeWidth={3} color={luminance(color) > 150 ? "#1a1a1a" : "#ffffff"} aria-hidden />}
+            {/* The tick sits on its own paper disc, so it reads on any swatch in light and dark. */}
+            {active && (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-stone-50 text-stone-900">
+                <Check className="h-4 w-4" strokeWidth={3} aria-hidden />
+              </span>
+            )}
           </button>
         );
       })}
+      {/* The colour input is invisible, so its keyboard focus ring is drawn on the label. */}
       <label
-        className={`relative flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 ${
+        className={`relative flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-stone-900 ${
           isCustom ? `border-stone-900/15 ${ring}` : "border-dashed border-stone-300 bg-stone-50"
         }`}
         style={isCustom ? { backgroundColor: current } : undefined}
         title="Custom colour"
       >
         {!isCustom && <Plus className="h-5 w-5 text-stone-500" aria-hidden />}
+        {isCustom && (
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-stone-50 text-stone-900" aria-hidden>
+            <Check className="h-4 w-4" strokeWidth={3} />
+          </span>
+        )}
         <span className="sr-only">Custom colour</span>
         <input
           type="color"
@@ -156,11 +169,11 @@ function Toggle({ field, label }: { field: ToggleField; label: string }) {
       role="switch"
       onClick={() => set(field, !on)}
       aria-checked={on}
-      className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[14px] border border-stone-200 bg-stone-50 px-4 text-[17px] text-stone-900"
+      className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[14px] border border-stone-200 bg-stone-50 px-4 text-body text-stone-900"
     >
       {label}
       <span className={`h-7 w-12 rounded-full p-1 transition-colors ${on ? "bg-brand-500" : "bg-stone-300"}`}>
-        <span className={`block h-5 w-5 rounded-full bg-white transition-transform motion-reduce:transition-none ${on ? "translate-x-5" : ""}`} />
+        <span className={`block h-5 w-5 rounded-full bg-stone-50 transition-transform motion-reduce:transition-none ${on ? "translate-x-5" : ""}`} />
       </span>
     </button>
   );
@@ -194,9 +207,7 @@ export function ChefAvatarCustomizer({ value, onChange }: ChefAvatarCustomizerPr
                 role="tab"
                 aria-selected={active}
                 onClick={() => setTab(id)}
-                className={`flex min-h-[48px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-2 px-4 text-[15px] transition-colors ${
-                  active ? "border-brand-500 bg-brand-500 font-bold text-white" : "border-stone-200 bg-stone-50 text-stone-900 hover:border-brand-300"
-                }`}
+                className={chip(active, "shrink-0 gap-2")}
               >
                 <Icon className="h-4 w-4" aria-hidden />
                 {label}
