@@ -34,6 +34,9 @@ jobs:
           DATABASE_URL: "file:./dev.db"
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-build-temporary-jwt-secret-key-32-chars-long' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           npx tsc --noEmit
           npm run build
+
