@@ -248,3 +248,12 @@ html.theme-fading *::after {
   transition: background-color 0.28s ease, color 0.28s ease, border-color 0.28s ease,
     fill 0.28s ease, stroke 0.28s ease !important;
 }
+
+/* Fields set focus:outline-none for their own border change, which hid the focus
+   ring from keyboard users. The ring comes back for keyboard focus only. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgb(var(--stone-900)) !important;
+  outline-offset: 2px !important;
+}
