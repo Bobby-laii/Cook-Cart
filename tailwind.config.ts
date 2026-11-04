@@ -56,6 +56,10 @@ const config: Config = {
       fontSize: {
         // 17px body: read at arm's length on a phone propped against the splashback.
         base: ["1.0625rem", { lineHeight: "1.55" }],
+        // The three reading sizes in DESIGN.md. Use these, not text-[15px] and friends.
+        body: ["1.0625rem", { lineHeight: "1.55" }],
+        small: ["0.9375rem", { lineHeight: "1.45" }],
+        caption: ["0.875rem", { lineHeight: "1.45" }],
       },
       borderRadius: {
         // Magazine-tight corners: photos and buttons 8px, sheets 16px, chips fully round.
@@ -72,7 +76,6 @@ const config: Config = {
         lg: "none",
         xl: "none",
         "2xl": "none",
-        page: "0 0 0 1px #EBEAE7",
       },
     },
   },
