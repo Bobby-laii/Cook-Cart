@@ -257,3 +257,70 @@ select:focus-visible {
   outline: 2px solid rgb(var(--stone-900)) !important;
   outline-offset: 2px !important;
 }
+
+/* Logo: steam rises from the pot and the lid knob hops, once on page load and again
+   when the logo is hovered or tapped (a new animation name restarts it). */
+.bt-steam { opacity: 0; }
+.bt-steam path,
+.bt-knob { transform-box: fill-box; transform-origin: center bottom; }
+.bt-mark .bt-steam {
+  animation: bt-steam 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+}
+.bt-mark .bt-knob {
+  animation: bt-knob 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+a:hover .bt-mark .bt-steam,
+a:active .bt-mark .bt-steam {
+  animation-name: bt-steam-again;
+  animation-delay: 0s;
+}
+a:hover .bt-mark .bt-knob,
+a:active .bt-mark .bt-knob {
+  animation-name: bt-knob-again;
+  animation-delay: 0s;
+}
+@keyframes bt-steam {
+  0% { opacity: 0; transform: translateY(3px); }
+  35% { opacity: 0.55; }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes bt-steam-again {
+  0% { opacity: 0; transform: translateY(3px); }
+  35% { opacity: 0.55; }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes bt-knob {
+  0%, 100% { transform: none; }
+  40% { transform: translateY(-1.6px); }
+}
+@keyframes bt-knob-again {
+  0%, 100% { transform: none; }
+  40% { transform: translateY(-1.6px); }
+}
+
+/* Chef: blinks now and then (idle), bobs while thinking, nods once when an answer
+   arrives. Set by <ChefAvatar mood>. */
+.chef-eyes { transform-box: view-box; transform-origin: 150px 150px; }
+.chef-idle .chef-eyes,
+.chef-thinking .chef-eyes { animation: chef-blink 5.5s ease-in-out infinite; }
+.chef-thinking { animation: chef-bob 1.4s ease-in-out infinite; }
+.chef-nod { animation: chef-nod 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes chef-blink {
+  0%, 94%, 100% { transform: none; }
+  96% { transform: scaleY(0.12); }
+}
+@keyframes chef-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes chef-nod {
+  0%, 100% { transform: none; }
+  35% { transform: translateY(3px) rotate(-2deg); }
+  70% { transform: translateY(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bt-mark .bt-steam, .bt-mark .bt-knob,
+  .chef-idle .chef-eyes, .chef-thinking .chef-eyes,
+  .chef-thinking, .chef-nod { animation: none !important; }
+}

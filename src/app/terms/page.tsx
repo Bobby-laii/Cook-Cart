@@ -65,9 +65,9 @@ export default function TermsPage() {
       <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900 sm:text-[40px]">
         Terms
       </h1>
-      <p className="mt-2 text-[15px] text-stone-500">Updated November 2026</p>
+      <p className="mt-2 text-small text-stone-500">Updated November 2026</p>
 
-      <div className="mt-8 space-y-8 text-[17px] leading-[1.55] text-stone-900">
+      <div className="mt-8 space-y-8 text-body text-stone-900">
         {sections.map((s) => (
           <section key={s.heading}>
             <h2 className="mb-2 text-[19px] font-bold leading-snug">{s.heading}</h2>

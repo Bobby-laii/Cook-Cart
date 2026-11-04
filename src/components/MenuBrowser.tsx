@@ -8,6 +8,7 @@ import { MENU_CUISINES, type MenuDish } from "@/lib/recipes/mealdb";
 import { Search } from "lucide-react";
 import { TonightPicks } from "@/components/home/TonightPicks";
 import { localDayKey, pickTonight } from "@/components/home/picks";
+import { button, chip, errorText, field } from "@/components/ui/styles";
 
 const PAGE_SIZE = 24;
 const NO_OVEN_KEY = "bontaste_no_oven";
@@ -111,7 +112,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
         <p className="mt-1 text-stone-500">{"You can still start from what's in your fridge."}</p>
         <Link
           href="/chat"
-          className="mt-5 inline-flex items-center justify-center h-[52px] px-6 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold"
+          className={button("primary", "md", "mt-5")}
         >
           Start with your ingredients
         </Link>
@@ -129,7 +130,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
       />
 
       {openError && (
-        <p className="mt-5 text-sm text-danger" role="alert">
+        <p className={`mt-5 ${errorText}`} role="alert">
           {"Couldn't open that dish just now. Please try again."}
         </p>
       )}
@@ -154,13 +155,13 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                   setShown(PAGE_SIZE);
                 }}
                 placeholder="Search dishes"
-                className="w-full h-12 pl-11 pr-4 rounded-lg border border-transparent bg-stone-100 text-base text-stone-900 focus:outline-none focus:bg-stone-50 focus:border-stone-900"
+                className={field("pl-11")}
               />
             </label>
           </div>
         </div>
 
-        <p className="mt-3 text-[15px] text-stone-500 md:text-right">
+        <p className="mt-3 text-small text-stone-500 md:text-right">
           Already have ingredients?{" "}
           <Link
             href="/chat"
@@ -182,11 +183,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                 type="button"
                 onClick={() => pickCuisine(area)}
                 aria-pressed={cuisine === area}
-                className={`shrink-0 h-11 px-4 rounded-full text-[15px] transition-colors ${
-                  cuisine === area
-                    ? "bg-stone-900 text-stone-50 font-bold"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                }`}
+                className={chip(cuisine === area, "shrink-0")}
               >
                 {label}
               </button>
@@ -237,7 +234,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                       {dish.title}
                     </span>
                     {dish.description && (
-                      <span className="mt-1 text-[15px] leading-snug text-stone-600 line-clamp-2">
+                      <span className="mt-1 text-small leading-snug text-stone-600 line-clamp-2">
                         {dish.description}
                       </span>
                     )}
@@ -254,7 +251,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                 <button
                   type="button"
                   onClick={() => setShown(shown + PAGE_SIZE)}
-                  className="h-12 px-6 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold"
+                  className={button("secondary", "sm", "px-6")}
                 >
                   {`Show more (${filtered.length - shown} left)`}
                 </button>

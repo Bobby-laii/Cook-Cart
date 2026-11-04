@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
+import { iconButton } from "@/components/ui/styles";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -97,7 +98,7 @@ export function BottomSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-12 h-12 -mr-3 inline-flex items-center justify-center rounded-md text-stone-900 hover:bg-stone-100 transition-colors"
+            className={iconButton("ghost", "sm", "-mr-3")}
           >
             <X className="w-6 h-6" aria-hidden />
           </button>

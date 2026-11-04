@@ -37,6 +37,7 @@ import {
   parseServings,
   stepTimerSeconds,
 } from "@/components/cook/cookHelpers";
+import { button, chip, errorText, iconButton } from "@/components/ui/styles";
 
 /** Step entrance, only after Back or Next; prefers-reduced-motion turns it off. */
 const STEP_MOTION = `
@@ -46,11 +47,6 @@ const STEP_MOTION = `
 .cc-step-back { animation: cc-step-back 0.28s ease-out; }
 @media (prefers-reduced-motion: reduce) { .cc-step-next, .cc-step-back { animation: none; } }
 `;
-
-const primaryBtn =
-  "inline-flex items-center justify-center gap-2 h-[52px] px-6 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold text-[17px] transition-colors disabled:opacity-40";
-const secondaryBtn =
-  "inline-flex items-center justify-center gap-2 h-[52px] px-5 rounded-md border border-stone-200 bg-stone-50 text-stone-900 font-bold text-[17px] hover:bg-stone-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
 
 export default function CookPage() {
   return (
@@ -116,7 +112,7 @@ function NotFound() {
     <div className="min-h-[100dvh] bg-stone-50 px-5 flex flex-col items-center justify-center text-center gap-5">
       <p className="font-display text-[30px] leading-tight text-stone-900">We couldn&apos;t find this recipe</p>
       <p className="text-stone-500 max-w-sm">It may have been removed, or the link is incomplete.</p>
-      <Link href="/" className={primaryBtn}>
+      <Link href="/" className={button("primary")}>
         Back to the menu
       </Link>
     </div>
@@ -376,7 +372,7 @@ function CookSession({
 
   const saveControl = user ? (
     <div className="space-y-2">
-      <button type="button" onClick={handleSave} disabled={saving || saved} className={`${primaryBtn} w-full`}>
+      <button type="button" onClick={handleSave} disabled={saving || saved} className={button("primary", "md", "w-full")}>
         {saving ? (
           <Loader2 className="w-5 h-5 motion-safe:animate-spin" aria-hidden />
         ) : saved ? (
@@ -386,10 +382,14 @@ function CookSession({
         )}
         {saved ? "Saved to My recipes" : "Save to My recipes"}
       </button>
-      {saveError && <p className="text-sm text-danger">Couldn&apos;t save just now. Try again in a moment.</p>}
+      {saveError && (
+        <p role="alert" className={errorText}>
+          Couldn&apos;t save just now. Try again in a moment.
+        </p>
+      )}
     </div>
   ) : (
-    <Link href={loginHref} className={`${primaryBtn} w-full`}>
+    <Link href={loginHref} className={button("primary", "md", "w-full")}>
       <Bookmark className="w-5 h-5" aria-hidden />
       Sign in to save this recipe
     </Link>
@@ -449,16 +449,16 @@ function CookSession({
 
       {/* Minimal top bar: close, dish name, progress */}
       <header className="sticky top-0 z-30 bg-stone-50 pt-[env(safe-area-inset-top)]">
-        <div className="max-w-2xl mx-auto px-3 sm:px-5">
+        <div className="max-w-2xl mx-auto px-5">
           <div className="flex items-center gap-2 h-14">
             <Link
               href={recipePath}
               aria-label="Close cooking mode"
-              className="w-12 h-12 flex-shrink-0 inline-flex items-center justify-center rounded-md text-stone-900 hover:bg-stone-100 transition-colors"
+              className={iconButton("ghost", "sm", "-ml-3 flex-shrink-0")}
             >
               <X className="w-6 h-6" aria-hidden />
             </Link>
-            <p className="flex-1 min-w-0 truncate font-display text-[17px] leading-tight">{dish.title}</p>
+            <p className="flex-1 min-w-0 truncate font-display text-body leading-tight">{dish.title}</p>
             {!finished && stepCount > 0 && (
               <button
                 type="button"
@@ -467,14 +467,14 @@ function CookSession({
                   setVoice(true);
                   setFarView(true);
                 }}
-                className="flex-shrink-0 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-stone-100 text-stone-900 text-[15px] font-bold hover:bg-stone-200 transition-colors"
+                className={chip(false, "flex-shrink-0 font-bold")}
               >
                 <Hand className="w-[18px] h-[18px]" aria-hidden />
                 Hands-free
               </button>
             )}
           </div>
-          <div className="px-2 pb-3 space-y-1.5">
+          <div className="pb-3 space-y-1.5">
             <p className="text-sm text-stone-500" aria-live="polite">
               {finished ? "All steps done" : stepCount > 0 ? `Step ${stepIdx + 1} of ${stepCount}` : "No steps"}
             </p>
@@ -513,7 +513,7 @@ function CookSession({
       ) : (
         <main className="max-w-2xl mx-auto px-5 pt-1 pb-[calc(9rem_+_env(safe-area-inset-bottom))] space-y-4">
           <section key={stepIdx} className={`enamel-rim p-6 sm:p-8 space-y-4 ${motionClass}`} aria-live="polite">
-            {stepTitle && <h1 className="text-[17px] leading-snug font-bold text-stone-500">{stepTitle}</h1>}
+            {stepTitle && <h1 className="text-body leading-snug font-bold text-stone-500">{stepTitle}</h1>}
             <p className={`${textSize} leading-[1.3] font-bold text-stone-900`}>{stepText}</p>
             <ReadAloudButton text={stepTitle ? `${stepTitle}. ${stepText}` : stepText} />
           </section>
@@ -565,7 +565,7 @@ function CookSession({
               <button
                 type="button"
                 onClick={() => setSheet("ingredients")}
-                className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-md text-stone-900 font-bold hover:bg-stone-100 transition-colors"
+                className={button("ghost", "sm", "flex-1")}
               >
                 <ListChecks className="w-5 h-5" aria-hidden />
                 Ingredients
@@ -573,17 +573,17 @@ function CookSession({
               <button
                 type="button"
                 onClick={() => setSheet("chef")}
-                className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-md text-stone-900 font-bold hover:bg-stone-100 transition-colors"
+                className={button("ghost", "sm", "flex-1")}
               >
                 <ChefHat className="w-5 h-5" aria-hidden />
                 Ask the chef
               </button>
             </div>
             <div className="flex gap-3 pt-1">
-              <button type="button" onClick={goBack} disabled={stepIdx === 0} className={`${secondaryBtn} flex-1`}>
+              <button type="button" onClick={goBack} disabled={stepIdx === 0} className={button("secondary", "md", "flex-1")}>
                 Back
               </button>
-              <button type="button" onClick={goNext} className={`${primaryBtn} flex-[2]`}>
+              <button type="button" onClick={goNext} className={button("primary", "md", "flex-[2]")}>
                 {isLast ? "Finish cooking" : "Next step"}
               </button>
             </div>
@@ -623,7 +623,7 @@ function CookSession({
                     >
                       {on && <Check className="w-4 h-4 cc-tick" strokeWidth={3} aria-hidden />}
                     </span>
-                    <span className={`flex-1 min-w-0 text-[17px] ${on ? "text-stone-500 line-through" : "text-stone-900"}`}>
+                    <span className={`flex-1 min-w-0 text-body ${on ? "text-stone-500 line-through" : "text-stone-900"}`}>
                       {item.name}
                     </span>
                     <span className="font-mono text-stone-500 text-right">{amountText(item)}</span>
@@ -703,7 +703,7 @@ function EndScreen({
       <main className="max-w-md mx-auto px-5 pt-10 text-center space-y-5">
         <p className="font-display text-[30px] leading-tight">This recipe has no steps yet</p>
         <p className="text-stone-500">The ingredients are on the recipe page.</p>
-        <Link href={recipePath} className={`${primaryBtn} w-full`}>
+        <Link href={recipePath} className={button("primary", "md", "w-full")}>
           Back to the recipe
         </Link>
       </main>
@@ -711,20 +711,20 @@ function EndScreen({
   }
   return (
     <main className={`max-w-md mx-auto px-5 pt-8 pb-10 text-center space-y-6 ${motionClass}`}>
-      <ChefAvatarBadge avatarConfig={chefConfig} size={96} title={chefName} className="mx-auto" />
+      <ChefAvatarBadge avatarConfig={chefConfig} size={96} title={chefName} className="mx-auto" mood="nod" />
       <div className="space-y-3">
         <h1 className="font-display text-[34px] leading-[1.1] font-medium">{`You made ${dish.title}`}</h1>
-        <p className="text-stone-500 text-[17px]">Plate it up while it&apos;s hot. Enjoy it.</p>
+        <p className="text-stone-500 text-body">Plate it up while it&apos;s hot. Enjoy it.</p>
       </div>
       <div className="space-y-3">
         {saveControl}
-        <Link href={cameFromChat ? "/chat" : "/"} className={`${secondaryBtn} w-full`}>
+        <Link href={cameFromChat ? "/chat" : "/"} className={button("secondary", "md", "w-full")}>
           {cameFromChat ? "Back to chat" : "Back to the menu"}
         </Link>
         <button
           type="button"
           onClick={onReview}
-          className="inline-flex items-center justify-center h-12 px-4 text-stone-500 font-bold hover:text-stone-900"
+          className={button("ghost", "sm", "text-stone-500 hover:text-stone-900")}
         >
           Back to the last step
         </button>

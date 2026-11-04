@@ -10,6 +10,7 @@ import { safeHttpUrl } from "@/lib/recipes/mealdb";
 import { convertAmount, convertTemperatures, formatQuantity, type UnitSystem } from "@/lib/units";
 import { useUnitSystem } from "@/lib/useUnitSystem";
 import { usePhotoArrival } from "@/lib/motion/photoFlip";
+import { button, chip, cx, errorText, iconButton } from "@/components/ui/styles";
 
 type LoadState = { status: "loading" } | { status: "missing" } | { status: "ready"; dish: DishSuggestion };
 
@@ -168,7 +169,7 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
             <div className="fixed inset-x-0 above-tabbar z-30 bg-stone-50 border-t border-stone-200 px-5 py-3 md:static md:z-auto md:p-0 md:border-0 md:bg-transparent">
               <Link
                 href={`/recipe/${encodeURIComponent(dish.id)}/cook?servings=${servings}`}
-                className="flex w-full md:w-auto items-center justify-center h-[52px] px-6 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold transition-colors"
+                className={button("primary", "md", "flex w-full md:w-auto")}
               >
                 Start cooking
               </Link>
@@ -178,7 +179,7 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
               onClick={save}
               disabled={saveState === "saving"}
               aria-live="polite"
-              className="inline-flex items-center justify-center gap-2 h-12 md:h-[52px] px-4 rounded-lg border border-stone-200 text-stone-900 font-bold hover:border-stone-500 transition-colors disabled:opacity-60"
+              className={button("secondary", "sm", "md:h-[52px]")}
             >
               {saveState === "saved" ? (
                 <BookmarkCheck className="w-5 h-5 text-fresh-500 cc-pop" aria-hidden="true" />
@@ -189,7 +190,9 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
             </button>
           </div>
           {saveState === "error" && (
-            <p className="mt-2 text-sm text-danger">That didn&apos;t save. Try again in a moment.</p>
+            <p role="alert" className={cx("mt-2", errorText)}>
+              That didn&apos;t save. Try again in a moment.
+            </p>
           )}
         </div>
       </header>
@@ -206,7 +209,7 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
                 type="button"
                 onClick={() => setServings((s) => Math.max(MIN_SERVINGS, s - 1))}
                 disabled={servings <= MIN_SERVINGS}
-                className="w-12 h-12 rounded-full bg-stone-100 text-stone-900 flex items-center justify-center hover:bg-stone-200 disabled:opacity-40"
+                className={iconButton("ghost", "sm", "rounded-full bg-stone-100 hover:bg-stone-200")}
                 aria-label="Fewer servings"
               >
                 <Minus className="w-5 h-5" aria-hidden="true" />
@@ -218,25 +221,21 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
                 type="button"
                 onClick={() => setServings((s) => Math.min(MAX_SERVINGS, s + 1))}
                 disabled={servings >= MAX_SERVINGS}
-                className="w-12 h-12 rounded-full bg-stone-100 text-stone-900 flex items-center justify-center hover:bg-stone-200 disabled:opacity-40"
+                className={iconButton("ghost", "sm", "rounded-full bg-stone-100 hover:bg-stone-200")}
                 aria-label="More servings"
               >
                 <Plus className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="inline-flex p-1 rounded-full bg-stone-100" role="group" aria-label="Units">
+            <div className="inline-flex gap-1 p-1 rounded-full bg-stone-100" role="group" aria-label="Units">
               {(["metric", "us"] as const).map((system) => (
                 <button
                   key={system}
                   type="button"
                   onClick={() => setUnits(system)}
                   aria-pressed={units === system}
-                  className={`h-10 px-4 rounded-full text-[15px] transition-colors ${
-                    units === system
-                      ? "bg-stone-50 text-stone-900 font-bold border border-stone-200"
-                      : "text-stone-500 hover:text-stone-900"
-                  }`}
+                  className={chip(units === system, units === system ? "" : "bg-transparent text-stone-500 hover:text-stone-900")}
                 >
                   {system === "metric" ? "Metric" : "US cups"}
                 </button>
@@ -261,7 +260,7 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
                     />
                     <span
                       aria-hidden="true"
-                      className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors peer-focus-visible:outline peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500 ${
+                      className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-stone-900 ${
                         ticked ? "bg-fresh-500 border-fresh-500 text-white" : "border-stone-300"
                       }`}
                     >
@@ -296,7 +295,7 @@ function Recipe({ dish }: { dish: DishSuggestion }) {
               type="button"
               onClick={shareList}
               disabled={toBuy.length === 0}
-              className="inline-flex items-center gap-2 h-12 px-4 rounded-lg border border-stone-200 text-stone-900 font-bold hover:border-stone-500 transition-colors disabled:opacity-40"
+              className={button("secondary", "sm")}
             >
               <ListChecks className="w-5 h-5" aria-hidden="true" />
               Shopping list
@@ -420,7 +419,7 @@ function RecipeMissing() {
       <p className="mt-3 text-stone-500">It may have been removed, or the link is incomplete.</p>
       <Link
         href="/"
-        className="mt-8 inline-flex items-center justify-center h-[52px] px-6 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold transition-colors"
+        className={button("primary", "md", "mt-8")}
       >
         Back to the menu
       </Link>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2, Mic, RotateCcw, Send } from "lucide-react";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
 import { listenOnce, speak, voiceSupported } from "@/lib/handsfree/useVoiceCommands";
+import { button, errorText, field, iconButton } from "@/components/ui/styles";
 
 type ChefReply =
   | { kind: "answer"; text: string }
@@ -117,7 +118,13 @@ export function AskChef({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <ChefAvatarBadge avatarConfig={avatarConfig} size={48} title={chefName} />
+        <ChefAvatarBadge
+          key={reply?.kind === "answer" ? reply.text.length : "idle"}
+          avatarConfig={avatarConfig}
+          size={48}
+          title={chefName}
+          mood={asking || listening ? "thinking" : reply?.kind === "answer" ? "nod" : "idle"}
+        />
         <p className="text-stone-600 leading-snug">Ask about the step you are on.</p>
       </div>
 
@@ -132,7 +139,7 @@ export function AskChef({
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="How hot should the pan be?"
           enterKeyHint="send"
-          className="flex-1 min-w-0 h-[52px] px-4 rounded-md bg-stone-100 border border-transparent text-[17px] placeholder:text-stone-500 focus:outline-none focus:border-stone-900 focus:bg-stone-50"
+          className={field("flex-1 min-w-0")}
         />
         {canListen && showMic && (
           <button
@@ -140,9 +147,11 @@ export function AskChef({
             onClick={askByVoice}
             aria-label={listening ? "Listening" : "Ask by voice"}
             aria-pressed={listening}
-            className={`w-[52px] h-[52px] flex-shrink-0 inline-flex items-center justify-center rounded-md transition-colors ${
-              listening ? "bg-fresh-500 text-white" : "bg-stone-100 text-stone-900 hover:bg-stone-200"
-            }`}
+            className={iconButton(
+              "ghost",
+              "md",
+              listening ? "flex-shrink-0 bg-fresh-500 text-white hover:bg-fresh-500" : "flex-shrink-0 bg-stone-100 hover:bg-stone-200"
+            )}
           >
             <Mic className={`w-5 h-5 ${listening ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
           </button>
@@ -151,7 +160,7 @@ export function AskChef({
           type="submit"
           disabled={asking || !question.trim()}
           aria-label="Ask"
-          className="w-[52px] h-[52px] flex-shrink-0 inline-flex items-center justify-center rounded-md bg-brand-500 hover:bg-brand-600 text-white transition-colors disabled:opacity-40"
+          className={iconButton("primary", "md", "flex-shrink-0")}
         >
           {asking ? (
             <Loader2 className="w-5 h-5 motion-safe:animate-spin" aria-hidden />
@@ -168,17 +177,19 @@ export function AskChef({
         {reply?.kind === "answer" && (
           <div className="space-y-1 cc-fade-in">
             <p className="text-sm font-bold text-stone-500">{chefName}</p>
-            <p className="text-[17px] leading-relaxed text-stone-900 whitespace-pre-line">{reply.text}</p>
+            <p className="text-body leading-relaxed text-stone-900 whitespace-pre-line">{reply.text}</p>
           </div>
         )}
 
         {reply?.kind === "error" && reply.reason === "network" && (
           <div className="space-y-3">
-            <p className="text-danger font-bold">I couldn&apos;t reach the chef just now.</p>
+            <p role="alert" className={errorText}>
+              I couldn&apos;t reach the chef just now.
+            </p>
             <button
               type="button"
               onClick={() => ask(reply.question)}
-              className="inline-flex items-center gap-2 h-12 px-4 rounded-md border border-stone-200 text-stone-900 font-bold hover:bg-stone-100 transition-colors"
+              className={button("secondary", "sm")}
             >
               <RotateCcw className="w-5 h-5" aria-hidden />
               Try again
@@ -191,7 +202,7 @@ export function AskChef({
             <p className="text-stone-900">The chef answers questions once you are signed in.</p>
             <Link
               href={loginHref}
-              className="inline-flex items-center h-12 px-5 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold transition-colors"
+              className={button("primary", "sm")}
             >
               Sign in to ask the chef
             </Link>

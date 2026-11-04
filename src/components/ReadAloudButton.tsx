@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Volume2 } from "lucide-react";
 import { speak, stopSpeaking, warmUpVoices } from "@/lib/handsfree/speech";
+import { chip } from "@/components/ui/styles";
 
 const STORAGE_KEY = "bontaste_read_aloud";
 
@@ -50,11 +51,7 @@ export function ReadAloudButton({ text }: { text: string }) {
       type="button"
       onClick={toggle}
       aria-pressed={on}
-      className={`inline-flex items-center gap-2 h-12 px-4 rounded-full border font-bold transition-colors ${
-        on
-          ? "bg-brand-500 border-brand-500 text-white hover:bg-brand-600"
-          : "bg-stone-50 border-stone-200 text-stone-900 hover:bg-stone-100"
-      }`}
+      className={chip(on, "gap-2 font-bold")}
     >
       <Volume2 className="w-5 h-5" aria-hidden />
       {on ? "Reading steps aloud" : "Read steps aloud"}

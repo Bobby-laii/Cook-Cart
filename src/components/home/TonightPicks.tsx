@@ -4,6 +4,7 @@ import React from "react";
 import type { MenuDish } from "@/lib/recipes/mealdb";
 import { dishLine } from "./picks";
 import { Loader2, RefreshCw } from "lucide-react";
+import { button } from "@/components/ui/styles";
 
 /**
  * "Tonight": three calm picks, photo first. One large lead dish with a clear way into
@@ -34,7 +35,7 @@ export function TonightPicks({
           <button
             type="button"
             onClick={onShuffle}
-            className="inline-flex items-center gap-2 h-12 -mr-2 px-2 rounded-lg text-[15px] text-stone-500 hover:text-stone-900"
+            className={button("ghost", "sm", "-mr-2 px-2 font-normal text-stone-500 hover:text-stone-900")}
           >
             <RefreshCw className="w-4 h-4" aria-hidden="true" />
             Show me others
@@ -87,7 +88,7 @@ export function TonightPicks({
               type="button"
               onClick={() => onOpen(lead)}
               disabled={opening !== null}
-              className="mt-4 inline-flex items-center justify-center gap-2 w-full sm:w-auto h-[52px] px-6 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold transition-colors disabled:cursor-wait"
+              className={button("primary", "md", "mt-4 w-full sm:w-auto disabled:cursor-wait")}
             >
               {opening === lead.id && (
                 <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />

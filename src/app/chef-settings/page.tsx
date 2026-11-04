@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Check, Dices, Loader2 } from "lucide-react";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
 import { CHEF_PERSONALITIES, randomChefName } from "@/lib/avatar/chefAvatar";
+import { button, cx, errorText, field, iconButton } from "@/components/ui/styles";
 
 const DEFAULT_CHEF_NAME = "Your chef";
 /** Names from before chefs were renamed; shown as the default instead. */
@@ -67,18 +68,18 @@ export default function ChefSettingsPage() {
       <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900 sm:text-[40px]">
         Your chef
       </h1>
-      <p className="mt-2 text-[17px] text-stone-500">Their name, their look and how they talk to you.</p>
+      <p className="mt-2 text-body text-stone-500">Their name, their look and how they talk to you.</p>
 
       <form onSubmit={handleSave} className="mt-8">
         {/* Look */}
         <section className="flex items-center gap-5">
-          <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} size={96} title={displayName} />
+          <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} size={96} title={displayName} mood="idle" />
           <div className="min-w-0 flex-1">
             <p className="font-display text-[22px] font-medium leading-tight text-stone-900">{displayName}</p>
             <button
               type="button"
               onClick={() => router.push("/onboarding/chef?next=/chef-settings")}
-              className="mt-3 inline-flex h-12 items-center justify-center rounded-lg border border-stone-900 px-5 text-[15px] font-bold text-stone-900 transition-colors hover:bg-stone-100"
+              className={button("secondary", "sm", "mt-3")}
             >
               {hasCustomAvatar ? "Change the look" : "Design the look"}
             </button>
@@ -87,7 +88,7 @@ export default function ChefSettingsPage() {
 
         {/* Name */}
         <section className="mt-8 border-t border-stone-200 pt-6">
-          <label htmlFor="chef-name" className="mb-2 block text-[17px] font-bold text-stone-900">
+          <label htmlFor="chef-name" className="mb-2 block text-body font-bold text-stone-900">
             Name
           </label>
           <div className="flex gap-2">
@@ -99,27 +100,27 @@ export default function ChefSettingsPage() {
               placeholder={DEFAULT_CHEF_NAME}
               maxLength={30}
               aria-describedby="chef-name-hint"
-              className="h-[52px] min-w-0 flex-1 rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none"
+              className={field("min-w-0 flex-1")}
             />
             <button
               type="button"
               onClick={() => setChefName((n) => randomChefName(n))}
               aria-label="Pick a random name"
               title="Pick a random name"
-              className="h-[52px] w-[52px] flex-shrink-0 inline-flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-900 transition-colors hover:border-stone-500"
+              className={iconButton("secondary", "md", "flex-shrink-0")}
             >
               <Dices className="h-5 w-5" aria-hidden />
             </button>
           </div>
-          <p id="chef-name-hint" className="mt-2 text-[14px] text-stone-500">
+          <p id="chef-name-hint" className="mt-2 text-caption text-stone-500">
             Your chef uses this name in every chat.
           </p>
         </section>
 
         {/* Personality */}
         <section role="group" aria-labelledby="chef-tone" className="mt-8 border-t border-stone-200 pt-6">
-          <h2 id="chef-tone" className="text-[17px] font-bold text-stone-900">How your chef talks</h2>
-          <p className="mb-4 mt-1 text-[15px] text-stone-500">The tone for everyday chats and cooking help.</p>
+          <h2 id="chef-tone" className="text-body font-bold text-stone-900">How your chef talks</h2>
+          <p className="mb-4 mt-1 text-small text-stone-500">The tone for everyday chats and cooking help.</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {CHEF_PERSONALITIES.map((item) => {
               const active = selectedPersonality === item.id;
@@ -134,10 +135,10 @@ export default function ChefSettingsPage() {
                   }`}
                 >
                   <span className="mb-1 flex items-center justify-between gap-2">
-                    <span className="text-[17px] font-bold text-stone-900">{item.label}</span>
+                    <span className="text-body font-bold text-stone-900">{item.label}</span>
                     {active && <Check className="h-5 w-5 shrink-0 text-stone-900" strokeWidth={2.5} aria-hidden />}
                   </span>
-                  <span className="block text-[15px] leading-relaxed text-stone-500">{item.description}</span>
+                  <span className="block text-small leading-relaxed text-stone-500">{item.description}</span>
                 </button>
               );
             })}
@@ -145,7 +146,7 @@ export default function ChefSettingsPage() {
         </section>
 
         {saveError && (
-          <p role="alert" className="mt-6 text-[15px] text-danger">
+          <p role="alert" className={cx("mt-6", errorText)}>
             {saveError}
           </p>
         )}
@@ -155,7 +156,7 @@ export default function ChefSettingsPage() {
           <button
             type="submit"
             disabled={isSaving}
-            className="inline-flex h-[52px] items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+            className={button("primary")}
           >
             {saveSuccess ? (
               <>
@@ -174,7 +175,7 @@ export default function ChefSettingsPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex h-12 items-center justify-center rounded-lg px-5 text-[15px] font-bold text-stone-500 hover:text-stone-900"
+            className={button("ghost", "sm", "text-stone-500 hover:text-stone-900")}
           >
             Cancel
           </button>

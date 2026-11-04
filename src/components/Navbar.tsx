@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { BonTasteLogo, BonTasteMark } from "@/components/BonTasteLogo";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { BookOpen, CircleUser, MessageCircle, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { button, iconButton } from "@/components/ui/styles";
 
 /**
  * How far the phone header travels before it is fully compact, in px. The header is
@@ -72,7 +73,7 @@ export function Navbar() {
             <BonTasteLogo />
           </Link>
 
-          <nav aria-label="Main" className="flex items-center gap-1 text-[0.95rem]">
+          <nav aria-label="Main" className="flex items-center gap-1 text-small">
             {navLinks.map((link) => {
               const active = isActive(link.href);
               return (
@@ -99,7 +100,7 @@ export function Navbar() {
                 {!onLogin && (
                   <Link
                     href="/login"
-                    className="flex items-center h-12 px-3 text-[0.95rem] text-stone-700 hover:text-stone-900 rounded-lg"
+                    className={button("ghost", "sm", "px-3 font-normal text-stone-700 hover:bg-transparent hover:text-stone-900")}
                   >
                     {t("navLogin")}
                   </Link>
@@ -107,7 +108,7 @@ export function Navbar() {
                 {!onRegister && (
                 <Link
                   href="/register"
-                  className="flex items-center h-10 px-4 text-[0.95rem] font-bold text-stone-50 bg-stone-900 hover:bg-stone-800 rounded-lg transition-colors"
+                  className={button("primary", "sm")}
                 >
                   {t("navRegister")}
                 </Link>
@@ -217,7 +218,7 @@ function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: 
           ) : hideSignIn ? null : (
             <Link
               href="/login"
-              className="flex items-center h-12 px-3 text-[0.95rem] text-stone-900 rounded-lg"
+              className={button("ghost", "sm", "px-3 font-normal")}
             >
               {t("navLogin")}
             </Link>
@@ -272,7 +273,7 @@ function AccountMenu() {
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Account"
-        className="w-12 h-12 flex items-center justify-center rounded-lg text-stone-900 hover:bg-stone-100"
+        className={iconButton("ghost", "sm")}
       >
         <CircleUser className="w-6 h-6" strokeWidth={1.6} aria-hidden="true" />
       </button>
@@ -280,7 +281,7 @@ function AccountMenu() {
       {open && (
         <div className="absolute right-0 top-full mt-1 w-64 rounded-lg border border-stone-200 bg-stone-50 py-2 z-50">
           <p className="px-4 pt-1 pb-3 border-b border-stone-200">
-            <span className="block text-sm text-stone-500">Signed in as</span>
+            <span className="block text-caption text-stone-500">Signed in as</span>
             <span className="block font-bold text-stone-900 truncate">{user.name}</span>
           </p>
           <Link

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { button, cx, errorText, iconButton } from "@/components/ui/styles";
 import { Trash2, UtensilsCrossed } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -120,9 +121,9 @@ export default function MyRecipesPage() {
       </h1>
 
       {loading ? (
-        <p className="mt-8 text-[17px] text-stone-500">Loading your recipes...</p>
+        <p className="mt-8 text-body text-stone-500">Loading your recipes...</p>
       ) : loadFailed ? (
-        <p role="alert" className="mt-8 text-[17px] text-danger">
+        <p role="alert" className={cx("mt-8", errorText, "text-body")}>
           {"We couldn't load your recipes. Check your connection and try again."}
         </p>
       ) : recipes.length === 0 && !pending ? (
@@ -131,19 +132,19 @@ export default function MyRecipesPage() {
           <h2 className="mt-4 font-display text-[24px] font-medium leading-tight text-stone-900">
             Nothing saved yet
           </h2>
-          <p className="mt-2 text-[17px] text-stone-500">
+          <p className="mt-2 text-body text-stone-500">
             Find a dish you like on the menu and tap Save. It will wait for you here.
           </p>
           <Link
             href="/"
-            className="mt-6 inline-flex h-[52px] items-center justify-center rounded-lg bg-brand-500 px-6 text-[17px] font-bold text-white transition-colors hover:bg-brand-600"
+            className={button("primary", "md", "mt-6")}
           >
             Browse the menu
           </Link>
         </div>
       ) : (
         <>
-          <p className="mt-2 text-[17px] text-stone-500">
+          <p className="mt-2 text-body text-stone-500">
             {recipes.length === 1 ? "1 saved recipe" : `${recipes.length} saved recipes`}
           </p>
           <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
@@ -175,12 +176,12 @@ export default function MyRecipesPage() {
                     </h2>
                   </Link>
                   <div className="mt-1 flex items-start justify-between gap-2">
-                    {meta ? <p className="min-w-0 text-[14px] text-stone-500">{meta}</p> : <span />}
+                    {meta ? <p className="min-w-0 text-caption text-stone-500">{meta}</p> : <span />}
                     <button
                       type="button"
                       onClick={() => handleRemove(item)}
                       aria-label={`Remove ${r.title}`}
-                      className="-mr-3 -mt-3 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-stone-500 transition-colors hover:text-danger"
+                      className={iconButton("ghost", "sm", "-mr-3 -mt-3 shrink-0 text-stone-500 hover:bg-transparent hover:text-danger")}
                     >
                       <Trash2 className="h-5 w-5" aria-hidden />
                     </button>
@@ -196,11 +197,11 @@ export default function MyRecipesPage() {
       <div aria-live="polite" className="above-tabbar pointer-events-none fixed inset-x-0 z-40 px-5 pb-4">
         {pending && (
           <div className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-3 rounded-lg bg-stone-900 py-2 pl-4 pr-2 text-stone-50 cc-fade-in">
-            <span className="min-w-0 truncate text-[15px]">{`Removed ${pending.item.recipe.title}`}</span>
+            <span className="min-w-0 truncate text-small">{`Removed ${pending.item.recipe.title}`}</span>
             <button
               type="button"
               onClick={handleUndo}
-              className="inline-flex h-12 shrink-0 items-center rounded-lg px-4 text-[15px] font-bold underline underline-offset-4"
+              className={button("ghost", "sm", "shrink-0 text-stone-50 underline underline-offset-4 hover:bg-stone-50/10")}
             >
               Undo
             </button>
