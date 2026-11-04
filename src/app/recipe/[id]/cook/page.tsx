@@ -10,6 +10,8 @@ import { DishSuggestion, RecipeIngredient, RecipeStep } from "@/types";
 import { convertAmount, convertTemperatures } from "@/lib/units";
 import { useUnitSystem } from "@/lib/useUnitSystem";
 import { ReadAloudButton } from "@/components/ReadAloudButton";
+import { CookingVoiceAssistant } from "@/components/CookingVoiceAssistant";
+import { playTimerDoneChime } from "@/lib/voice/soundEffects";
 import { MEALDB_ID_PREFIX } from "@/lib/recipes/mealdb";
 import {
   ArrowLeft,
@@ -185,7 +187,7 @@ export default function StepByStepCookingPage() {
           if (t.isRunning && t.remainingSeconds > 0) {
             changed = true;
             const rem = t.remainingSeconds - 1;
-            if (rem === 0) playChime();
+            if (rem === 0) { playChime(); playTimerDoneChime(); }
             next[stepNum] = { ...t, remainingSeconds: rem, isRunning: rem > 0 };
           } else {
             next[stepNum] = t;
@@ -287,6 +289,32 @@ export default function StepByStepCookingPage() {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const handleVoiceStartTimer = (customSeconds?: number) => {
+    if (customSeconds && customSeconds > 0) {
+      setTimers((prev) => ({
+        ...prev,
+        [stepNumber]: {
+          remainingSeconds: customSeconds,
+          totalSeconds: customSeconds,
+          isRunning: true,
+        },
+      }));
+    } else {
+      startOrToggleTimer(currentStep.timerSeconds || 180);
+    }
+  };
+
+  const handleVoicePauseTimer = () => {
+    setTimers((prev) => {
+      const existing = prev[stepNumber];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [stepNumber]: { ...existing, isRunning: false },
+      };
+    });
   };
 
   const scrollToTop = () => {
@@ -575,6 +603,24 @@ export default function StepByStepCookingPage() {
             </ol>
           </div>
         </header>
+
+        {/* Hands-Free Cooking Voice Assistant */}
+        <CookingVoiceAssistant
+          currentStepIndex={currentStepIdx}
+          totalSteps={steps.length}
+          stepTitle={stepTitle}
+          stepText={stepText}
+          recipeTitle={displayTitle}
+          isTimerRunning={Boolean(activeTimer?.isRunning)}
+          onNextStep={handleCompleteStepAndNext}
+          onPrevStep={goBack}
+          onRepeatStep={() => {}}
+          onStartTimer={handleVoiceStartTimer}
+          onPauseTimer={handleVoicePauseTimer}
+          onResetTimer={resetTimer}
+          defaultLanguage={language}
+          isZh={zh}
+        />
 
         {finishedAll ? (
           /* Finished: a quiet sheet, not the rim */
