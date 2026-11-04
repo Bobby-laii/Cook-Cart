@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { button, cx, errorText, field } from "@/components/ui/styles";
@@ -12,7 +11,6 @@ const labelClass = "mb-2 block text-small font-bold text-stone-900";
 const hintClass = "mt-2 text-caption text-stone-500";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { refreshUser } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -32,6 +30,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           email,
           password,
@@ -42,13 +41,13 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
-      setLoading(false);
 
       if (res.ok) {
         await refreshUser();
         // First-time users go straight to designing their personal chef.
-        router.push("/onboarding/chef?next=/chat");
+        window.location.assign("/onboarding/chef?next=/chat");
       } else {
+        setLoading(false);
         setError(data.error || "We couldn't create your account. Please try again.");
       }
     } catch (err: any) {

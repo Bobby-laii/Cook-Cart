@@ -43,15 +43,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch("/api/auth/me", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          setUser((prev) => prev ?? null);
+        }
       } else {
         setUser(null);
       }
     } catch {
-      setUser(null);
+      // Keep existing user on transient network hiccup
     } finally {
       setLoading(false);
     }
@@ -66,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
@@ -73,8 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || "Login failed" };
       }
       setUser(data.user);
-      // The login response only carries basic fields; load the full profile
-      // (chef avatar, onboarding status) so the UI and onboarding gate are accurate.
       await refreshUser();
       return { success: true };
     } catch (err: any) {
@@ -84,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
       setUser(null);
       window.location.href = "/";
     } catch (err) {

@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { button, cx, errorText, field } from "@/components/ui/styles";
@@ -18,9 +18,8 @@ function safeCallback(raw: string | null): string {
 
 function LoginPageContent() {
   const { login } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = safeCallback(searchParams.get("callbackUrl"));
+  const callbackUrl = safeCallback(searchParams.get("callbackUrl") || searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,11 +30,10 @@ function LoginPageContent() {
     setError("");
     setLoading(mode);
     const res = await login(address, secret);
-    setLoading(null);
     if (res.success) {
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.assign(callbackUrl);
     } else {
+      setLoading(null);
       setError(res.error || "That email and password don't match.");
     }
   };
