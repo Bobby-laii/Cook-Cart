@@ -1,3 +1,4 @@
+import { cuisineLabel } from "@/lib/recipes/cuisines";
 import type { MenuDish } from "@/lib/recipes/mealdb";
 
 /** Small, fast, seedable PRNG (mulberry32). */
@@ -69,8 +70,9 @@ export function pickTonight(
 
 /** A short, honest line about a dish from what the menu knows: its cuisine and the oven. */
 export function dishLine(dish: MenuDish): string {
-  const article = /^[aeiou]/i.test(dish.cuisine) ? "An" : "A";
+  const cuisine = cuisineLabel(dish.cuisine);
+  const article = /^[aeiou]/i.test(cuisine) ? "An" : "A";
   return dish.needsOven
-    ? `${article} ${dish.cuisine} dish, made in the oven`
-    : `${article} ${dish.cuisine} dish, no oven needed`;
+    ? `${article} ${cuisine} dish, made in the oven`
+    : `${article} ${cuisine} dish, no oven needed`;
 }

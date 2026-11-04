@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { rememberPhoto } from "@/lib/motion/photoFlip";
 import { useRouter } from "next/navigation";
-import { MENU_CUISINES, type MenuDish } from "@/lib/recipes/mealdb";
+import { MENU_CUISINES, cuisineLabel } from "@/lib/recipes/cuisines";
+import type { MenuDish } from "@/lib/recipes/mealdb";
 import { Search } from "lucide-react";
 import { TonightPicks } from "@/components/home/TonightPicks";
 import { localDayKey, pickTonight } from "@/components/home/picks";
@@ -99,7 +100,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
 
   const chips = [
     { area: "all", label: "All" },
-    ...cuisines.map((c) => ({ area: c.area, label: c.area })),
+    ...cuisines.map((c) => ({ area: c.area, label: cuisineLabel(c.area) })),
   ];
 
   if (dishes.length === 0) {
@@ -239,7 +240,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                       </span>
                     )}
                     <span className="mt-1 block text-sm text-stone-500">
-                      {opening === dish.id ? "Opening the recipe" : dish.cuisine}
+                      {opening === dish.id ? "Opening the recipe" : cuisineLabel(dish.cuisine)}
                     </span>
                   </button>
                 </li>

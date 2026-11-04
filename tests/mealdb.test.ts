@@ -359,3 +359,66 @@ describe("prettyFractions", () => {
     expect(prettyFractions("Bake for 20 minutes")).toBe("Bake for 20 minutes");
   });
 });
+
+import { MENU_CUISINES } from "@/lib/recipes/mealdb";
+import { CUISINE_GUIDE } from "@/lib/recipes/cuisineGuide";
+
+describe("menu cuisines and their guides", () => {
+    it("lists each cuisine once", () => {
+        const areas = MENU_CUISINES.map((c) => c.area);
+        expect(new Set(areas).size).toBe(areas.length);
+        expect(areas.length).toBeGreaterThanOrEqual(13);
+    });
+
+    it("has a description and an oven flag for every dish, and nothing extra", () => {
+        const flagged = Object.keys(MENU_NEEDS_OVEN).sort();
+        expect(Object.keys(MENU_DESCRIPTIONS).sort()).toEqual(flagged);
+    });
+
+    it("keeps descriptions to 8-16 words in sentence case with no dashes", () => {
+        for (const [id, text] of Object.entries(MENU_DESCRIPTIONS)) {
+            const words = text.slice(0, -1).split(/\s+/).length;
+            expect(words, `meal ${id}: ${text}`).toBeGreaterThanOrEqual(8);
+            expect(words, `meal ${id}: ${text}`).toBeLessThanOrEqual(16);
+            expect(text, `meal ${id}`).not.toMatch(/[–—]/);
+            expect(text[0], `meal ${id}`).toBe(text[0].toUpperCase());
+        }
+    });
+
+    it("has a guide entry with a plain one-sentence intro for every cuisine", () => {
+        for (const { area } of MENU_CUISINES) {
+            const guide = CUISINE_GUIDE[area];
+            expect(guide, area).toBeDefined();
+            const { intro } = guide;
+            const words = intro.slice(0, -1).split(/\s+/).length;
+            expect(words, `${area}: ${intro}`).toBeGreaterThanOrEqual(10);
+            expect(words, `${area}: ${intro}`).toBeLessThanOrEqual(22);
+            expect(intro.endsWith("."), area).toBe(true);
+            expect(intro.slice(0, -1), area).not.toMatch(/[.!?](\s|$)/);
+            expect(intro, area).not.toMatch(/[!·—–]/);
+            expect(intro, area).not.toMatch(/\bauthentic\b/i);
+        }
+        expect(Object.keys(CUISINE_GUIDE).sort()).toEqual(MENU_CUISINES.map((c) => c.area).sort());
+    });
+
+    it("picks one to three distinct known dishes per cuisine", () => {
+        for (const { area } of MENU_CUISINES) {
+            const { picks } = CUISINE_GUIDE[area];
+            expect(picks.length, area).toBeGreaterThanOrEqual(1);
+            expect(picks.length, area).toBeLessThanOrEqual(3);
+            expect(new Set(picks).size, area).toBe(picks.length);
+            for (const id of picks) expect(id in MENU_NEEDS_OVEN, `${area} pick ${id}`).toBe(true);
+        }
+    });
+});
+
+import { cuisineLabel } from "@/lib/recipes/cuisines";
+
+describe("cuisineLabel", () => {
+  it("names country-filed cuisines the way people say them", () => {
+    expect(cuisineLabel("India")).toBe("Indian");
+    expect(cuisineLabel("United States")).toBe("American");
+    expect(cuisineLabel("Unknown")).toBe("World");
+    expect(cuisineLabel("Thai")).toBe("Thai");
+  });
+});
