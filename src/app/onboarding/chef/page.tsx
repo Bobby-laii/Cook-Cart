@@ -14,6 +14,7 @@ import {
   isValidPersonality,
   parseChefAvatarConfig,
   randomChefAvatar,
+  randomChefName,
 } from "@/lib/avatar/chefAvatar";
 
 type Step = 1 | 2 | 3;
@@ -93,10 +94,11 @@ function ChefOnboardingContent() {
 
   const randomize = () => {
     setConfig(randomChefAvatar());
+    setChefName((n) => randomChefName(n));
     setPopKey((k) => k + 1);
     setDiceSpin(true);
     setTimeout(() => setDiceSpin(false), 500);
-    setBubble("A whole new me. Keep going until it feels right.");
+    setBubble("A whole new me, and a new name. Keep going until it feels right.");
   };
 
   const reset = () => {
@@ -282,6 +284,17 @@ function ChefOnboardingContent() {
                     </p>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChefName((n) => randomChefName(n));
+                        if (error) setError("");
+                      }}
+                      className="min-h-[48px] inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-4 text-[15px] font-bold text-stone-900 transition-colors hover:border-stone-500"
+                    >
+                      <Dices className="h-4 w-4" aria-hidden />
+                      Random name
+                    </button>
                     {["Chef Oliver", "Nonna Rosa", "Chef Mei", "Sous-chef Kai"].map((n) => {
                       const active = chefName === n;
                       return (

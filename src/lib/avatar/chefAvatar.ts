@@ -274,6 +274,23 @@ export function randomChefAvatar(): ChefAvatarConfig {
   };
 }
 
+/**
+ * Names for "Surprise me", from kitchens around the world. Short enough for the
+ * chat header (the field allows 30 characters).
+ */
+export const CHEF_NAMES = [
+  "Chef Mei", "Nonna Rosa", "Chef Oliver", "Sous-chef Kai", "Chef Amara", "Chef Mateo",
+  "Auntie Lin", "Chef Priya", "Chef Hiro", "Chef Leila", "Chef Tomás", "Chef Noor",
+  "Chef Sofia", "Chef Kofi", "Chef Ana", "Chef Ravi", "Chef Yuna", "Chef Malik",
+  "Chef Ingrid", "Chef Dara", "Chef Bao", "Chef Elena", "Chef Sami", "Chef Wren",
+] as const;
+
+/** A random chef name, never the one passed in (so each tap changes it). */
+export function randomChefName(current = ""): string {
+  const pool = CHEF_NAMES.filter((n) => n !== current);
+  return rand(pool);
+}
+
 /* ---------------------------------- Colour helpers ---------------------------------- */
 
 /** Lightens (amount > 0) or darkens (amount < 0) a #rrggbb colour. amount in [-1, 1]. */

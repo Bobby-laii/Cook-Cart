@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Dices, Loader2 } from "lucide-react";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
-import { CHEF_PERSONALITIES } from "@/lib/avatar/chefAvatar";
+import { CHEF_PERSONALITIES, randomChefName } from "@/lib/avatar/chefAvatar";
 
 const DEFAULT_CHEF_NAME = "Your chef";
 /** Names from before chefs were renamed; shown as the default instead. */
@@ -90,16 +90,27 @@ export default function ChefSettingsPage() {
           <label htmlFor="chef-name" className="mb-2 block text-[17px] font-bold text-stone-900">
             Name
           </label>
-          <input
-            id="chef-name"
-            type="text"
-            value={chefName}
-            onChange={(e) => setChefName(e.target.value)}
-            placeholder={DEFAULT_CHEF_NAME}
-            maxLength={30}
-            aria-describedby="chef-name-hint"
-            className="h-[52px] w-full rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none"
-          />
+          <div className="flex gap-2">
+            <input
+              id="chef-name"
+              type="text"
+              value={chefName}
+              onChange={(e) => setChefName(e.target.value)}
+              placeholder={DEFAULT_CHEF_NAME}
+              maxLength={30}
+              aria-describedby="chef-name-hint"
+              className="h-[52px] min-w-0 flex-1 rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setChefName((n) => randomChefName(n))}
+              aria-label="Pick a random name"
+              title="Pick a random name"
+              className="h-[52px] w-[52px] flex-shrink-0 inline-flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-900 transition-colors hover:border-stone-500"
+            >
+              <Dices className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
           <p id="chef-name-hint" className="mt-2 text-[14px] text-stone-500">
             Your chef uses this name in every chat.
           </p>
