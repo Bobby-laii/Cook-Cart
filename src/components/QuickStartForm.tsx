@@ -9,20 +9,7 @@ import {
   isEuropeanCuisine,
   TOP_50_EUROPEAN_INGREDIENTS,
 } from "@/config/regionalIngredients";
-import {
-  Sparkles,
-  Camera,
-  Plus,
-  X,
-  Users,
-  Clock,
-  Flame,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  Upload,
-} from "lucide-react";
+import { X, Check, ChevronDown, Loader2, Plus } from "lucide-react";
 
 interface QuickStartFormProps {
   onSubmit: (formData: {
@@ -37,11 +24,18 @@ interface QuickStartFormProps {
   }) => void;
   isLoading: boolean;
   initialCuisine?: string;
+  /** Collapse to the summary bar (e.g. once the conversation has messages). */
+  collapsed?: boolean;
 }
 
-export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickStartFormProps) {
+export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed = false }: QuickStartFormProps) {
   const { t, language } = useLanguage();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(!collapsed);
+
+  // Follow the parent: fold away once a conversation starts, open again for a new chat.
+  useEffect(() => {
+    setIsExpanded(!collapsed);
+  }, [collapsed]);
 
   // Form states
   const [cuisine, setCuisine] = useState("cantonese");
@@ -75,12 +69,6 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
   const [equipment, setEquipment] = useState<string[]>(["stove", "rice_cooker"]);
   const [dietary, setDietary] = useState("None");
   const [allergies, setAllergies] = useState("");
-
-  // Photo upload states
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
-  const [detectedItems, setDetectedItems] = useState<string[]>([]);
-  const [photoError, setPhotoError] = useState("");
 
   // Check if current cuisine selection is European
   const isEuropean = useMemo(() => isEuropeanCuisine(cuisine), [cuisine]);
@@ -147,53 +135,6 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setPhotoError("");
-    setIsAnalyzingPhoto(true);
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      setPhotoPreview(base64);
-
-      try {
-        const res = await fetch("/api/ai/photo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64 }),
-        });
-        const data = await res.json();
-        setIsAnalyzingPhoto(false);
-
-        if (res.ok && data.detectedIngredients) {
-          setDetectedItems(data.detectedIngredients);
-        } else {
-          setPhotoError(data.error || "Failed to analyze photo");
-        }
-      } catch (err: any) {
-        setIsAnalyzingPhoto(false);
-        setPhotoError(err.message || "Failed to upload photo");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleConfirmDetected = (item: string) => {
-    if (!ingredients.includes(item)) {
-      setIngredients([...ingredients, item]);
-    }
-    setDetectedItems(detectedItems.filter((i) => i !== item));
-  };
-
-  const handleConfirmAllDetected = () => {
-    const combined = Array.from(new Set([...ingredients, ...detectedItems]));
-    setIngredients(combined);
-    setDetectedItems([]);
-  };
-
   // Resolved display name for selected cuisine
   const selectedCuisineObj = useMemo(
     () => APP_CONFIG.cuisines.find((c) => c.id === cuisine),
@@ -228,399 +169,341 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine }: QuickSta
     });
   };
 
+  const zh = language === "zh-HK";
+  const timeLabel =
+    cookingTimeLimit === "any"
+      ? t("anyTime")
+      : cookingTimeLimit === "30 mins"
+        ? t("quickUnder30")
+        : cookingTimeLimit === "45 mins"
+          ? t("quickUnder45")
+          : t("quickUnder60");
+  const skillLabel = (() => {
+    const lvl = APP_CONFIG.skillLevels.find((l) => l.id === skillLevel);
+    return lvl ? (zh ? lvl.labelZh : lvl.label) : skillLevel;
+  })();
+
+  const fieldClass =
+    "rounded-md border border-stone-200 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-500";
+
+  // Collapsed once a conversation is under way so the messages get the screen; the
+  // summary keeps what was asked for visible.
+  if (!isExpanded) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+        <div className="min-w-0">
+          <p className="font-bold text-stone-900">{zh ? "用食材搵菜式" : "Search by ingredients"}</p>
+          <p className="text-sm text-stone-500 truncate">
+            {ingredients.length > 0
+              ? zh
+                ? `${ingredients.join("、")}，${servings} ${t("people")}，${cuisineDisplayName}`
+                : `${ingredients.join(", ")} for ${servings} ${t("people")}, ${cuisineDisplayName}`
+              : zh
+                ? "話我知你有咩食材，我建議三道菜。"
+                : "Tell me what you have and I'll suggest three dishes."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          aria-expanded={false}
+          className="shrink-0 h-12 px-4 rounded-md border border-stone-200 bg-stone-50 text-stone-900 font-bold hover:border-brand-500 hover:text-brand-600 transition"
+        >
+          {ingredients.length > 0 ? (zh ? "修改" : "Edit") : zh ? "打開" : "Open"}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden transition-all">
-      {/* Header bar with toggle */}
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-stone-50/80 transition select-none"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center font-bold">
-            <Sparkles className="w-5 h-5" />
+    <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-5">
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[22px] leading-tight font-bold text-stone-900">
+            {zh ? "雪櫃有乜？" : "What's in the fridge?"}
+          </h2>
+          <p className="mt-1 text-sm text-stone-500 max-w-xl">
+            {zh
+              ? "加入你手上有嘅食材。我哋會建議三道菜，每道都用晒佢哋。"
+              : "Add what you have. We'll suggest three dishes, each using all of it."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsExpanded(false)}
+          aria-expanded={true}
+          className="shrink-0 h-12 -mt-2 -mr-2 px-3 rounded-md text-sm text-stone-500 hover:text-stone-900"
+        >
+          {zh ? "收起" : "Hide"}
+        </button>
+      </header>
+
+      {/* Ingredients: the one required input, so it comes first and gets the space. */}
+      <section className="space-y-3">
+        <div ref={inputContainerRef} className="relative">
+          <label htmlFor="ingredient-input" className="sr-only">
+            {t("ingredientsLabel")}
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="ingredient-input"
+              type="text"
+              value={ingredientInput}
+              onChange={(e) => {
+                setIngredientInput(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (ingredientInput.trim()) setShowSuggestions(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (matchingSuggestions.length > 0 && showSuggestions) {
+                    const top = matchingSuggestions[0];
+                    handleAddIngredient(zh ? top.zh : top.en);
+                  } else {
+                    handleAddIngredient();
+                  }
+                } else if (e.key === "Escape") {
+                  setShowSuggestions(false);
+                }
+              }}
+              placeholder={zh ? "輸入食材，例如：雞蛋、白菜仔、豆腐" : "Type an ingredient, e.g. eggs, bok choy, tofu"}
+              className={`${fieldClass} flex-1 min-w-0 h-12 px-4 text-base placeholder:text-stone-400`}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={() => handleAddIngredient()}
+              className="h-12 px-5 rounded-md border border-brand-500 text-brand-600 font-bold hover:bg-brand-50 transition"
+            >
+              {t("addIngredientBtn")}
+            </button>
           </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-black text-stone-900">
-              {t("quickStartTitle")}
-            </h2>
-            <p className="text-xs text-stone-500 hidden sm:block">
-              {t("quickStartSubtitle")}
-            </p>
+
+          {showSuggestions && matchingSuggestions.length > 0 && (
+            <ul className="absolute z-30 left-0 right-0 sm:right-24 top-full mt-1 bg-stone-50 rounded-md border border-stone-200 max-h-64 overflow-y-auto py-1">
+              {matchingSuggestions.map((item, idx) => {
+                const main = zh ? item.zh : item.en;
+                const sub = zh ? item.en : item.zh;
+                return (
+                  <li key={item.en}>
+                    <button
+                      type="button"
+                      onClick={() => handleAddIngredient(main)}
+                      className={`w-full min-h-12 px-4 py-3 text-left flex items-baseline gap-2 hover:bg-stone-100 ${
+                        idx === 0 ? "bg-stone-100" : ""
+                      }`}
+                    >
+                      <span className="text-stone-900">{main}</span>
+                      <span className="text-sm text-stone-500">{sub}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* What has been added so far */}
+        {ingredients.length > 0 && (
+          <ul className="flex flex-wrap gap-2" aria-label={zh ? "已加入食材" : "Added ingredients"}>
+            {ingredients.map((item) => (
+              <li
+                key={item}
+                className="inline-flex items-center gap-1 pl-3 pr-1 py-1 rounded-full bg-brand-500 text-white text-sm"
+              >
+                {item}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveIngredient(item)}
+                  className="p-1.5 rounded-full hover:bg-brand-600"
+                  aria-label={zh ? `移除${item}` : `Remove ${item}`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Common ingredients for the chosen cuisine, one tap each */}
+        <div>
+          <p className="text-sm text-stone-500 mb-2">
+            {zh ? `${cuisineDisplayName}常用：` : `Common in ${cuisineDisplayName.toLowerCase()} cooking:`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {popularChips.map((chip) => {
+              const label = zh ? chip.zh : chip.en;
+              if (ingredients.includes(label) || ingredients.includes(chip.en)) return null;
+              return (
+                <button
+                  key={chip.en}
+                  type="button"
+                  onClick={() => handleAddIngredient(label)}
+                  className="inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full border border-stone-200 bg-stone-50 text-sm text-stone-700 hover:border-brand-500 hover:text-brand-600 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" aria-hidden />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <button
-          type="button"
-          className="p-2 text-stone-400 hover:text-stone-700 rounded-lg"
-          aria-label="Toggle Form"
-        >
-          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-        </button>
-      </div>
+      </section>
 
-      {isExpanded && (
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 border-t border-stone-100 space-y-6">
-          {/* 1. Cuisine Selection & Servings */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">
-                {t("cuisineLabel")}
-              </label>
-              <select
-                value={cuisine}
-                onChange={(e) => setCuisine(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              >
-                {/* One language only, driven by the user's choice — never both.
-                    The region is intentionally not rendered: "(Asia)" or
-                    "(Middle East / Europe)" beside a dish style is just noise. */}
-                {/*
-                  Split into two groups so the country-agnostic styles ("Asian
-                  Food", "Western Food") read as a distinct, deliberate choice
-                  rather than being buried among specific cuisines.
-                */}
-                <optgroup label={language === "zh-HK" ? "不拘國家" : "No Specific Country"}>
-                  {APP_CONFIG.cuisines
-                    .filter((c) => c.broadStyle)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {language === "zh-HK" ? c.labelZh : c.label}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label={language === "zh-HK" ? "特定菜系" : "Specific Cuisine"}>
-                  {APP_CONFIG.cuisines
-                    .filter((c) => !c.broadStyle)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {language === "zh-HK" ? c.labelZh : c.label}
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-stone-500" />
-                {t("peopleCountLabel")}
-              </label>
-              <div className="flex items-center rounded-xl border border-stone-300 bg-white overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setServings(Math.max(1, servings - 1))}
-                  className="px-3.5 py-2 text-stone-600 hover:bg-stone-100 font-bold"
-                >
-                  -
-                </button>
-                <span className="flex-1 text-center text-sm font-bold text-stone-900">
-                  {servings} {t("people")}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setServings(Math.min(10, servings + 1))}
-                  className="px-3.5 py-2 text-stone-600 hover:bg-stone-100 font-bold"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Core Feature: Ingredients list with "Use All Ingredients" Guarantee */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-stone-900 uppercase tracking-wider">
-                {t("ingredientsLabel")}
-              </label>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                ✓ {language === "zh-HK" ? "核心保證：全數入饌" : "AI uses ALL entered items"}
-              </span>
-            </div>
-
-            {/* Input bar with instant local autocomplete */}
-            <div ref={inputContainerRef} className="relative">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={ingredientInput}
-                  onChange={(e) => {
-                    setIngredientInput(e.target.value);
-                    setShowSuggestions(true);
-                  }}
-                  onFocus={() => {
-                    if (ingredientInput.trim()) setShowSuggestions(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (matchingSuggestions.length > 0 && showSuggestions) {
-                        const top = matchingSuggestions[0];
-                        handleAddIngredient(language === "zh-HK" ? top.zh : top.en);
-                      } else {
-                        handleAddIngredient();
-                      }
-                    } else if (e.key === "Escape") {
-                      setShowSuggestions(false);
-                    }
-                  }}
-                  placeholder={t("ingredientsPlaceholder")}
-                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleAddIngredient()}
-                  className="px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-sm font-bold flex items-center gap-1 transition"
-                >
-                  <Plus className="w-4 h-4" />
-                  {t("addIngredientBtn")}
-                </button>
-              </div>
-
-              {/* Autocomplete Dropdown List */}
-              {showSuggestions && matchingSuggestions.length > 0 && (
-                <div className="absolute z-30 left-0 right-16 top-full mt-1.5 bg-white rounded-xl border border-stone-200 shadow-xl overflow-hidden animate-fadeIn">
-                  <div className="p-1.5 max-h-56 overflow-y-auto divide-y divide-stone-100">
-                    {matchingSuggestions.map((item, idx) => {
-                      const displayMain = language === "zh-HK" ? item.zh : item.en;
-                      const displaySub = language === "zh-HK" ? item.en : item.zh;
-                      return (
-                        <button
-                          key={item.en}
-                          type="button"
-                          onClick={() => handleAddIngredient(displayMain)}
-                          className={`w-full px-3 py-2 text-left flex items-center justify-between rounded-lg transition hover:bg-amber-50 group ${
-                            idx === 0 ? "bg-stone-50" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-stone-900 group-hover:text-amber-800">
-                              {displayMain}
-                            </span>
-                            <span className="text-xs text-stone-400">
-                              ({displaySub})
-                            </span>
-                          </div>
-                          <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition">
-                            + {language === "zh-HK" ? "加入" : "Add"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Selected Ingredient Chips */}
-            <div className="flex flex-wrap gap-2 pt-1 min-h-[38px] items-center">
-              {ingredients.length === 0 ? (
-                <p className="text-xs text-stone-400 italic">
-                  {language === "zh-HK"
-                    ? "未選擇食材。請在上方搜尋或點選下方熱門食材。"
-                    : "No ingredients selected yet. Search above or tap popular ingredients below."}
-                </p>
-              ) : (
-                ingredients.map((item) => (
-                  <span
-                    key={item}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-800 border border-brand-200 text-xs sm:text-sm font-bold shadow-sm"
-                  >
-                    {item}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveIngredient(item)}
-                      className="hover:text-red-600 rounded-full p-0.5"
-                      title="Remove item"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </span>
-                ))
-              )}
-            </div>
-
-            {/* Quick Tap Suggestions */}
-            <div className="pt-2 border-t border-stone-100 space-y-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-[11px] text-stone-600 font-semibold flex items-center gap-1">
-                  <span>{isEuropean ? "🇪🇺" : "💡"}</span>
-                  <span>
-                    {isEuropean
-                      ? language === "zh-HK"
-                        ? `歐洲常用食材（${cuisineDisplayName}）：`
-                        : `Top European distinctive ingredients (${cuisineDisplayName}):`
-                      : language === "zh-HK"
-                        ? `常用食材（${cuisineDisplayName}）：`
-                        : `Quick tap (${cuisineDisplayName}):`}
-                  </span>
-                </span>
-              </div>
-
-              {/* Main Quick Tap Chips */}
-              <div className="flex flex-wrap gap-1.5">
-                {popularChips.map((chip) => {
-                  const label = language === "zh-HK" ? chip.zh : chip.en;
-                  const isSelected = ingredients.includes(label) || ingredients.includes(chip.en);
-                  if (isSelected) return null;
-                  return (
-                    <button
-                      key={chip.en}
-                      type="button"
-                      onClick={() => handleAddIngredient(language === "zh-HK" ? chip.zh : chip.en)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 shadow-2xs ${
-                        isEuropean
-                          ? "bg-amber-50/90 hover:bg-amber-100 text-amber-900 border border-amber-200/80"
-                          : "bg-stone-100 hover:bg-stone-200 text-stone-700"
-                      }`}
-                    >
-                      <span className={isEuropean ? "text-amber-600 font-bold" : "text-stone-400"}>+</span>
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Photo Upload for Fridge / Ingredients (Requirement 4.1 & Stage 9) */}
-          <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-brand-600" />
-                {t("photoUploadTitle")}
-              </span>
-              <label className="cursor-pointer px-3 py-1 bg-white hover:bg-stone-100 border border-stone-300 text-stone-800 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition">
-                <Upload className="w-3.5 h-3.5 text-brand-500" />
-                <span>{language === "zh-HK" ? "上載相片" : "Choose Photo"}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {isAnalyzingPhoto && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2 animate-pulse">
-                <Sparkles className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>{t("analyzingPhoto")}</span>
-              </div>
-            )}
-
-            {photoError && (
-              <p className="text-xs text-red-600 flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                {photoError}
-              </p>
-            )}
-
-            {detectedItems.length > 0 && (
-              <div className="p-3 bg-white rounded-lg border border-emerald-300 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-900">
-                    {t("photoDetectedTitle")} ({detectedItems.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleConfirmAllDetected}
-                    className="text-xs font-bold text-emerald-700 hover:underline"
-                  >
-                    {language === "zh-HK" ? "全部確認加入 +" : "Add All +"}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {detectedItems.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => handleConfirmDetected(item)}
-                      className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold hover:bg-emerald-200 transition"
-                      title="Tap to confirm and add"
-                    >
-                      ✓ {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 4. Time limit, Skill Level & Kitchen Equipment */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-stone-500" />
-                {t("cookingTimeLabel")}
-              </label>
-              <select
-                value={cookingTimeLimit}
-                onChange={(e) => setCookingTimeLimit(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs sm:text-sm bg-white"
-              >
-                <option value="any">{t("anyTime")}</option>
-                <option value="30 mins">{t("quickUnder30")}</option>
-                <option value="45 mins">{t("quickUnder45")}</option>
-                <option value="60 mins">{t("quickUnder60")}</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">
-                {t("skillLevelLabel")}
-              </label>
-              <select
-                value={skillLevel}
-                onChange={(e) => setSkillLevel(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs sm:text-sm bg-white"
-              >
-                {APP_CONFIG.skillLevels.map((lvl) => (
-                  <option key={lvl.id} value={lvl.id}>
-                    {language === "zh-HK" ? lvl.labelZh : lvl.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">
-                {t("equipmentLabel")}
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {APP_CONFIG.equipmentList.map((eq) => {
-                  const isChecked = equipment.includes(eq.id);
-                  return (
-                    <button
-                      key={eq.id}
-                      type="button"
-                      onClick={() => handleToggleEquipment(eq.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${isChecked
-                          ? "bg-stone-900 text-white font-bold"
-                          : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                        }`}
-                    >
-                      {language === "zh-HK" ? eq.labelZh : eq.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Submit CTA */}
-          <div className="pt-2">
+      {/* Who and what style, as one readable line */}
+      <section className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-stone-200 pt-4">
+        <div className="flex items-center gap-3">
+          <span className="text-stone-700">{zh ? "煮俾" : "Cooking for"}</span>
+          <div className={`${fieldClass} flex items-center`}>
             <button
-              type="submit"
-              disabled={isLoading || ingredients.length === 0}
-              className="w-full py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-sm sm:text-base shadow-lg shadow-brand-500/25 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              type="button"
+              onClick={() => setServings(Math.max(1, servings - 1))}
+              className="w-11 h-12 text-lg text-stone-600 hover:text-stone-900"
+              aria-label={zh ? "減少人數" : "Fewer people"}
             >
-              <Sparkles className="w-5 h-5" />
-              {isLoading ? t("aiThinking") : t("generateRecipesBtn")}
+              −
+            </button>
+            <span className="min-w-[5.5rem] px-1 text-center font-medium font-mono whitespace-nowrap" aria-live="polite">
+              {servings} {t("people")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setServings(Math.min(10, servings + 1))}
+              className="w-11 h-12 text-lg text-stone-600 hover:text-stone-900"
+              aria-label={zh ? "增加人數" : "More people"}
+            >
+              +
             </button>
           </div>
-        </form>
-      )}
-    </div>
+        </div>
+
+        <label className="flex items-center gap-3">
+          <span className="text-stone-700">{zh ? "菜系" : "Style"}</span>
+          <select
+            value={cuisine}
+            onChange={(e) => setCuisine(e.target.value)}
+            className={`${fieldClass} h-12 pl-3 pr-8`}
+          >
+            {/* One language only, driven by the user's choice. Country-agnostic styles
+                ("Asian Food", "Western Food") are grouped apart as a deliberate choice. */}
+            <optgroup label={zh ? "不拘國家" : "No specific country"}>
+              {APP_CONFIG.cuisines
+                .filter((c) => c.broadStyle)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {zh ? c.labelZh : c.label}
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label={zh ? "特定菜系" : "Specific cuisine"}>
+              {APP_CONFIG.cuisines
+                .filter((c) => !c.broadStyle)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {zh ? c.labelZh : c.label}
+                  </option>
+                ))}
+            </optgroup>
+          </select>
+        </label>
+      </section>
+
+      {/* Less-used settings, folded away with their current values in the summary */}
+      <details className="group border-y border-stone-200">
+        <summary className="flex items-center justify-between gap-3 min-h-12 py-3 cursor-pointer list-none text-stone-700 hover:text-stone-900">
+          <span>
+            <span className="font-bold text-stone-900">{zh ? "廚房同時間" : "Kitchen and time"}</span>
+            <span className="block text-sm text-stone-500">
+              {[
+                timeLabel,
+                skillLabel,
+                ...APP_CONFIG.equipmentList
+                  .filter((eq) => equipment.includes(eq.id))
+                  .map((eq) => (zh ? eq.labelZh : eq.label)),
+              ].join(zh ? "、" : ", ")}
+            </span>
+          </span>
+          <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
+        </summary>
+
+        <div className="grid gap-5 pb-5 sm:grid-cols-3">
+          <label className="space-y-2">
+            <span className="block text-sm font-medium text-stone-900">{t("cookingTimeLabel")}</span>
+            <select
+              value={cookingTimeLimit}
+              onChange={(e) => setCookingTimeLimit(e.target.value)}
+              className={`${fieldClass} w-full h-12 px-3`}
+            >
+              <option value="any">{t("anyTime")}</option>
+              <option value="30 mins">{t("quickUnder30")}</option>
+              <option value="45 mins">{t("quickUnder45")}</option>
+              <option value="60 mins">{t("quickUnder60")}</option>
+            </select>
+          </label>
+
+          <label className="space-y-2">
+            <span className="block text-sm font-medium text-stone-900">{t("skillLevelLabel")}</span>
+            <select
+              value={skillLevel}
+              onChange={(e) => setSkillLevel(e.target.value)}
+              className={`${fieldClass} w-full h-12 px-3`}
+            >
+              {APP_CONFIG.skillLevels.map((lvl) => (
+                <option key={lvl.id} value={lvl.id}>
+                  {zh ? lvl.labelZh : lvl.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-stone-900 mb-2">
+              {zh ? "廚房有乜用" : "What your kitchen has"}
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {APP_CONFIG.equipmentList.map((eq) => {
+                const on = equipment.includes(eq.id);
+                return (
+                  <button
+                    key={eq.id}
+                    type="button"
+                    onClick={() => handleToggleEquipment(eq.id)}
+                    aria-pressed={on}
+                    className={`inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full text-sm border transition ${
+                      on
+                        ? "bg-brand-500 border-brand-500 text-white"
+                        : "border-stone-200 bg-stone-50 text-stone-700 hover:border-brand-500"
+                    }`}
+                  >
+                    {on && <Check className="w-3.5 h-3.5" />}
+                    {zh ? eq.labelZh : eq.label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        </div>
+      </details>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={isLoading || ingredients.length === 0}
+          className="inline-flex items-center justify-center gap-2 h-[52px] px-6 w-full sm:w-auto rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold transition disabled:bg-stone-200 disabled:text-stone-500 disabled:cursor-not-allowed"
+        >
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />}
+          {isLoading ? t("aiThinking") : zh ? "建議三道菜" : "Suggest 3 dishes"}
+        </button>
+        {ingredients.length === 0 && !isLoading && (
+          <span className="text-sm text-stone-500">
+            {zh ? "先加至少一樣食材。" : "Add at least one ingredient first."}
+          </span>
+        )}
+      </div>
+    </form>
   );
 }

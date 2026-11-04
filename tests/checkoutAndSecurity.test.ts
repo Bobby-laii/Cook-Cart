@@ -275,6 +275,20 @@ describe("GET /api/orders — Access Isolation", () => {
 });
 
 describe("POST /api/ai/chat & GET /api/ai/conversations — Conversation IDOR Protection", () => {
+  it("rejects an anonymous chat with 401 and never calls the AI", async () => {
+    mocks.getCurrentSession.mockResolvedValue(null);
+
+    const res = await chatRoute.POST(
+      postJson("http://localhost/api/ai/chat", {
+        messages: [{ role: "user", content: "What can I cook?" }],
+      })
+    );
+
+    // Without a user the daily message limit cannot be counted, so the AI must not run.
+    expect(res.status).toBe(401);
+    expect(mocks.executeAIChat).not.toHaveBeenCalled();
+  });
+
   it("allocates a new conversationId if user tries to overwrite another user's conversation", async () => {
     mocks.getCurrentSession.mockResolvedValue(CUSTOMER);
     mocks.userFindUnique.mockResolvedValue({

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
-import { Check, Palette, Scissors, Shirt, Smile, ChefHat, Image as ImageIcon } from "lucide-react";
+import { Check, Palette, Plus, Scissors, Shirt, Smile, ChefHat, Image as ImageIcon } from "lucide-react";
 import { ChefAvatar } from "@/components/avatar/ChefAvatar";
 import {
   ACCENT_COLORS,
@@ -20,6 +20,7 @@ import {
   OUTFIT_COLORS,
   OUTFIT_STYLES,
   SKIN_TONES,
+  luminance,
   optionLabel,
 } from "@/lib/avatar/chefAvatar";
 
@@ -28,12 +29,12 @@ type ColorField = "skinTone" | "hairColor" | "outfitColor" | "accentColor" | "he
 type ToggleField = "blush" | "neckerchief";
 
 const TABS: { id: TabId; en: string; zh: string; icon: React.ElementType }[] = [
-  { id: "face", en: "Skin & Face", zh: "膚色與臉型", icon: Palette },
+  { id: "face", en: "Skin and face", zh: "膚色與臉型", icon: Palette },
   { id: "expression", en: "Expression", zh: "表情", icon: Smile },
   { id: "hair", en: "Hair", zh: "髮型", icon: Scissors },
   { id: "outfit", en: "Outfit", zh: "服裝", icon: Shirt },
-  { id: "headwear", en: "Hats & Glasses", zh: "帽子與眼鏡", icon: ChefHat },
-  { id: "backdrop", en: "Backdrop", zh: "背景", icon: ImageIcon },
+  { id: "headwear", en: "Hat and glasses", zh: "帽子與眼鏡", icon: ChefHat },
+  { id: "backdrop", en: "Badge", zh: "徽章底色", icon: ImageIcon },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -58,13 +59,13 @@ function useEditor(): EditorCtx {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500">{title}</h3>
+      <h3 className="text-[17px] font-bold leading-snug text-stone-900">{title}</h3>
       {children}
     </section>
   );
 }
 
-/** Grid of tiles — each tile previews the current avatar with that option applied. */
+/** Grid of small tiles: each tile previews the current avatar with that option applied. */
 function OptionGrid<K extends keyof ChefAvatarConfig>({
   field,
   options,
@@ -76,7 +77,7 @@ function OptionGrid<K extends keyof ChefAvatarConfig>({
 }) {
   const { value, set, language } = useEditor();
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
       {options.map((opt) => {
         const active = value[field] === opt;
         const label = labelFor ? labelFor(opt) : optionLabel(String(opt), language);
@@ -86,19 +87,15 @@ function OptionGrid<K extends keyof ChefAvatarConfig>({
             type="button"
             onClick={() => set(field, opt)}
             aria-pressed={active}
-            className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border transition ${
-              active
-                ? "border-amber-500 bg-amber-50 ring-2 ring-amber-400/40 shadow-sm"
-                : "border-stone-200 bg-white hover:border-amber-300 hover:-translate-y-0.5"
+            className={`relative flex min-h-[48px] flex-col items-center gap-1.5 rounded-[14px] border-2 px-1.5 pb-2 pt-2.5 transition-colors focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+              active ? "border-brand-500 bg-brand-50" : "border-stone-200 bg-stone-50 hover:border-brand-300"
             }`}
           >
             <ChefAvatar config={{ ...value, [field]: opt }} size={64} className="rounded-full" />
-            <span className={`text-[11px] font-semibold leading-tight text-center ${active ? "text-amber-800" : "text-stone-600"}`}>
-              {label}
-            </span>
+            <span className={`text-sm leading-tight text-center ${active ? "font-bold text-brand-600" : "text-stone-700"}`}>{label}</span>
             {active && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center">
-                <Check className="w-3 h-3" strokeWidth={3} />
+              <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white">
+                <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
               </span>
             )}
           </button>
@@ -112,8 +109,9 @@ function Swatches({ field, colors }: { field: ColorField; colors: string[] }) {
   const { value, set, language } = useEditor();
   const current = value[field];
   const isCustom = !colors.includes(current);
+  const ring = "outline outline-[3px] outline-offset-2 outline-brand-500";
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2.5">
       {colors.map((color) => {
         const active = current === color;
         return (
@@ -123,26 +121,27 @@ function Swatches({ field, colors }: { field: ColorField; colors: string[] }) {
             onClick={() => set(field, color)}
             aria-label={color}
             aria-pressed={active}
-            className={`w-9 h-9 rounded-full border transition ${
-              active ? "ring-2 ring-offset-2 ring-amber-500 scale-110 border-white" : "border-stone-300 hover:scale-110"
-            }`}
+            className={`h-12 w-12 rounded-full border-2 border-stone-900/15 transition-[outline-color] ${active ? ring : "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-brand-500"}`}
             style={{ backgroundColor: color }}
-          />
+          >
+            {active && <Check className="mx-auto h-5 w-5" strokeWidth={3} color={luminance(color) > 150 ? "#12204A" : "#FFFFFF"} aria-hidden />}
+          </button>
         );
       })}
       <label
-        className={`relative w-9 h-9 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer transition hover:scale-110 ${
-          isCustom ? "ring-2 ring-offset-2 ring-amber-500 border-transparent" : "border-stone-300"
+        className={`relative flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 ${
+          isCustom ? `border-stone-900/15 ${ring}` : "border-dashed border-stone-300 bg-stone-50"
         }`}
         style={isCustom ? { backgroundColor: current } : undefined}
         title={language === "zh-HK" ? "自訂顏色" : "Custom colour"}
       >
-        {!isCustom && <span className="text-stone-400 text-lg leading-none">+</span>}
+        {!isCustom && <Plus className="h-5 w-5 text-stone-500" aria-hidden />}
+        <span className="sr-only">{language === "zh-HK" ? "自訂顏色" : "Custom colour"}</span>
         <input
           type="color"
           value={current}
           onChange={(e) => set(field, e.target.value.toLowerCase())}
-          className="absolute inset-0 opacity-0 cursor-pointer"
+          className="absolute inset-0 cursor-pointer opacity-0"
         />
       </label>
     </div>
@@ -153,11 +152,17 @@ function Toggle({ field, label }: { field: ToggleField; label: string }) {
   const { value, set } = useEditor();
   const on = value[field];
   return (
-    <button type="button" onClick={() => set(field, !on)} aria-pressed={on} className="flex items-center gap-3 text-sm font-medium text-stone-700">
-      <span className={`w-11 h-6 rounded-full p-0.5 transition ${on ? "bg-amber-500" : "bg-stone-300"}`}>
-        <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : ""}`} />
-      </span>
+    <button
+      type="button"
+      role="switch"
+      onClick={() => set(field, !on)}
+      aria-checked={on}
+      className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[14px] border border-stone-200 bg-stone-50 px-4 text-[17px] text-stone-900"
+    >
       {label}
+      <span className={`h-7 w-12 rounded-full p-1 transition-colors ${on ? "bg-brand-500" : "bg-stone-300"}`}>
+        <span className={`block h-5 w-5 rounded-full bg-white transition-transform motion-reduce:transition-none ${on ? "translate-x-5" : ""}`} />
+      </span>
     </button>
   );
 }
@@ -181,25 +186,30 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
 
   return (
     <Ctx.Provider value={{ value, set, language }}>
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-        {/* Category tabs */}
-        <div className="flex gap-1.5 overflow-x-auto p-3 border-b border-stone-100 bg-stone-50/60">
-          {TABS.map(({ id, en, zh: zhLabel, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition ${
-                tab === id ? "bg-stone-900 text-white shadow" : "text-stone-600 hover:bg-white hover:text-stone-900"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {zh ? zhLabel : en}
-            </button>
-          ))}
+      <div className="overflow-hidden rounded-3xl border border-stone-200 bg-stone-50">
+        {/* Category chips */}
+        <div role="tablist" aria-label={L("Parts of your chef", "大廚造型部分")} className="flex gap-2 overflow-x-auto border-b border-stone-200 px-4 py-3">
+          {TABS.map(({ id, en, zh: zhLabel, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(id)}
+                className={`flex min-h-[48px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-2 px-4 text-[15px] transition-colors ${
+                  active ? "border-brand-500 bg-brand-500 font-bold text-white" : "border-stone-200 bg-stone-50 text-stone-900 hover:border-brand-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" aria-hidden />
+                {zh ? zhLabel : en}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="p-5 sm:p-6 space-y-7 max-h-[560px] overflow-y-auto">
+        <div className="space-y-7 p-4 sm:p-6 lg:max-h-[600px] lg:overflow-y-auto">
           {tab === "face" && (
             <>
               <Section title={L("Skin tone", "膚色")}>
@@ -249,7 +259,7 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
                 <Swatches field="outfitColor" colors={OUTFIT_COLORS} />
               </Section>
               <Section
-                title={value.outfit === "apron" ? L("Shirt & neckerchief colour", "襯衫與領巾顏色") : L("Trim & neckerchief colour", "滾邊與領巾顏色")}
+                title={value.outfit === "apron" ? L("Shirt and neckerchief colour", "襯衫與領巾顏色") : L("Trim and neckerchief colour", "滾邊與領巾顏色")}
               >
                 <Swatches field="accentColor" colors={ACCENT_COLORS} />
               </Section>
@@ -278,7 +288,7 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
           )}
 
           {tab === "backdrop" && (
-            <Section title={L("Backdrop", "背景")}>
+            <Section title={L("Badge colour", "徽章底色")}>
               <OptionGrid
                 field="backdrop"
                 options={BACKDROPS.map((b) => b.id)}

@@ -4,53 +4,23 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { Sparkles, Bot, Save, Check, ArrowLeft, RefreshCw, Palette } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
+import { CHEF_PERSONALITIES } from "@/lib/avatar/chefAvatar";
 
 const CHEF_AVATAR_PRESETS = [
-  { id: "chef_mei", name: "Chef Mei", avatar: "👩‍🍳", cuisine: "Cantonese & Dim Sum", flag: "🇭🇰" },
-  { id: "chef_marco", name: "Chef Marco", avatar: "👨‍🍳", cuisine: "Italian Pasta & Pizza", flag: "🇮🇹" },
-  { id: "chef_yuki", name: "Chef Yuki", avatar: "🍣", cuisine: "Japanese & Umami Broths", flag: "🇯🇵" },
-  { id: "chef_raj", name: "Chef Raj", avatar: "🍛", cuisine: "Indian Aromatics & Curries", flag: "🇮🇳" },
-  { id: "chef_pierre", name: "Chef Pierre", avatar: "🥐", cuisine: "French Classical & Pastry", flag: "🇫🇷" },
-  { id: "chef_rosa", name: "Chef Rosa", avatar: "🌮", cuisine: "Mexican & Vibrant Salsas", flag: "🇲🇽" },
-  { id: "chef_kwame", name: "Chef Kwame", avatar: "🍲", cuisine: "West African & Jollof", flag: "🇬🇭" },
-  { id: "chef_sam", name: "Chef Sam", avatar: "🍔", cuisine: "Modern Diner & BBQ", flag: "🇺🇸" },
-  { id: "chef_ling", name: "Chef Ling", avatar: "🥟", cuisine: "Sichuan Heat & Hand Pulled Noodles", flag: "🇨🇳" },
-  { id: "chef_sofia", name: "Chef Sofia", avatar: "🥘", cuisine: "Spanish Tapas & Paella", flag: "🇪🇸" },
-  { id: "chef_jun", name: "Chef Jun", avatar: "🍜", cuisine: "Korean BBQ & Comfort Soups", flag: "🇰🇷" },
-  { id: "chef_olivia", name: "Chef Olivia", avatar: "🥗", cuisine: "Mediterranean & Farm-to-Table", flag: "🇬🇷" },
-];
-
-const PERSONALITY_OPTIONS = [
-  {
-    id: "friendly",
-    label: "Friendly & Warm",
-    labelZh: "親切溫暖",
-    description: "Supportive, encouraging, and empathetic like an everyday close friend in the kitchen.",
-    descriptionZh: "溫暖鼓勵、善解人意，就像在廚房陪著你的好朋友。",
-  },
-  {
-    id: "professional",
-    label: "Executive Chef",
-    labelZh: "專業星廚",
-    description: "Meticulous, precise culinary techniques, Michelin-standard advice and plating guidance.",
-    descriptionZh: "注重精準刀工火候、米芝蓮星級食材配搭與專業技巧。",
-  },
-  {
-    id: "playful",
-    label: "Playful & Fun",
-    labelZh: "活潑搞怪",
-    description: "Humorous, energetic, loaded with joyful cooking puns and upbeat vibes.",
-    descriptionZh: "幽默生動、活力滿滿，讓每天烹飪充滿歡笑。",
-  },
-  {
-    id: "calm",
-    label: "Mindful & Calm",
-    labelZh: "療癒平靜",
-    description: "Serene, patient, grounding—focuses on soothing rituals and stress-free comfort food.",
-    descriptionZh: "沉穩舒緩、耐性陪伴，專注為你帶來身心放鬆的療癒美食。",
-  },
+  { id: "chef_mei", name: "Chef Mei", avatar: "👩‍🍳", cuisine: "Cantonese and dim sum" },
+  { id: "chef_marco", name: "Chef Marco", avatar: "👨‍🍳", cuisine: "Italian pasta and pizza" },
+  { id: "chef_yuki", name: "Chef Yuki", avatar: "🍣", cuisine: "Japanese and umami broths" },
+  { id: "chef_raj", name: "Chef Raj", avatar: "🍛", cuisine: "Indian aromatics and curries" },
+  { id: "chef_pierre", name: "Chef Pierre", avatar: "🥐", cuisine: "French classical and pastry" },
+  { id: "chef_rosa", name: "Chef Rosa", avatar: "🌮", cuisine: "Mexican and bright salsas" },
+  { id: "chef_kwame", name: "Chef Kwame", avatar: "🍲", cuisine: "West African and jollof" },
+  { id: "chef_sam", name: "Chef Sam", avatar: "🍔", cuisine: "Modern diner and barbecue" },
+  { id: "chef_ling", name: "Chef Ling", avatar: "🥟", cuisine: "Sichuan heat and hand-pulled noodles" },
+  { id: "chef_sofia", name: "Chef Sofia", avatar: "🥘", cuisine: "Spanish tapas and paella" },
+  { id: "chef_jun", name: "Chef Jun", avatar: "🍜", cuisine: "Korean barbecue and comfort soups" },
+  { id: "chef_olivia", name: "Chef Olivia", avatar: "🥗", cuisine: "Mediterranean, farm to table" },
 ];
 
 export default function ChefSettingsPage() {
@@ -121,245 +91,181 @@ export default function ChefSettingsPage() {
     }
   };
 
+  const zh = language === "zh-HK";
+  const L = (en: string, zhText: string) => (zh ? zhText : en);
+  const chip = (active: boolean) =>
+    `rounded-[14px] border-2 text-left transition-colors ${active ? "border-brand-500 bg-brand-50" : "border-stone-200 bg-stone-50 hover:border-brand-300"}`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-stone-100 px-5 pb-12 pt-4 sm:px-6">
+      <div className="mx-auto max-w-2xl">
         <button
+          type="button"
           onClick={() => router.push("/chat")}
-          className="flex items-center gap-2 text-sm text-stone-600 hover:text-stone-900 mb-6 transition"
+          className="-ml-2 mb-2 inline-flex min-h-[48px] items-center rounded-[14px] px-2 text-[15px] font-bold text-brand-500 hover:text-brand-600"
         >
-          <ArrowLeft className="w-4 h-4" />
-          {language === "zh-HK" ? "返回 AI 聊天室" : "Back to AI Chat"}
+          {L("Back to chat", "返回聊天")}
         </button>
 
-        {/* Header */}
-        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-stone-200 mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {hasCustomAvatar ? (
-                <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} emoji={selectedAvatar} size={64} className="shadow-md ring-4 ring-amber-100" />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center text-4xl shadow-inner border border-amber-200">
-                  {selectedAvatar}
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-stone-900">{chefName || "My Personal Chef"}</h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                    {language === "zh-HK" ? "專屬夥伴" : "Companion"}
-                  </span>
-                </div>
-                <p className="text-sm text-stone-500 mt-1">
-                  {language === "zh-HK"
-                    ? "自訂專屬 AI 大廚的名稱、頭像形象與對話性格，打造專屬於你的廚房避風港。"
-                    : "Customize your AI Chef's name, avatar, and conversation style to make your cooking safe space."}
-                </p>
-              </div>
-            </div>
+        <h1 className="text-[32px] font-bold leading-tight text-stone-900 sm:text-[40px]">{L("Chef settings", "大廚設定")}</h1>
+        <p className="mt-2 text-[17px] leading-relaxed text-stone-500">
+          {L("Your chef's name, look and the way they talk to you.", "設定大廚嘅名字、造型同埋同你傾偈嘅風格。")}
+        </p>
 
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm transition disabled:opacity-50"
-            >
-              {saveSuccess ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-300" />
-                  {language === "zh-HK" ? "已儲存！" : "Saved!"}
-                </>
-              ) : isSaving ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  {language === "zh-HK" ? "儲存中..." : "Saving..."}
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {language === "zh-HK" ? "儲存設定" : "Save Changes"}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-8">
-          {/* Avatar Studio entry point */}
-          <div className="rounded-2xl p-6 sm:p-8 border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/60 shadow-sm flex flex-col sm:flex-row items-center gap-6">
-            <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} emoji={selectedAvatar} size={112} className="shadow-lg ring-4 ring-white" />
-            <div className="flex-1 text-center sm:text-left">
-              <h2 className="text-lg font-bold text-stone-900 flex items-center justify-center sm:justify-start gap-2">
-                <Palette className="w-5 h-5 text-amber-600" />
-                {language === "zh-HK" ? "大廚造型工作室" : "Chef Avatar Studio"}
-              </h2>
-              <p className="text-sm text-stone-600 mt-1">
-                {language === "zh-HK"
-                  ? "親手設計大廚的膚色、髮型、表情、廚師服與帽子。"
-                  : "Design your chef's skin tone, hair, expression, uniform and hat."}
+        <form onSubmit={handleSave} className="mt-6 space-y-5">
+          {/* Look */}
+          <section className="flex flex-col items-center gap-5 rounded-3xl border border-stone-200 bg-stone-50 p-5 text-center sm:flex-row sm:p-6 sm:text-left">
+            <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} emoji={selectedAvatar} size={112} />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[22px] font-bold leading-snug text-stone-900">{chefName || L("Your chef", "你的大廚")}</h2>
+              <p className="mt-1 text-[15px] leading-relaxed text-stone-500">
+                {hasCustomAvatar
+                  ? L("Change their face, hair, outfit, hat and badge colour.", "更改大廚嘅臉、髮型、服裝、帽子同徽章底色。")
+                  : L("Design a face, hair, outfit and hat for your chef.", "為大廚設計臉、髮型、服裝同帽子。")}
               </p>
+              <button
+                type="button"
+                onClick={() => router.push("/onboarding/chef?next=/chef-settings")}
+                className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-[14px] border-2 border-brand-500 bg-stone-50 px-5 text-[15px] font-bold text-brand-500 transition-colors hover:bg-brand-50 sm:w-auto"
+              >
+                {hasCustomAvatar ? L("Edit look", "編輯造型") : L("Design look", "設計造型")}
+              </button>
               {hasCustomAvatar && (
-                <p className="text-xs text-stone-500 mt-2">
-                  {language === "zh-HK" ? "已使用自訂造型（會取代下方的 Emoji 頭像）。" : "Your designed look is shown instead of the emoji below."}{" "}
-                  <button type="button" onClick={handleUseEmoji} className="font-semibold text-amber-700 hover:underline">
-                    {language === "zh-HK" ? "改用 Emoji" : "Use emoji instead"}
+                <p className="mt-3 text-[14px] text-stone-500">
+                  {L("Your designed look is shown instead of the emoji below.", "已使用自訂造型，會取代下面嘅 Emoji 頭像。")}{" "}
+                  <button type="button" onClick={handleUseEmoji} className="inline-flex min-h-[48px] items-center font-bold text-brand-500 underline-offset-2 hover:underline">
+                    {L("Use emoji instead", "改用 Emoji")}
                   </button>
                 </p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => router.push("/onboarding/chef?next=/chef-settings")}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold shadow-sm transition whitespace-nowrap"
-            >
-              <Sparkles className="w-4 h-4" />
-              {hasCustomAvatar ? (language === "zh-HK" ? "編輯造型" : "Edit Look") : language === "zh-HK" ? "設計造型" : "Design Look"}
-            </button>
-          </div>
-          {/* Section 1: Name & Custom Emoji */}
-          <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-stone-200">
-            <h2 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
-              <Bot className="w-5 h-5 text-amber-600" />
-              {language === "zh-HK" ? "1. 大廚稱號與頭像" : "1. Chef Name & Avatar"}
-            </h2>
+          </section>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  {language === "zh-HK" ? "大廚名字" : "Chef Name"}
+          {/* Name and emoji */}
+          <section className="rounded-3xl border border-stone-200 bg-stone-50 p-5 sm:p-6">
+            <h2 className="mb-4 text-[22px] font-bold leading-snug text-stone-900">{L("Name and emoji", "名字與 Emoji")}</h2>
+
+            <div className="grid grid-cols-[1fr_88px] gap-3">
+              <div>
+                <label htmlFor="chef-name" className="mb-2 block text-[15px] font-bold text-stone-900">
+                  {L("Chef name", "大廚名字")}
                 </label>
                 <input
+                  id="chef-name"
                   type="text"
                   value={chefName}
                   onChange={(e) => setChefName(e.target.value)}
-                  placeholder="e.g. Chef Mei, Gordon, Grandma's Kitchen"
+                  placeholder={L("For example, Chef Mei", "例如：Mei 大廚")}
                   maxLength={30}
-                  className="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-stone-900"
+                  className="h-[52px] w-full rounded-[14px] border border-stone-300 bg-stone-50 px-4 text-[17px] text-stone-900 placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 />
-                <p className="text-xs text-stone-400 mt-1.5">
-                  {language === "zh-HK"
-                    ? "在聊天室中 AI 將使用此名字稱呼自己並與您對話。"
-                    : "The AI will identify with this name in every chat."}
-                </p>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  {language === "zh-HK" ? "頭像圖示 / Emoji" : "Avatar Emoji"}
+                <label htmlFor="chef-emoji" className="mb-2 block text-[15px] font-bold text-stone-900">
+                  Emoji
                 </label>
                 <input
+                  id="chef-emoji"
                   type="text"
                   value={selectedAvatar}
                   onChange={(e) => setSelectedAvatar(e.target.value)}
                   maxLength={5}
-                  className="w-full text-center text-2xl px-4 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="h-[52px] w-full rounded-[14px] border border-stone-300 bg-stone-50 px-2 text-center text-2xl focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 />
-                <p className="text-xs text-stone-400 mt-1.5 text-center">
-                  {language === "zh-HK" ? "可輸入任何 Emoji" : "Any emoji or character"}
-                </p>
               </div>
             </div>
+            <p className="mt-2 text-[14px] text-stone-500">{L("Your chef uses this name in every chat.", "大廚喺每次傾偈都會用呢個名字。")}</p>
 
-            {/* Presets Grid */}
-            <div className="mt-6 pt-6 border-t border-stone-100">
-              <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">
-                {language === "zh-HK" ? "或從 12 款預設大廚中選擇" : "Or Pick From 12 Signature Chef Presets"}
-              </label>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {CHEF_AVATAR_PRESETS.map((preset) => (
+            <h3 className="mb-3 mt-6 text-[17px] font-bold text-stone-900">{L("Or start from a signature chef", "或者揀一位招牌大廚")}</h3>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {CHEF_AVATAR_PRESETS.map((preset) => {
+                const active = selectedAvatar === preset.avatar && chefName === preset.name;
+                return (
                   <button
                     key={preset.id}
                     type="button"
                     onClick={() => handleSelectPreset(preset)}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition ${
-                      selectedAvatar === preset.avatar && chefName === preset.name
-                        ? "border-amber-500 bg-amber-50/80 ring-2 ring-amber-400/20"
-                        : "border-stone-200 hover:border-amber-300 hover:bg-stone-50"
-                    }`}
+                    aria-pressed={active}
+                    className={`flex min-h-[56px] items-center gap-3 px-3 py-2 ${chip(active)}`}
                   >
-                    <span className="text-3xl">{preset.avatar}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-semibold text-stone-900 truncate">{preset.name}</span>
-                        <span className="text-xs">{preset.flag}</span>
-                      </div>
-                      <p className="text-xs text-stone-500 truncate">{preset.cuisine}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Personality Style */}
-          <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-stone-200">
-            <h2 className="text-lg font-semibold text-stone-900 mb-2 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-600" />
-              {language === "zh-HK" ? "2. 對話風格與性格" : "2. Personality & Conversation Tone"}
-            </h2>
-            <p className="text-sm text-stone-500 mb-6">
-              {language === "zh-HK"
-                ? "選擇你的 AI 大廚與你溝通、提供下廚建議與日常生活閒聊時的說話風格。"
-                : "Choose how your chef communicates during everyday chats and culinary guidance."}
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {PERSONALITY_OPTIONS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelectedPersonality(item.id)}
-                  className={`p-5 rounded-xl border text-left transition ${
-                    selectedPersonality === item.id
-                      ? "border-amber-500 bg-amber-50/80 ring-2 ring-amber-400/20 shadow-sm"
-                      : "border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-stone-900">
-                      {language === "zh-HK" ? item.labelZh : item.label}
+                    <span className="text-2xl" aria-hidden>
+                      {preset.avatar}
                     </span>
-                    {selectedPersonality === item.id && (
-                      <span className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs">
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-stone-600 leading-relaxed">
-                    {language === "zh-HK" ? item.descriptionZh : item.description}
-                  </p>
-                </button>
-              ))}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-bold text-stone-900">{preset.name}</span>
+                      <span className="block truncate text-[14px] text-stone-500">{preset.cuisine}</span>
+                    </span>
+                    {active && <Check className="h-5 w-5 shrink-0 text-brand-500" strokeWidth={3} aria-hidden />}
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          </section>
 
-          {/* Bottom Save Action */}
-          <div className="flex justify-end gap-3">
+          {/* Personality */}
+          <section className="rounded-3xl border border-stone-200 bg-stone-50 p-5 sm:p-6">
+            <h2 className="text-[22px] font-bold leading-snug text-stone-900">{L("How your chef talks", "大廚嘅說話風格")}</h2>
+            <p className="mb-4 mt-1 text-[15px] text-stone-500">
+              {L("This sets the tone for everyday chats and cooking help.", "影響日常傾偈同煮食建議嘅語氣。")}
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {CHEF_PERSONALITIES.map((item) => {
+                const active = selectedPersonality === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedPersonality(item.id)}
+                    aria-pressed={active}
+                    className={`p-4 ${chip(active)}`}
+                  >
+                    <span className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-[17px] font-bold text-stone-900">{zh ? item.labelZh : item.label}</span>
+                      {active && (
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+                          <Check className="h-4 w-4" strokeWidth={3} aria-hidden />
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-[15px] leading-relaxed text-stone-500">{zh ? item.descriptionZh : item.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Save */}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => router.push("/chat")}
-              className="px-6 py-2.5 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 transition"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-[14px] px-5 text-[15px] font-bold text-stone-500 hover:text-stone-900"
             >
-              {language === "zh-HK" ? "取消" : "Cancel"}
+              {L("Cancel", "取消")}
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm transition disabled:opacity-50"
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-brand-500 px-6 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
             >
               {saveSuccess ? (
                 <>
-                  <Check className="w-4 h-4 text-emerald-300" />
-                  {language === "zh-HK" ? "設定已儲存！" : "Saved Successfully!"}
+                  <Check className="h-5 w-5" strokeWidth={3} aria-hidden />
+                  {L("Saved", "已儲存")}
+                </>
+              ) : isSaving ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden />
+                  {L("Saving...", "儲存中...")}
                 </>
               ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {language === "zh-HK" ? "確認並儲存" : "Save Chef Settings"}
-                </>
+                L("Save settings", "儲存設定")
               )}
             </button>
           </div>
+          <p className="sr-only" role="status" aria-live="polite">
+            {saveSuccess ? L("Settings saved", "設定已儲存") : ""}
+          </p>
         </form>
       </div>
     </div>

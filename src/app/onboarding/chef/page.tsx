@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Dices, Loader2, RotateCcw, Sparkles } from "lucide-react";
+import { Check, Dices, Loader2, RotateCcw } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { ChefAvatar } from "@/components/avatar/ChefAvatar";
@@ -88,7 +88,7 @@ function ChefOnboardingContent() {
   }, [loading, user, router]);
 
   useEffect(() => {
-    setBubble(L("Hi! Design me however you like — I'll be your kitchen buddy.", "你好！隨你喜歡打扮我——我會係你嘅廚房好拍檔。"));
+    setBubble(L("Hi, I'm your chef. Choose how I look, then we can start cooking.", "你好，我係你嘅大廚。揀好我嘅樣，我哋就可以開始煮嘢食。"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 
@@ -104,7 +104,7 @@ function ChefOnboardingContent() {
     setPopKey((k) => k + 1);
     setDiceSpin(true);
     setTimeout(() => setDiceSpin(false), 500);
-    setBubble(L("Surprise! A whole new me.", "驚喜！全新嘅我！"));
+    setBubble(L("A whole new me. Keep going until it feels right.", "全新嘅我！揀到啱心水為止。"));
   };
 
   const reset = () => {
@@ -113,7 +113,7 @@ function ChefOnboardingContent() {
     setBubble(L("Back to the original recipe.", "返去原本嘅樣。"));
   };
 
-  const displayName = chefName.trim() || L("Your Chef", "你的大廚");
+  const displayName = chefName.trim() || L("Your chef", "你的大廚");
   const personalityInfo = CHEF_PERSONALITIES.find((p) => p.id === personality) ?? CHEF_PERSONALITIES[0];
 
   const save = async () => {
@@ -161,35 +161,37 @@ function ChefOnboardingContent() {
     }
   };
 
+  const primaryBtn =
+    "inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px] bg-brand-500 px-6 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60 sm:w-auto";
+  const secondaryBtn =
+    "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[14px] border border-stone-200 bg-stone-50 px-4 text-[15px] font-bold text-stone-900 transition-colors hover:border-brand-300";
+  const quietBtn =
+    "inline-flex min-h-[48px] w-full items-center justify-center rounded-[14px] px-4 text-[15px] font-bold text-stone-500 transition-colors hover:text-stone-900 disabled:opacity-50 sm:w-auto";
+
   if (loading || !user) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center text-stone-500 text-sm gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" /> {L("Preparing the kitchen...", "正在準備廚房...")}
+      <div className="flex min-h-[70vh] items-center justify-center gap-2 bg-stone-100 text-sm text-stone-500">
+        <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> {L("Preparing the kitchen...", "正在準備廚房...")}
       </div>
     );
   }
 
   /* ------------------------------ Step 3: Meet ------------------------------ */
   if (step === 3) {
+    const goingToChat = nextUrl.startsWith("/chat");
     return (
-      <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-gradient-to-b from-amber-50/60 to-white">
-        <div className="max-w-lg w-full text-center space-y-6">
-          <div className="relative inline-block">
-            <div className="absolute inset-0 rounded-full bg-amber-300/40 blur-2xl animate-pulse" />
-            <ChefAvatar config={config} size={220} className="relative rounded-full shadow-xl ring-8 ring-white cc-pop" title={displayName} />
+      <div className="flex min-h-[80vh] items-center justify-center bg-stone-100 px-5 py-12">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <ChefAvatar config={config} size={220} className="cc-pop mx-auto h-48 w-48 rounded-full sm:h-56 sm:w-56" title={displayName} />
+          <div>
+            <h1 className="text-[32px] font-bold leading-tight text-stone-900">{L(`This is ${displayName}`, `呢位係 ${displayName}`)}</h1>
+            <p className="mt-1 text-[15px] text-stone-500">{zh ? personalityInfo.labelZh : personalityInfo.label}</p>
           </div>
-          <div className="relative bg-white border border-stone-200 rounded-2xl p-5 shadow-sm text-left">
-            <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-white border-l border-t border-stone-200" />
-            <p className="text-xs font-bold text-amber-700 mb-1">{displayName}</p>
-            <p className="text-stone-800 leading-relaxed">{zh ? personalityInfo.greetingZh : personalityInfo.greeting}</p>
+          <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-left">
+            <p className="text-[17px] leading-relaxed text-stone-900">{zh ? personalityInfo.greetingZh : personalityInfo.greeting}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => router.push(nextUrl)}
-            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold shadow-lg transition group"
-          >
-            {L(`Start cooking with ${displayName}`, `開始與 ${displayName} 一齊煮`)}
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          <button type="button" onClick={() => router.push(nextUrl)} className={primaryBtn}>
+            {goingToChat ? L(`Chat with ${displayName}`, `同 ${displayName} 傾偈`) : L("Done", "完成")}
           </button>
         </div>
       </div>
@@ -197,73 +199,67 @@ function ChefOnboardingContent() {
   }
 
   /* --------------------------- Steps 1 & 2 layout --------------------------- */
+  const title =
+    step === 1
+      ? isEditing
+        ? L("Change your chef's look", "更改大廚造型")
+        : L("Meet your chef", "認識你的大廚")
+      : isEditing
+        ? L("Name and personality", "名字與性格")
+        : L("Give your chef a name", "為你的大廚取個名字");
+  const intro =
+    step === 1
+      ? isEditing
+        ? L("Pick any part to change it. The preview updates as you go.", "揀任何部分去改，預覽會即時更新。")
+        : L(
+            "Before your first chat, choose how your chef looks. You can change this any time in chef settings.",
+            "第一次傾偈之前，先揀你大廚嘅樣。之後隨時可以喺大廚設定度更改。",
+          )
+      : L("Pick a name and how your chef talks to you.", "揀個名字，再揀大廚同你傾偈嘅風格。");
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/60 to-white py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header + progress */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              {isEditing ? L("Chef Studio", "大廚工作室") : L("Welcome to CookCart", "歡迎來到 CookCart")}
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-black text-stone-900 mt-1">
-              {step === 1 ? L("Design your personal chef", "設計你的專屬大廚") : L("Give your chef a personality", "為大廚注入個性")}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-bold">
-            {[1, 2].map((n) => (
-              <div key={n} className="flex items-center gap-2">
-                <span
-                  className={`w-7 h-7 rounded-full flex items-center justify-center transition ${
-                    step > n ? "bg-emerald-500 text-white" : step === n ? "bg-stone-900 text-white" : "bg-stone-200 text-stone-500"
-                  }`}
-                >
-                  {step > n ? <Check className="w-4 h-4" /> : n}
-                </span>
-                <span className={step === n ? "text-stone-900" : "text-stone-400"}>{n === 1 ? L("Look", "外觀") : L("Identity", "身份")}</span>
-                {n === 1 && <span className="w-8 h-px bg-stone-300" />}
-              </div>
-            ))}
-          </div>
+    <div className="min-h-screen bg-stone-100 px-5 pb-10 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        {/* Header */}
+        <div className="mb-5">
+          <p className="text-[14px] text-stone-500">{L(`Step ${step} of 2`, `第 ${step} 步，共 2 步`)}</p>
+          <h1 className="mt-1 text-[32px] font-bold leading-tight text-stone-900 sm:text-[40px]">{title}</h1>
+          <p className="mt-2 max-w-xl text-[17px] leading-relaxed text-stone-500">{intro}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
           {/* Live preview */}
           <aside className="lg:col-span-5">
-            <div className="lg:sticky lg:top-6 bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex flex-col items-center">
-              {/* speech bubble */}
-              <div className="relative w-full mb-5 min-h-[56px] bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-stone-800 text-center">
-                <span key={bubble} className="cc-fade-in inline-block">{bubble}</span>
-                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-amber-50 border-r border-b border-amber-200" />
+            <div className="flex flex-col items-center rounded-3xl border border-stone-200 bg-stone-50 p-5 lg:sticky lg:top-6">
+              <div className="mb-4 flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-stone-100 px-4 py-3 text-center text-[15px] leading-snug text-stone-900">
+                <span key={bubble} className="cc-fade-in inline-block">
+                  {bubble}
+                </span>
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-4 rounded-full bg-amber-300/30 blur-2xl" />
-                <div key={popKey} className="cc-pop relative">
-                  <ChefAvatar config={config} size={step === 1 ? 260 : 200} className="rounded-full shadow-lg ring-8 ring-white" title={displayName} />
-                </div>
+              <div key={popKey} className="cc-pop">
+                <ChefAvatar
+                  config={config}
+                  size={260}
+                  className={`rounded-full ${step === 1 ? "h-44 w-44 sm:h-60 sm:w-60 lg:h-64 lg:w-64" : "h-36 w-36 sm:h-48 sm:w-48"}`}
+                  title={displayName}
+                />
               </div>
 
-              <p className="mt-4 text-lg font-black text-stone-900">{displayName}</p>
-              {step === 2 && <p className="text-xs text-amber-700 font-semibold">{personalityInfo.emoji} {zh ? personalityInfo.labelZh : personalityInfo.label}</p>}
+              <p className="mt-3 text-[22px] font-bold text-stone-900">{displayName}</p>
+              {step === 2 && <p className="text-[14px] text-stone-500">{zh ? personalityInfo.labelZh : personalityInfo.label}</p>}
 
               {step === 1 && (
-                <div className="mt-5 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={randomize}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-sm transition"
-                  >
-                    <Dices className={`w-4 h-4 transition-transform duration-500 ${diceSpin ? "rotate-[360deg]" : ""}`} />
-                    {L("Randomize", "隨機造型")}
+                <div className="mt-4 flex w-full gap-2 sm:w-auto">
+                  <button type="button" onClick={randomize} className={`${secondaryBtn} flex-1 sm:flex-none`}>
+                    <Dices
+                      className={`h-5 w-5 text-brand-500 transition-transform duration-500 motion-reduce:transition-none ${diceSpin ? "rotate-[360deg]" : ""}`}
+                      aria-hidden
+                    />
+                    {L("Surprise me", "隨機造型")}
                   </button>
-                  <button
-                    type="button"
-                    onClick={reset}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 text-sm font-semibold transition"
-                  >
-                    <RotateCcw className="w-4 h-4" />
+                  <button type="button" onClick={reset} className={`${secondaryBtn} flex-1 sm:flex-none`}>
+                    <RotateCcw className="h-5 w-5 text-stone-500" aria-hidden />
                     {L("Reset", "重設")}
                   </button>
                 </div>
@@ -272,13 +268,13 @@ function ChefOnboardingContent() {
           </aside>
 
           {/* Editor column */}
-          <div className="lg:col-span-7 space-y-5">
+          <div className="space-y-5 lg:col-span-7">
             {step === 1 ? (
               <ChefAvatarCustomizer value={config} onChange={handleChange} language={language} />
             ) : (
-              <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 space-y-7">
+              <div className="space-y-7 rounded-3xl border border-stone-200 bg-stone-50 p-5 sm:p-6">
                 <div>
-                  <label htmlFor="chef-name" className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
+                  <label htmlFor="chef-name" className="mb-2 block text-[17px] font-bold text-stone-900">
                     {L("Chef name", "大廚名字")}
                   </label>
                   <input
@@ -291,26 +287,42 @@ function ChefOnboardingContent() {
                     }}
                     maxLength={30}
                     autoFocus
-                    placeholder={L("e.g. Chef Oliver, Nonna Rosa, Sous-Chef Kai", "例如：Oliver 大廚、陳師傅、Kai 副廚")}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-900 text-lg font-semibold"
+                    placeholder={L("For example, Chef Oliver", "例如：Oliver 大廚")}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "chef-name-error" : undefined}
+                    className="h-[52px] w-full rounded-[14px] border border-stone-300 bg-stone-50 px-4 text-[17px] text-stone-900 placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                   />
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {(zh ? ["陳師傅", "Mei 大廚", "Oliver 大廚", "阿嫲"] : ["Chef Oliver", "Nonna Rosa", "Chef Mei", "Sous-Chef Kai"]).map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setChefName(n)}
-                        className="px-3 py-1.5 rounded-full text-xs font-semibold bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-800 transition"
-                      >
-                        {n}
-                      </button>
-                    ))}
+                  {error && (
+                    <p id="chef-name-error" className="mt-2 text-[15px] font-bold text-danger">
+                      {error}
+                    </p>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(zh ? ["陳師傅", "Mei 大廚", "Oliver 大廚", "阿嫲"] : ["Chef Oliver", "Nonna Rosa", "Chef Mei", "Sous-chef Kai"]).map((n) => {
+                      const active = chefName === n;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => {
+                            setChefName(n);
+                            if (error) setError("");
+                          }}
+                          aria-pressed={active}
+                          className={`min-h-[48px] rounded-full border-2 px-4 text-[15px] transition-colors ${
+                            active ? "border-brand-500 bg-brand-500 font-bold text-white" : "border-stone-200 bg-stone-50 text-stone-900 hover:border-brand-300"
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">{L("Cooking personality", "烹飪性格")}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <fieldset>
+                  <legend className="mb-3 text-[17px] font-bold text-stone-900">{L("How your chef talks", "大廚嘅說話風格")}</legend>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {CHEF_PERSONALITIES.map((p) => {
                       const active = personality === p.id;
                       return (
@@ -322,72 +334,53 @@ function ChefOnboardingContent() {
                             setBubble(zh ? p.greetingZh : p.greeting);
                           }}
                           aria-pressed={active}
-                          className={`text-left p-4 rounded-xl border transition ${
-                            active ? "border-amber-500 bg-amber-50 ring-2 ring-amber-400/30 shadow-sm" : "border-stone-200 hover:border-amber-300"
+                          className={`rounded-[14px] border-2 p-4 text-left transition-colors ${
+                            active ? "border-brand-500 bg-brand-50" : "border-stone-200 bg-stone-50 hover:border-brand-300"
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-stone-900">
-                              {p.emoji} {zh ? p.labelZh : p.label}
-                            </span>
+                          <span className="mb-1 flex items-center justify-between gap-2">
+                            <span className="text-[17px] font-bold text-stone-900">{zh ? p.labelZh : p.label}</span>
                             {active && (
-                              <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center">
-                                <Check className="w-3 h-3" strokeWidth={3} />
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
+                                <Check className="h-4 w-4" strokeWidth={3} aria-hidden />
                               </span>
                             )}
-                          </div>
-                          <p className="text-xs text-stone-600 leading-relaxed">{zh ? p.descriptionZh : p.description}</p>
+                          </span>
+                          <span className="block text-[15px] leading-relaxed text-stone-500">{zh ? p.descriptionZh : p.description}</span>
                         </button>
                       );
                     })}
                   </div>
-                </div>
-
-                {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+                </fieldset>
               </div>
             )}
 
-            {/* Footer actions */}
-            <div className="flex items-center justify-between gap-3">
+            {/* Footer actions: primary first on phones, on the right from sm up */}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
               {step === 1 ? (
                 isEditing ? (
-                  <button type="button" onClick={() => router.push(nextUrl)} className="text-sm font-semibold text-stone-500 hover:text-stone-800 transition">
+                  <button type="button" onClick={() => router.push(nextUrl)} className={quietBtn}>
                     {L("Cancel", "取消")}
                   </button>
                 ) : (
-                  <button type="button" onClick={skip} disabled={saving} className="text-sm font-semibold text-stone-500 hover:text-stone-800 transition disabled:opacity-50">
+                  <button type="button" onClick={skip} disabled={saving} className={quietBtn}>
                     {L("Skip for now", "稍後再設定")}
                   </button>
                 )
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-stone-900 transition"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  {L("Back to look", "返回外觀")}
+                <button type="button" onClick={() => setStep(1)} className={quietBtn}>
+                  {L("Back to the look", "返回外觀")}
                 </button>
               )}
 
               {step === 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold shadow-md transition group"
-                >
-                  {L("Next: name your chef", "下一步：為大廚命名")}
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                <button type="button" onClick={() => setStep(2)} className={primaryBtn}>
+                  {L("Continue", "繼續")}
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={save}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-md transition disabled:opacity-60 group"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  {saving ? L("Saving...", "儲存中...") : isEditing ? L("Save my chef", "儲存大廚") : L("Confirm & meet my chef", "確認並認識我的大廚")}
+                <button type="button" onClick={save} disabled={saving} className={primaryBtn}>
+                  {saving && <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden />}
+                  {saving ? L("Saving...", "儲存中...") : isEditing ? L("Save my chef", "儲存大廚") : L("Meet my chef", "認識我的大廚")}
                 </button>
               )}
             </div>
@@ -400,7 +393,7 @@ function ChefOnboardingContent() {
 
 export default function ChefOnboardingPage() {
   return (
-    <Suspense fallback={<div className="p-10 text-center text-sm text-stone-500">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-stone-100 p-10 text-center text-sm text-stone-500">Loading...</div>}>
       <ChefOnboardingContent />
     </Suspense>
   );

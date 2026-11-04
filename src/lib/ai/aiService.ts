@@ -575,7 +575,83 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     return attachDishImages(local.suggestions);
   }
 
-  // 2. Check for Live OpenRouter Key in Environment
+  // 2. Gemini first: the agreed provider, on Google's free tier. GEMINI_MODEL lets the
+  // model be swapped in .env when Google retires one, without a code change.
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  if (geminiApiKey) {
+    try {
+      const userContent = quickStartData?.ingredients?.length
+        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
+        : lastUserMessage;
+
+      // Recent turns so the chef remembers the conversation; Gemini calls the assistant "model".
+      const contents = messages
+        .filter((m) => m.role !== "system")
+        .slice(-8)
+        .map((m, idx, arr) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: idx === arr.length - 1 && m.role === "user" ? userContent : m.content }],
+        }));
+      // Gemini refuses a conversation that opens with a model turn, which slice() can produce.
+      while (contents.length > 0 && contents[0].role === "model") contents.shift();
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
+        {
+          method: "POST",
+          // Header rather than ?key= so the key never lands in proxy or server URL logs.
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1200,
+              // 2.5 models "think" by default, which spends the output budget and adds
+              // seconds; short kitchen replies do not need it.
+              thinkingConfig: { thinkingBudget: 0 },
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(`Gemini ${geminiModel} returned ${response.status}, trying the next provider:`, await response.text());
+      } else {
+        const data = await response.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
+        const promptTokens = data.usageMetadata?.promptTokenCount || 200;
+        const completionTokens = data.usageMetadata?.candidatesTokenCount || 400;
+
+        await logAIUsage({
+          userId,
+          conversationId,
+          modelName: geminiModel,
+          tokensPrompt: promptTokens,
+          tokensCompletion: completionTokens,
+        });
+
+        const suggestions = await resolveStructuredSuggestions(menuDishes);
+
+        return {
+          message: cleanMessage,
+          structuredSuggestions: suggestions,
+          tokensUsed: {
+            prompt: promptTokens,
+            completion: completionTokens,
+            total: promptTokens + completionTokens,
+          },
+          modelUsed: geminiModel,
+        };
+      }
+    } catch (apiError) {
+      console.warn("Live Gemini API call encountered error, trying the next provider:", apiError);
+    }
+  }
+
+  // 3. OpenRouter, when configured
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
   if (openRouterApiKey) {
     try {
@@ -646,7 +722,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     }
   }
 
-  // 3. Check for Live Groq API Key in Environment
+  // 4. Check for Live Groq API Key in Environment
   const groqApiKey = process.env.GROQ_API_KEY;
   if (groqApiKey) {
     try {
@@ -694,7 +770,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     }
   }
 
-  // 4. Check for Live Ollama Cloud API Key in Environment
+  // 5. Check for Live Ollama Cloud API Key in Environment
   const ollamaApiKey = process.env.OLLAMA_API_KEY;
   if (ollamaApiKey) {
     try {
@@ -743,67 +819,6 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       };
     } catch (ollamaError) {
       console.warn("Ollama API call encountered error, proceeding to next provider:", ollamaError);
-    }
-  }
-
-  // 5. Check for Live Gemini API Key in Environment
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (geminiApiKey) {
-    try {
-      const userContent = quickStartData?.ingredients?.length
-        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
-        : lastUserMessage;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: systemPrompt }, { text: userContent }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1200,
-            },
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
-        const promptTokens = data.usageMetadata?.promptTokenCount || 200;
-        const completionTokens = data.usageMetadata?.candidatesTokenCount || 400;
-
-        await logAIUsage({
-          userId,
-          conversationId,
-          modelName: "gemini-1.5-flash",
-          tokensPrompt: promptTokens,
-          tokensCompletion: completionTokens,
-        });
-
-        const suggestions = await resolveStructuredSuggestions(menuDishes);
-
-        return {
-          message: cleanMessage,
-          structuredSuggestions: suggestions,
-          tokensUsed: {
-            prompt: promptTokens,
-            completion: completionTokens,
-            total: promptTokens + completionTokens,
-          },
-          modelUsed: "gemini-1.5-flash",
-        };
-      }
-    } catch (apiError) {
-      console.warn("Live Gemini API call encountered error, falling back to local engine:", apiError);
     }
   }
 

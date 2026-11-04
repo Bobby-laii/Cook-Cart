@@ -2,73 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Design System: `design-clean` (.agents/skills/design-clean) + BON TASTE Logo Identity
- *   - Surface:  #FFFFFF (cards) / #F8F9FA (canvas, matching the BON TASTE logo background)
- *   - Ink:      #0F2A3D ("B O N" deep midnight navy)
- *   - Primary:  #4E7B94 ("T A S T E" slate-blue)
- *   - Accent:   #7DA3B8 (inner plate ring soft blue)
- *   - Fonts:    Roboto (body), Poppins (UI display), Inconsolata (label-caps), Cormorant Garamond (serif)
- *   - Grid:     8pt baseline spacing grid, WCAG 2.2 AA contrast & focus states
- */
-:root {
-  --bon-navy: #0F2A3D;
-  --bon-slate: #4E7B94;
-  --bon-ring: #7DA3B8;
-  --bon-surface: #FFFFFF;
-  --bon-canvas: #F8F9FA;
-}
-
+/* Enamelware: see DESIGN.md. Tokens live in tailwind.config.ts. */
 body {
-  color: var(--bon-navy);
-  background-color: var(--bon-canvas);
+  @apply bg-stone-100 text-stone-900;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  letter-spacing: 0.005em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 ::selection {
-  background: #C5DCE8;
-  color: #0F2A3D;
+  @apply bg-butter-300 text-stone-900;
 }
 
-/* `design-clean` accessibility rule: WCAG 2.2 AA visible focus states */
 :focus-visible {
-  outline: 2px solid #4E7B94;
-  outline-offset: 2px;
+  @apply outline outline-[3px] outline-offset-2 outline-brand-500;
 }
 
-/* `design-clean` label-caps token: Inconsolata, 0.75rem */
+/* Timers and counts line up without switching to a code font. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kept for older pages; renders as a plain small label, not tracked-out caps. */
 .label-caps {
-  font-family: var(--font-inconsolata), ui-monospace, monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 700;
 }
 
-/* Signature BON TASTE double hairline divider */
-.bon-double-rule {
-  position: relative;
-  height: 4px;
-  border-top: 1px solid #0F2A3D;
-  border-bottom: 1px solid #4E7B94;
+/* The one bold element in the system: the enamel rim around the current step. */
+.enamel-rim {
+  @apply bg-stone-50 rounded-3xl;
+  box-shadow: inset 0 0 0 3px theme("colors.brand.500");
 }
 
-/* Clean minimal scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Phone app shell: the bottom tab bar is var(--tabbar-h) tall plus the home indicator.
+   Anything fixed to the bottom of a page (a sticky action bar) sits above it with
+   .above-tabbar; pages clear it with .pb-tabbar. Both collapse to 0 from md up, where
+   navigation moves to the top bar, and on screens that hide the tab bar. */
+:root {
+  --tabbar-h: 4rem;
+  --tabbar-space: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
 }
-::-webkit-scrollbar-track {
-  background: #F1F5F8;
+@media (min-width: 768px) {
+  :root {
+    --tabbar-space: 0px;
+  }
 }
-::-webkit-scrollbar-thumb {
-  background: #CBD5DF;
-  border-radius: 9999px;
+body[data-tabbar="hidden"] {
+  --tabbar-space: 0px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #94A6B8;
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pb-tabbar {
+  padding-bottom: var(--tabbar-space);
+}
+.above-tabbar {
+  bottom: var(--tabbar-space);
 }
 
 /* Chef avatar studio micro-animations */

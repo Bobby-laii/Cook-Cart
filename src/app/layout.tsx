@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Roboto, Poppins, Inconsolata, Cormorant_Garamond } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Atkinson_Hyperlegible } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { AuthProvider } from "@/lib/auth/AuthContext";
@@ -8,40 +8,34 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OnboardingGate } from "@/components/avatar/OnboardingGate";
 
-// Typography tokens from `design-clean` (.agents/skills/design-clean):
-// primary=Roboto, display=Poppins, mono=Inconsolata + Cormorant Garamond for BON TASTE serif
-const roboto = Roboto({
+// Designed for low-vision readers: the same problem as reading a step from across a kitchen.
+const sans = Atkinson_Hyperlegible({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-roboto",
-  display: "swap",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const inconsolata = Inconsolata({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inconsolata",
-  display: "swap",
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cormorant",
+  weight: ["400", "700"],
+  variable: "--font-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "BON TASTE — AI Culinary & Grocery Concierge in Hong Kong",
+  title: "Bon Taste — what do you feel like eating?",
   description:
-    "Curated AI recipe recommendations using 100% of your ingredients, paired with live Hong Kong supermarket price comparison.",
+    "Pick a dish from a menu of real recipes from around the world, then cook it step by step with your own AI chef.",
+  applicationName: "Bon Taste",
+  // The manifest (src/app/manifest.ts) and the icons (src/app/icon.tsx, apple-icon.tsx,
+  // icons/[size]) are linked automatically by their file conventions.
+  appleWebApp: {
+    capable: true,
+    title: "Bon Taste",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F4F6F8",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -52,15 +46,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${roboto.variable} ${poppins.variable} ${inconsolata.variable} ${cormorant.variable}`}
+      className={sans.variable}
     >
-      <body className="font-sans antialiased flex flex-col min-h-screen bg-[#F8F9FA] text-[#0F2A3D]">
+      <body className="font-sans antialiased">
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>
               <OnboardingGate />
               <Navbar />
-              <main className="flex-1 w-full">{children}</main>
+              <main className="flex-1 w-full pb-tabbar">{children}</main>
               <Footer />
             </CartProvider>
           </AuthProvider>

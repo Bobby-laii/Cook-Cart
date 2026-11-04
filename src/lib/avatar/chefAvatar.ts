@@ -29,30 +29,36 @@ export type OutfitStyle = (typeof OUTFIT_STYLES)[number];
 export type HeadwearStyle = (typeof HEADWEAR_STYLES)[number];
 export type GlassesStyle = (typeof GLASSES_STYLES)[number];
 
+/**
+ * Badge backdrops. Each one is a flat enamel colour that fills the inner circle of the
+ * badge; the renderer adds the white rim and navy edge. Ids are stored in saved configs,
+ * so never rename or remove them.
+ */
 export interface BackdropPreset {
   id: string;
-  from: string;
-  to: string;
+  fill: string;
   label: string;
   labelZh: string;
 }
 
 export const BACKDROPS: BackdropPreset[] = [
-  { id: "saffron", from: "#fde68a", to: "#f59e0b", label: "Saffron", labelZh: "番紅花" },
-  { id: "tomato", from: "#fecaca", to: "#ef4444", label: "Tomato", labelZh: "番茄紅" },
-  { id: "basil", from: "#bbf7d0", to: "#16a34a", label: "Basil", labelZh: "羅勒綠" },
-  { id: "blueberry", from: "#c7d2fe", to: "#4f46e5", label: "Blueberry", labelZh: "藍莓" },
-  { id: "matcha", from: "#ecfccb", to: "#65a30d", label: "Matcha", labelZh: "抹茶" },
-  { id: "peach", from: "#ffedd5", to: "#fb923c", label: "Peach", labelZh: "蜜桃" },
-  { id: "taro", from: "#f5d0fe", to: "#a855f7", label: "Taro", labelZh: "香芋" },
-  { id: "charcoal", from: "#57534e", to: "#1c1917", label: "Charcoal", labelZh: "炭燒" },
+  { id: "saffron", fill: "#f5c842", label: "Butter", labelZh: "牛油黃" },
+  { id: "tomato", fill: "#d9553b", label: "Tomato", labelZh: "番茄紅" },
+  { id: "basil", fill: "#3f8a5c", label: "Herb", labelZh: "香草綠" },
+  { id: "blueberry", fill: "#2a4fbf", label: "Cobalt", labelZh: "鈷藍" },
+  { id: "matcha", fill: "#a9c67e", label: "Matcha", labelZh: "抹茶" },
+  { id: "peach", fill: "#f0a47c", label: "Peach", labelZh: "蜜桃" },
+  { id: "taro", fill: "#a48cc4", label: "Taro", labelZh: "香芋" },
+  { id: "charcoal", fill: "#47526b", label: "Slate", labelZh: "石板灰" },
 ];
 
-export const SKIN_TONES = ["#ffe0c7", "#f8d0a8", "#eab88a", "#d29a6c", "#b07a4f", "#8d5a3b", "#6b4029", "#4a2c1d"];
-export const HAIR_COLORS = ["#1f1a17", "#4a2f1d", "#7a4a2a", "#b0703a", "#d9a35b", "#f2d38a", "#a8a29e", "#f5f5f4", "#c2410c", "#be185d", "#2563eb", "#059669"];
-export const OUTFIT_COLORS = ["#ffffff", "#1c1917", "#44403c", "#1e3a8a", "#7f1d1d", "#14532d", "#e05822", "#f59e0b", "#0f766e", "#6d28d9"];
-export const ACCENT_COLORS = ["#e05822", "#dc2626", "#2563eb", "#16a34a", "#f59e0b", "#1c1917", "#ffffff", "#db2777"];
-export const HEADWEAR_COLORS = ["#ffffff", "#1c1917", "#dc2626", "#2563eb", "#16a34a", "#f59e0b", "#e05822", "#7c3aed"];
+/** Light to deep. All lowercase: the validator lowercases colours. */
+export const SKIN_TONES = ["#fbe3cf", "#f3cfae", "#e6b48c", "#d39c6f", "#b87d52", "#96603c", "#744528", "#55311d"];
+/** The first eight are natural shades (the randomiser prefers them). */
+export const HAIR_COLORS = ["#1d1a22", "#3b2618", "#6a4128", "#8f4a26", "#c46a2f", "#b98a4e", "#e2c17c", "#9aa0a8", "#eef0f2", "#2a4fbf", "#23744a", "#c2557a"];
+export const OUTFIT_COLORS = ["#ffffff", "#12204a", "#2a4fbf", "#8aa2e3", "#23744a", "#d9553b", "#f5c842", "#f3ead8", "#47526b", "#a48cc4"];
+export const ACCENT_COLORS = ["#d9553b", "#2a4fbf", "#f5c842", "#23744a", "#12204a", "#ffffff", "#8aa2e3", "#e58fa0"];
+export const HEADWEAR_COLORS = ["#ffffff", "#12204a", "#2a4fbf", "#d9553b", "#f5c842", "#23744a", "#8aa2e3", "#f3ead8"];
 
 export interface ChefAvatarConfig {
   v: 1;
@@ -78,22 +84,22 @@ export interface ChefAvatarConfig {
 export const DEFAULT_CHEF_AVATAR: ChefAvatarConfig = {
   v: 1,
   faceShape: "oval",
-  skinTone: "#eab88a",
+  skinTone: "#e6b48c",
   blush: true,
   eyes: "friendly",
   brows: "soft",
   mouth: "smile",
   facialHair: "none",
   hairStyle: "short",
-  hairColor: "#4a2f1d",
+  hairColor: "#3b2618",
   outfit: "chefCoat",
   outfitColor: "#ffffff",
-  accentColor: "#e05822",
+  accentColor: "#d9553b",
   neckerchief: true,
   headwear: "toque",
   headwearColor: "#ffffff",
   glasses: "none",
-  backdrop: "saffron",
+  backdrop: "blueberry",
 };
 
 /** Human labels for every option, used by the customizer UI. */
@@ -115,7 +121,7 @@ export const OPTION_LABELS: Record<string, { en: string; zh: string }> = {
   arched: { en: "Arched", zh: "挑眉" },
   // mouth
   smile: { en: "Smile", zh: "微笑" },
-  grin: { en: "Big Grin", zh: "大笑" },
+  grin: { en: "Big grin", zh: "大笑" },
   smirk: { en: "Smirk", zh: "自信笑" },
   // facial hair
   none: { en: "None", zh: "無" },
@@ -124,23 +130,23 @@ export const OPTION_LABELS: Record<string, { en: string; zh: string }> = {
   goatee: { en: "Goatee", zh: "山羊鬍" },
   beard: { en: "Beard", zh: "絡腮鬍" },
   // hair
-  short: { en: "Short Crop", zh: "短髮" },
-  sidePart: { en: "Side Part", zh: "側分" },
+  short: { en: "Short crop", zh: "短髮" },
+  sidePart: { en: "Side part", zh: "側分" },
   curly: { en: "Curly", zh: "捲髮" },
-  bun: { en: "Chef Bun", zh: "丸子頭" },
+  bun: { en: "Chef bun", zh: "丸子頭" },
   long: { en: "Long", zh: "長髮" },
   ponytail: { en: "Ponytail", zh: "馬尾" },
-  buzz: { en: "Buzz Cut", zh: "平頭" },
+  buzz: { en: "Buzz cut", zh: "平頭" },
   bald: { en: "Bald", zh: "光頭" },
   // outfit
-  chefCoat: { en: "Chef Coat", zh: "廚師服" },
-  apron: { en: "Bistro Apron", zh: "小館圍裙" },
-  tee: { en: "Kitchen Tee", zh: "廚房 T 恤" },
-  kimono: { en: "Sushi Wrap", zh: "壽司師傅服" },
+  chefCoat: { en: "Chef coat", zh: "廚師服" },
+  apron: { en: "Bistro apron", zh: "小館圍裙" },
+  tee: { en: "Kitchen tee", zh: "廚房 T 恤" },
+  kimono: { en: "Sushi wrap", zh: "壽司師傅服" },
   // headwear
   toque: { en: "Toque", zh: "高帽" },
   bandana: { en: "Bandana", zh: "頭巾" },
-  cap: { en: "Flat Cap", zh: "鴨舌帽" },
+  cap: { en: "Flat cap", zh: "鴨舌帽" },
   beret: { en: "Beret", zh: "貝雷帽" },
   // glasses (round/square reuse face keys above)
 };
@@ -157,7 +163,7 @@ export const CHEF_PERSONALITIES = [
   {
     id: "friendly",
     emoji: "🌟",
-    label: "Friendly & Warm",
+    label: "Friendly and warm",
     labelZh: "親切溫暖",
     description: "Supportive and encouraging, like a close friend in the kitchen.",
     descriptionZh: "溫暖鼓勵、善解人意，就像在廚房陪著你的好朋友。",
@@ -167,7 +173,7 @@ export const CHEF_PERSONALITIES = [
   {
     id: "professional",
     emoji: "🔥",
-    label: "Executive Chef",
+    label: "Executive chef",
     labelZh: "專業星廚",
     description: "Precise techniques and Michelin-standard plating advice.",
     descriptionZh: "注重精準刀工火候、米芝蓮星級技巧。",
@@ -177,7 +183,7 @@ export const CHEF_PERSONALITIES = [
   {
     id: "playful",
     emoji: "🎉",
-    label: "Playful & Fun",
+    label: "Playful and fun",
     labelZh: "活潑搞怪",
     description: "Energetic, full of food puns and upbeat vibes.",
     descriptionZh: "幽默生動、活力滿滿，讓烹飪充滿歡笑。",
@@ -187,7 +193,7 @@ export const CHEF_PERSONALITIES = [
   {
     id: "calm",
     emoji: "🍵",
-    label: "Mindful & Calm",
+    label: "Mindful and calm",
     labelZh: "療癒平靜",
     description: "Patient and soothing — stress-free comfort cooking.",
     descriptionZh: "沉穩舒緩、耐性陪伴，帶來放鬆的療癒美食。",

@@ -1,281 +1,166 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useCart } from "@/lib/cart/CartContext";
 import { BonTasteLogo } from "@/components/BonTasteLogo";
-import {
-  UtensilsCrossed,
-  ShoppingCart,
-  Bookmark,
-  ShoppingBag,
-  Store,
-  ShieldCheck,
-  Globe,
-  User as UserIcon,
-  LogOut,
-  Menu,
-  X,
-  Sparkles,
-  Compass,
-  Bot,
-} from "lucide-react";
+import { BookOpen, MessageCircle, UtensilsCrossed, type LucideIcon } from "lucide-react";
 
+/**
+ * App shell. Below md: a slim top app bar and a fixed bottom tab bar
+ * (var(--tabbar-h) plus the home indicator). From md up: one top bar with the links.
+ * Cooking mode hides the tab bar and marks the body so --tabbar-space collapses to 0.
+ */
 export function Navbar() {
   const { language, setLanguage, t } = useLanguage();
   const { user, logout, switchDemoRole } = useAuth();
-  const { itemCount } = useCart();
-  const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname() ?? "/";
+  const zh = language === "zh-HK";
 
-  const toggleLanguage = () => {
-    setLanguage(language === "en" ? "zh-HK" : "en");
-  };
+  const toggleLanguage = () => setLanguage(zh ? "en" : "zh-HK");
 
-  const navLinks = [
-    { href: "/chat", label: t("navChat"), icon: Sparkles },
-    { href: "/explore", label: language === "zh-HK" ? "環球菜系" : "Explore Cuisines", icon: Compass },
-    { href: "/chef-settings", label: language === "zh-HK" ? "自訂大廚" : "My AI Chef", icon: Bot },
-    { href: "/my-recipes", label: t("navMyRecipes"), icon: Bookmark },
-    { href: "/orders", label: t("navOrders"), icon: ShoppingBag },
+  const isCookMode = /^\/recipe\/[^/]+\/cook(\/|$)/.test(pathname);
+
+  useEffect(() => {
+    if (isCookMode) {
+      document.body.dataset.tabbar = "hidden";
+    } else {
+      delete document.body.dataset.tabbar;
+    }
+    return () => {
+      delete document.body.dataset.tabbar;
+    };
+  }, [isCookMode]);
+
+  // Shops, orders and the partner/admin portals are hidden while Bon Taste is a
+  // cooking companion; their routes still exist for a later phase.
+  const navLinks: { href: string; label: string; icon: LucideIcon }[] = [
+    { href: "/", label: zh ? "餐牌" : "Menu", icon: UtensilsCrossed },
+    { href: "/chat", label: zh ? "問大廚" : "Ask the chef", icon: MessageCircle },
+    { href: "/my-recipes", label: t("navMyRecipes"), icon: BookOpen },
   ];
 
+  // "/" is a prefix of every path, so Menu is active on the home page and on recipe pages
+  // (browsing a dish from the menu), not everywhere.
+  const isActive = (href: string) =>
+    href === "/"
+      ? pathname === "/" || pathname.startsWith("/recipe/")
+      : pathname === href || pathname.startsWith(`${href}/`);
+
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-stone-200">
-      {/* Quick Demo Role Switcher Top Bar for MVP Evaluation */}
-      <div className="bg-stone-900 text-stone-200 text-xs py-1.5 px-4 border-b border-stone-800 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="label-caps text-caramel-300 font-semibold flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            {t("quickDemoSwitch")}
-          </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => switchDemoRole("CUSTOMER")}
-              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "CUSTOMER"
-                  ? "bg-white text-stone-900 font-semibold"
-                  : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-                }`}
-            >
-              👤 {t("roleCustomer")}
-            </button>
-            <button
-              onClick={() => switchDemoRole("STORE_PARTNER")}
-              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "STORE_PARTNER"
-                  ? "bg-white text-stone-900 font-semibold"
-                  : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-                }`}
-            >
-              🏪 {t("rolePartner")}
-            </button>
-            <button
-              onClick={() => switchDemoRole("ADMIN")}
-              className={`px-2.5 py-0.5 rounded text-xs transition font-medium ${user?.role === "ADMIN"
-                  ? "bg-white text-stone-900 font-semibold"
-                  : "bg-stone-800 text-stone-300 hover:bg-stone-700"
-                }`}
-            >
-              🛡️ {t("roleAdmin")}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {user && (
-            <span className="hidden sm:inline font-mono text-[11px] text-stone-400">
-              {t("roleCurrent")}{" "}
-              <strong className="text-stone-100 font-medium">
-                {user.name} · {user.role}
-              </strong>
-            </span>
-          )}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-100 font-medium"
-            title="Switch Language (English / 繁體中文)"
-          >
-            <Globe className="w-3 h-3 text-caramel-300" />
-            {language === "en" ? "繁體中文" : "English"}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Navigation (`design-clean`: white surface, ample whitespace, 8px radius) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          {/* Official BON TASTE Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <BonTasteLogo variant="navbar" />
-          </Link>
-
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname.startsWith(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition ${isActive
-                      ? "bg-stone-900 text-white shadow-xs"
-                      : "text-stone-600 hover:text-stone-900 hover:bg-stone-100"
-                    }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {link.label}
-                </Link>
-              );
-            })}
-
-            {/* Role specific portals */}
-            {(user?.role === "STORE_PARTNER" || user?.role === "ADMIN") && (
-              <Link
-                href="/store-partner"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${pathname.startsWith("/store-partner")
-                    ? "bg-brand-500 text-stone-50"
-                    : "text-stone-700 hover:bg-stone-200/60"
-                  }`}
-              >
-                <Store className="w-4 h-4" />
-                {t("navPartner")}
-              </Link>
-            )}
-
-            {user?.role === "ADMIN" && (
-              <Link
-                href="/admin"
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition ${pathname.startsWith("/admin")
-                    ? "bg-brand-500 text-stone-50"
-                    : "text-stone-700 hover:bg-stone-200/60"
-                  }`}
-              >
-                <ShieldCheck className="w-4 h-4" />
-                {t("navAdmin")}
-              </Link>
-            )}
-          </nav>
-
-          {/* Right Action Area: Cart & Auth */}
-          <div className="flex items-center gap-3">
-            {/* Cart Button */}
-            <Link
-              href="/cart"
-              className="relative p-2 text-stone-700 hover:text-brand-600 hover:bg-stone-100 rounded-full transition"
-              aria-label={t("navCart")}
-            >
-              <ShoppingCart className="w-6 h-6" />
-              {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-brand-500 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
-                  {itemCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth Menu */}
+    <>
+      <header className="sticky top-0 z-50 bg-stone-100 border-b border-stone-200 pt-[env(safe-area-inset-top)]">
+        {/* Demo strip for MVP reviewers. Kept visually quiet so it reads as a tool, not the product. */}
+        <div className="bg-stone-200/70 text-stone-600 text-xs">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between gap-3">
+            {/* One-click demo account for reviewers; the store partner and admin demos are hidden with those portals. */}
             {user ? (
-              <div className="hidden sm:flex items-center gap-2">
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:text-red-600 hover:bg-red-50 text-sm font-medium transition"
-                  title={t("navLogout")}
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden lg:inline">{t("navLogout")}</span>
-                </button>
-              </div>
+              <span className="truncate">
+                {t("roleCurrent")} <span className="text-stone-900">{user.name}</span>
+              </span>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/login"
-                  className="px-3 py-1.5 text-sm font-medium text-stone-700 hover:text-stone-900"
-                >
-                  {t("navLogin")}
-                </Link>
-                <Link
-                  href="/register"
-                  className="px-3.5 py-1.5 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition"
-                >
-                  {t("navRegister")}
-                </Link>
-              </div>
-            )}
-
-            {/* Mobile menu hamburger */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-stone-600 hover:text-stone-900 rounded-lg"
-              aria-label="Toggle Menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-stone-200 bg-white px-4 pt-3 pb-6 space-y-2">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium text-stone-700 hover:bg-stone-100"
-              >
-                <Icon className="w-5 h-5 text-brand-500" />
-                {link.label}
-              </Link>
-            );
-          })}
-
-          {(user?.role === "STORE_PARTNER" || user?.role === "ADMIN") && (
-            <Link
-              href="/store-partner"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium text-amber-800 hover:bg-amber-50"
-            >
-              <Store className="w-5 h-5 text-amber-600" />
-              {t("navPartner")}
-            </Link>
-          )}
-
-          {user?.role === "ADMIN" && (
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-base font-medium text-purple-800 hover:bg-purple-50"
-            >
-              <ShieldCheck className="w-5 h-5 text-purple-600" />
-              {t("navAdmin")}
-            </Link>
-          )}
-
-          <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-            <button
-              onClick={toggleLanguage}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-stone-100 text-stone-800 text-sm font-semibold"
-            >
-              <Globe className="w-4 h-4 text-emerald-600" />
-              {language === "en" ? "切換至 繁體中文" : "Switch to English"}
-            </button>
-            {user && (
               <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-sm font-semibold"
+                onClick={() => switchDemoRole("CUSTOMER")}
+                className="shrink-0 py-2 hover:text-stone-900 underline-offset-4 hover:underline"
               >
-                <LogOut className="w-4 h-4" />
-                {t("navLogout")}
+                {zh ? "用示範帳戶試用" : "Try it with the demo account"}
               </button>
             )}
+            <button
+              onClick={toggleLanguage}
+              lang={zh ? "en" : "zh-HK"}
+              className="shrink-0 py-2 hover:text-stone-900 underline-offset-4 hover:underline"
+              title="English / 繁體中文"
+            >
+              {zh ? "English" : "繁體中文"}
+            </button>
           </div>
         </div>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-14 md:h-16 items-center gap-6">
+            <Link href="/" aria-label="Bon Taste home" className="flex items-center h-12 rounded-lg">
+              <BonTasteLogo />
+            </Link>
+
+            <nav aria-label={zh ? "主要" : "Main"} className="hidden md:flex items-center gap-2 text-[0.95rem]">
+              {navLinks.map((link) => {
+                const active = isActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center h-12 px-3 rounded-lg transition-colors ${
+                      active
+                        ? "text-brand-600 font-bold"
+                        : "text-stone-600 hover:text-stone-900 hover:bg-stone-200/60"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="flex items-center gap-1 sm:gap-2">
+              {user ? (
+                <button
+                  onClick={logout}
+                  className="h-12 px-3 -mr-3 md:mr-0 text-sm text-stone-600 hover:text-stone-900 rounded-lg"
+                >
+                  {t("navLogout")}
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="flex items-center h-12 px-3 text-sm text-stone-700 hover:text-stone-900 rounded-lg"
+                  >
+                    {t("navLogin")}
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="flex items-center h-10 px-4 text-sm font-bold text-stone-50 bg-brand-500 hover:bg-brand-600 rounded-[14px] transition-colors"
+                  >
+                    {t("navRegister")}
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {!isCookMode && (
+        <nav
+          aria-label={zh ? "主要" : "Main"}
+          className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-stone-50 border-t border-stone-200 pb-safe"
+        >
+          <ul className="grid grid-cols-3 h-[var(--tabbar-h)]">
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              const Icon = link.icon;
+              return (
+                <li key={link.href} className="flex">
+                  <Link
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex-1 flex flex-col items-center justify-center gap-1 min-h-12 text-[0.8125rem] leading-none rounded-xl -outline-offset-4 transition-colors ${
+                      active ? "text-brand-600 font-bold" : "text-stone-500 active:text-stone-900"
+                    }`}
+                  >
+                    <Icon className="w-6 h-6" strokeWidth={active ? 2.4 : 1.8} aria-hidden="true" />
+                    <span className="truncate max-w-full px-1">{link.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       )}
-    </header>
+    </>
   );
 }
