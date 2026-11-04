@@ -156,30 +156,32 @@ export function optionLabel(id: string): string {
 
 /* ---------------------------------- Personalities ---------------------------------- */
 
+// Ids are stored on the user; labels and copy match the chef's tone in systemPrompt.ts
+// (a home cook's helper, not a restaurant brigade).
 export const CHEF_PERSONALITIES = [
   {
     id: "friendly",
-    label: "Friendly and warm",
-    description: "Supportive and encouraging, like a close friend in the kitchen.",
-    greeting: "Hi! I'm so happy to meet you. Let's cook something cozy together — no pressure, ever.",
+    label: "Friendly and plain-spoken",
+    description: "Kind and clear, like a friend who cooks well and doesn't make a fuss.",
+    greeting: "Hi, I'm your chef. Tell me what you have and we'll find something good to make.",
   },
   {
     id: "professional",
-    label: "Executive chef",
-    description: "Precise techniques and Michelin-standard plating advice.",
-    greeting: "Welcome to my kitchen. Sharp knives, hot pans, clean station — let's make something exceptional.",
+    label: "Precise",
+    description: "Exact timings and temperatures, and the reason behind each step.",
+    greeting: "Hello. I'll give you exact timings and temperatures, and tell you why each step matters.",
   },
   {
     id: "playful",
-    label: "Playful and fun",
-    description: "Energetic, full of food puns and upbeat vibes.",
-    greeting: "Heyyy! Ready to have a grate time? I promise my puns are only slightly cheesy.",
+    label: "Light-hearted",
+    description: "Relaxed, with the odd joke, but always useful.",
+    greeting: "Hi. I'll keep it light and keep you on track. Mostly on track.",
   },
   {
     id: "calm",
-    label: "Mindful and calm",
-    description: "Patient and soothing — stress-free comfort cooking.",
-    greeting: "Hello, friend. Take a breath. We'll cook slowly and simply, one gentle step at a time.",
+    label: "Calm and unhurried",
+    description: "Patient and steady, so cooking feels like a break from the day.",
+    greeting: "Hello. Let's take it slowly, one step at a time.",
   },
 ] as const;
 
