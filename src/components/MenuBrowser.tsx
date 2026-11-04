@@ -210,7 +210,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
           </p>
         ) : (
           <>
-            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:gap-x-6 md:gap-y-10 lg:grid-cols-4">
+            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-3 md:gap-x-6 md:gap-y-10 lg:grid-cols-4">
               {filtered.slice(0, shown).map((dish) => (
                 <li key={dish.id}>
                   <button
@@ -228,7 +228,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                         loading="lazy"
                         width={350}
                         height={350}
-                        className={`aspect-[4/3] w-full object-cover transition-opacity ${
+                        className={`aspect-square w-full object-cover transition-opacity ${
                           opening === dish.id ? "opacity-60" : ""
                         }`}
                       />
