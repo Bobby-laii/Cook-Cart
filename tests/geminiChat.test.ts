@@ -33,6 +33,7 @@ describe("chef chat on Gemini", () => {
 
     beforeEach(() => {
         process.env.GEMINI_API_KEY = "test-key-not-real";
+        delete process.env.GOOGLE_API_KEY;
         delete process.env.GEMINI_MODEL;
         delete process.env.OPENROUTER_API_KEY;
         delete process.env.GROQ_API_KEY;
@@ -42,6 +43,7 @@ describe("chef chat on Gemini", () => {
 
     afterEach(() => {
         delete process.env.GEMINI_API_KEY;
+        delete process.env.GOOGLE_API_KEY;
         vi.unstubAllGlobals();
     });
 
@@ -75,6 +77,23 @@ describe("chef chat on Gemini", () => {
         expect(body.contents.at(-1).parts[0].text).toBe("Is the bottom burnt?");
 
         expect(prisma.aIUsageLog.create).toHaveBeenCalled();
+    });
+
+    it("routes AQ. Vertex AI Express Mode keys to aiplatform.googleapis.com", async () => {
+        process.env.GEMINI_API_KEY = "AQ.Ab8RN6ExampleVertexExpressKey";
+        fetchMock.mockResolvedValue(geminiReply("Keep the heat at medium and stir gently."));
+
+        const result = await executeAIChat({
+            conversationId: "convo-vertex",
+            messages: [{ role: "user", content: "How hot should the pan be?" }],
+        });
+
+        expect(result.message).toContain("medium");
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe(
+            "https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash:generateContent"
+        );
+        expect(init.headers["x-goog-api-key"]).toBe("AQ.Ab8RN6ExampleVertexExpressKey");
     });
 
     it("uses GEMINI_MODEL when set, so a retired model can be swapped without a code change", async () => {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getGeminiApiKey, getGeminiGenerateContentUrl } from "@/lib/ai/geminiEndpoint";
 
 /**
  * Build a step-specific visual inspection response when cloud vision APIs are not configured.
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     const cleanBase64 = String(imageBase64).replace(/^data:image\/\w+;base64,/, "");
-    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const geminiApiKey = getGeminiApiKey();
     const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
     // Mode 1: Live Camera Step-by-Step Action Check in Cook Mode
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
       if (geminiApiKey) {
         try {
           const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
+            getGeminiGenerateContentUrl(geminiModel, geminiApiKey),
             {
               method: "POST",
               headers: {
@@ -101,6 +102,7 @@ export async function POST(req: Request) {
               body: JSON.stringify({
                 contents: [
                   {
+                    role: "user",
                     parts: [
                       { text: visionPrompt },
                       {
@@ -171,7 +173,7 @@ export async function POST(req: Request) {
     if (geminiApiKey) {
       try {
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
+          getGeminiGenerateContentUrl(geminiModel, geminiApiKey),
           {
             method: "POST",
             headers: {
@@ -181,6 +183,7 @@ export async function POST(req: Request) {
             body: JSON.stringify({
               contents: [
                 {
+                  role: "user",
                   parts: [
                     {
                       text: 'Analyze this photo of food/fridge/ingredients. List only the distinct raw grocery ingredients you clearly identify. Return a JSON array of strings in plain English, for example: ["Chicken Thighs", "Bok Choy", "Eggs", "Garlic", "Ginger"]. Do not output markdown, only valid JSON.',

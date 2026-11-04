@@ -16,6 +16,7 @@ import { DishSuggestion, RecipeStep } from "@/types";
 import { resolveDishImageUrl } from "@/lib/images/foodImage";
 import { fetchLiveRecipes, hasSpoonacularKey } from "@/lib/recipes/spoonacular";
 import { COMMON_INGREDIENTS_CATALOGUE } from "@/config/ingredientsCatalogue";
+import { getGeminiApiKey, getGeminiGenerateContentUrl } from "@/lib/ai/geminiEndpoint";
 import Groq from "groq-sdk";
 import { Ollama } from "ollama";
 
@@ -630,7 +631,8 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
 
   // 2. Gemini first: the agreed provider, on Google's free tier. GEMINI_MODEL lets the
   // model be swapped in .env when Google retires one, without a code change.
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  // Supports both Google AI Studio keys (AIza...) and Vertex AI Express Mode keys (AQ....).
+  const geminiApiKey = getGeminiApiKey();
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   if (geminiApiKey) {
     try {
@@ -648,7 +650,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       while (contents.length > 0 && contents[0].role === "model") contents.shift();
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
+        getGeminiGenerateContentUrl(geminiModel, geminiApiKey),
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },

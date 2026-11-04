@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth";
 import { pcmToWav, speechStyleText } from "@/lib/ai/speech";
+import { getGeminiApiKey, getGeminiGenerateContentUrl } from "@/lib/ai/geminiEndpoint";
 
 /**
  * The chef's voice: turns a cooking step or a chef answer into natural speech with
@@ -46,7 +47,7 @@ function wav(body: Buffer) {
 }
 
 export async function POST(req: Request) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   if (!apiKey) return NextResponse.json({ error: "No voice on this server" }, { status: 501 });
 
   const session = await getCurrentSession();
@@ -64,11 +65,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+    const res = await fetch(getGeminiGenerateContentUrl(MODEL, apiKey), {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: speechStyleText(text) }] }],
+        contents: [{ role: "user", parts: [{ text: speechStyleText(text) }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE } } },
