@@ -705,10 +705,11 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
   if (openRouterApiKey) {
     const candidateModels = [
-      process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
+      process.env.OPENROUTER_MODEL,
+      "openrouter/free",
+      "google/gemini-2.5-flash",
       "openai/gpt-4o-mini",
-    ];
+    ].filter(Boolean) as string[];
     for (const orModel of candidateModels) {
       try {
         const userContent = quickStartData?.ingredients?.length
@@ -762,7 +763,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
             const suggestions = await resolveStructuredSuggestions(menuDishes);
 
             return {
-              message: cleanMessage,
+              message: humanizeChefMessage(cleanMessage, Boolean(suggestions?.length), activeIngredients),
               structuredSuggestions: suggestions,
               tokensUsed: {
                 prompt: promptTokens,
