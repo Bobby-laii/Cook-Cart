@@ -1,54 +1,87 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
 
-import React from "react";
-import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { ShieldCheck, AlertCircle } from "lucide-react";
+export const metadata: Metadata = {
+  title: "Privacy | Bon Taste",
+};
 
-export default function PrivacyPolicyPage() {
-  const { language } = useLanguage();
+const sections: { heading: string; body: React.ReactNode }[] = [
+  {
+    heading: "This is a test version",
+    body: (
+      <p>
+        Bon Taste is early and still changing. Please don&apos;t put anything in it you&apos;d mind
+        losing, and don&apos;t share sensitive personal details in the chat.
+      </p>
+    ),
+  },
+  {
+    heading: "What we keep",
+    body: (
+      <ul className="list-disc space-y-2 pl-5">
+        <li>Your account: name, email and a hashed password (we never store the password itself).</li>
+        <li>How you eat and any allergies, if you choose to add them.</li>
+        <li>The recipes you save.</li>
+        <li>Your chef: its name, look and personality.</li>
+        <li>Your chats with your chef, so you can pick a conversation up again.</li>
+      </ul>
+    ),
+  },
+  {
+    heading: "Your chef's replies",
+    body: (
+      <p>
+        Your chef is written by Google Gemini. When you chat, your messages and the cooking
+        preferences you set (such as cuisine, ingredients, how you eat and allergies) are sent to
+        Google to write the reply. If Gemini is unavailable, this test version may use another AI
+        service instead. Your email and password are never sent.
+      </p>
+    ),
+  },
+  {
+    heading: "Recipes and photos",
+    body: (
+      <p>
+        The recipes and dish photos on the menu come from TheMealDB. Looking up a dish asks
+        TheMealDB for it; nothing about you is included.
+      </p>
+    ),
+  },
+  {
+    heading: "What we don't do",
+    body: <p>We don&apos;t sell your data, show ads, or share it with anyone else.</p>,
+  },
+  {
+    heading: "Deleting your data",
+    body: (
+      <p>
+        You can remove saved recipes on{" "}
+        <Link href="/my-recipes" className="font-bold text-stone-900 underline underline-offset-4">
+          My recipes
+        </Link>
+        . To delete your whole account and everything in it, ask the person who invited you to
+        the test and we&apos;ll remove it.
+      </p>
+    ),
+  },
+];
 
+export default function PrivacyPage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
-      <div className="space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-amber-100 text-amber-900 text-xs font-semibold">
-          <AlertCircle className="w-3.5 h-3.5" />
-          Hong Kong Legal Review Required Before Production Launch
-        </div>
-        <h1 className="text-3xl font-black text-stone-900">
-          {language === "zh-HK" ? "私隱政策 (香港特別行政區)" : "Privacy Policy (Hong Kong SAR)"}
-        </h1>
-        <p className="text-xs text-stone-500">Last updated: October 2026 (CookCart MVP)</p>
+    <article className="mx-auto w-full max-w-[40rem] px-5 pb-12 pt-8 sm:pt-12">
+      <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900 sm:text-[40px]">
+        Privacy
+      </h1>
+      <p className="mt-2 text-[15px] text-stone-500">Updated November 2026</p>
+
+      <div className="mt-8 space-y-8 text-[17px] leading-[1.55] text-stone-900">
+        {sections.map((s) => (
+          <section key={s.heading}>
+            <h2 className="mb-2 text-[19px] font-bold leading-snug">{s.heading}</h2>
+            {s.body}
+          </section>
+        ))}
       </div>
-
-      <div className="bg-white p-6 sm:p-8 rounded-2xl border border-stone-200 shadow-sm space-y-6 text-sm text-stone-700 leading-relaxed">
-        <section className="space-y-2">
-          <h2 className="text-lg font-bold text-stone-900">1. Data Collection & Purpose</h2>
-          <p>
-            CookCart collects only information necessary to deliver recipe recommendations and facilitate grocery deliveries within the Hong Kong Special Administrative Region, conforming with the Personal Data (Privacy) Ordinance (Cap. 486).
-          </p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-lg font-bold text-stone-900">2. Dietary & Health Information Privacy</h2>
-          <p>
-            Dietary restrictions, food preferences, and allergy flags provided by users are treated as confidential. This data is strictly accessible only by the account holder and platform system administrators. It is never sold or transferred to advertisers or third parties.
-          </p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-lg font-bold text-stone-900">3. Artificial Intelligence Processing</h2>
-          <p>
-            When utilizing CookCart AI culinary suggestions, only ingredient names, selected cuisine, and cooking equipment are processed by the AI engine. Personally identifiable details (such as your delivery address, phone number, and name) are strictly stripped and never transmitted to the language model.
-          </p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-lg font-bold text-stone-900">4. Payment Information</h2>
-          <p>
-            CookCart MVP utilizes a mock payment simulation. In future production releases, credit card information will be processed via PCI-DSS compliant third-party payment gateways and will never be stored on our servers.
-          </p>
-        </section>
-      </div>
-    </div>
+    </article>
   );
 }

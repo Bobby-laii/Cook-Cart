@@ -1,9 +1,9 @@
-# Bon Taste design: Enamelware
+# Bon Taste design: Photo first
 
-Bon Taste is a calm cooking companion. Its main moment is a phone propped up on a
-kitchen counter in the evening, read from about a metre away by someone whose hands
-are busy. The look comes from enamel cookware and old kitchen timers: clean white
-enamel, a deep cobalt rim, butter yellow for the thing that is running right now.
+Bon Taste is a calm cooking companion for home cooks everywhere. Its main moment is a
+phone propped up on a kitchen counter in the evening, read from about a metre away by
+someone cooking after work to unwind. The look comes from a good cooking magazine: a
+white page, big honest food photos, quiet type. The food does the talking.
 
 It is a phone app first (installable web app now, App Store later). Desktop is the
 same app with more room, not a website.
@@ -12,52 +12,67 @@ same app with more room, not a website.
 
 | Token | Hex | Tailwind | Use |
 | --- | --- | --- | --- |
-| Enamel | `#F4F6F8` | `stone-100` | App background |
-| Pot white | `#FFFFFF` | `stone-50` | Raised surfaces: sheets, inputs, the step card |
-| Speckle | `#E3E8EF` | `stone-200` | Lines and quiet borders |
-| Ink | `#12204A` | `stone-900` | Text, icons |
-| Cobalt | `#2A4FBF` / `#1D3B9A` | `brand-500` / `brand-600` | Primary actions, the rim, active tab |
-| Butter | `#F5C842` | `butter-400` | Only what is live: a running timer, the current step, a ticked item's flash |
-| Herb | `#23744A` | `fresh-600` | "You already have this" |
+| Paper | `#FFFFFF` | `stone-50` | Page and sheets |
+| Wash | `#F6F5F3` | `stone-100` | Quiet fills: chips, inputs at rest, the timer tray |
+| Line | `#EBEAE7` | `stone-200` | Hairlines between things |
+| Muted | `#6B6862` | `stone-500` | Secondary text and placeholders (5.6:1 on white) |
+| Ink | `#1A1A1A` | `stone-900` / `brand-500` | Text, icons, primary buttons, active tab |
+| Herb | `#2F6B3F` | `fresh-500` (`butter-*` is the same scale) | The only accent: what is live right now (running timer, current step) and "you already have this" |
 
-Muted text is `stone-500` (`#5B6680`, 5.6:1 on enamel). Errors use `#B3261E` (`danger`).
-`amber-*` is an alias of cobalt for older pages; do not use it in new code.
+**Dark mode** follows the phone; the sun/moon button in the header flips it and is
+remembered. Every token is a CSS variable (globals.css), so the same classes work in
+both. At night the page is a warm near-black (`#171614`), text a soft light
+(`#F0EDE6`), and primary buttons turn herb (`#357A47`) so their white text keeps its
+contrast. Never hard-code `bg-white` or a hex colour in a component.
+
+Colour comes from the photos. Nothing else on the page competes with them: no tinted
+cards, no gradients, no shadows. Errors use `#B3261E` (`danger`).
 
 ## Type
 
-One family: **Atkinson Hyperlegible** (Regular 400, Bold 700). It was designed for
-low-vision readers, which is the same problem as reading a step from across a kitchen.
-Hierarchy comes from size and weight only.
+| Role | Face | Size / line height | Weight |
+| --- | --- | --- | --- |
+| Dish names, page titles | Newsreader (`font-display`) | 30–40px / 1.1 | 500 |
+| Card dish names | Newsreader | 17–19px / 1.25 | 500 |
+| Step text in cooking mode | Atkinson Hyperlegible | 26–32px / 1.3 | 700 |
+| Body | Atkinson Hyperlegible | 17px / 1.55 | 400 |
+| Small | Atkinson Hyperlegible | 14px / 1.45 | 400 |
 
-| Role | Size / line height | Weight |
-| --- | --- | --- |
-| Step text in cooking mode | 28–34px / 1.3 | 700 |
-| Page title | 32–40px / 1.1 | 700 |
-| Section title | 22px / 1.25 | 700 |
-| Body | 17px / 1.55 | 400 |
-| Small | 14px / 1.45 | 400 |
-
-Timers use tabular figures (`font-mono` maps to the same family with `tabular-nums`).
+Newsreader is only for names of things (a dish, a page). Everything you read while
+cooking is Atkinson Hyperlegible, which was designed for low-vision readers: the same
+problem as reading a step from across a kitchen. Timers use tabular figures (`font-mono`).
 
 ## Shape and layout
 
-- Phone first: one column, 20px side gutter, content max 40rem on reading pages.
-- Tap targets at least 48px tall. Primary buttons are 52px, cobalt, radius 14px.
-- Radius has a hierarchy: photos 16px, sheets and the step card 24px, buttons 14px,
-  chips fully round. Not one radius on everything.
-- No drop shadows. Separation comes from Pot white on Enamel and Speckle lines.
-- **The one bold thing is the enamel rim**: a 3px cobalt ring on a white sheet. It is
-  used only for the current step in cooking mode. Everything else stays quiet.
+- Phone first: one column, 20px side gutter, reading content max 40rem.
+- Photos are big and edge to edge where they lead (recipe header); 8px corners in grids.
+- Radius: photos and buttons 8px, sheets 16px, chips fully round.
+- Tap targets at least 48px. Primary buttons are ink with white text, 52px tall.
+- No drop shadows, no cards inside cards. Separation is whitespace and Line hairlines.
+- **The one bold thing is the photo.** In cooking mode, where there is no photo, the
+  current step gets a 2px herb ring (`.enamel-rim`, kept as a class name).
+- The app header shows a large Bon Taste wordmark at the top of the page that shrinks
+  into a compact bar as you scroll.
 
 ## Words
 
-- Sentence case everywhere. No all-caps labels, no labels above headings that only
-  repeat the heading.
-- No "A · B · C" strings of metadata; write it as a short phrase or separate lines.
-- No arrows appended to buttons. A button says what happens: "Start cooking", "Share list".
-- Only number things that really are a sequence (cooking steps).
+- Sentence case everywhere. No all-caps labels, no labels above headings.
+- No "A · B · C" metadata strings; write a short phrase.
+- No arrows appended to buttons, no emoji as icons (icons come from lucide-react).
+- A button says what happens: "Start cooking", "Share list".
+- The chef is a quiet, competent kitchen voice, not a companion that asks about your day.
+
+## Hands-free cooking
+
+Cooking mode has a "Hands-free" button: wave at the front camera to turn the page
+(frames stay on the phone, 48×36 greyscale, never recorded), say "next", "back",
+"repeat", "start timer" or "chef, …", and a far view readable from across the kitchen.
+Steps and chef answers are spoken in Gemini's voice when the server has a key, else
+the best voice on the phone.
 
 ## Motion
 
-Only in answer to an action: a step sliding in after "Next", a timer starting. Respect
-`prefers-reduced-motion`.
+Only in answer to an action. The one authored moment: the dish photo you tap grows
+into the recipe's header photo (src/lib/motion/photoFlip.ts). Supporting motion: a
+step sliding in after "Next", a tick drawing itself, a timer starting, the header
+shrinking with scroll. Respect `prefers-reduced-motion`.

@@ -66,11 +66,8 @@ export function isOffTopic(_text: string): boolean {
  * Detect whether a free-text chat message is asking for a menu, recipe, or how to cook a dish.
  */
 export function isMenuOrRecipeRequest(text: string): boolean {
-  const q = text.toLowerCase();
-  return (
-    /\b(menu|recipe|recipes|cook|cooking|make|dish|dishes|dinner|lunch|breakfast|meal|eat|prepare|stir[- ]?fry|braise|steam|bake|roast|pasta|noodle|chicken|beef|pork|salmon|tofu|egg|soup|curry)\b/i.test(
-      q
-    ) || /(食譜|菜單|煮|整咩|食咩|推薦|點整|點煮|晚餐|午餐|早餐|餸|做法|步驟)/.test(text)
+  return /\b(menu|recipe|recipes|cook|cooking|make|dish|dishes|dinner|lunch|breakfast|meal|eat|prepare|stir[- ]?fry|braise|steam|bake|roast|pasta|noodle|chicken|beef|pork|salmon|tofu|egg|soup|curry)\b/i.test(
+    text
   );
 }
 
@@ -112,9 +109,7 @@ export function extractMenuFromLLMResponse(rawText: string): {
             ? rawSteps.map((st: any, sIdx: number) => ({
                 step: Number(st.step) || sIdx + 1,
                 title: String(st.title || `Step ${sIdx + 1}`),
-                titleZh: st.titleZh ? String(st.titleZh) : undefined,
                 text: String(st.text || ""),
-                textZh: st.textZh ? String(st.textZh) : undefined,
                 ...(Number(st.timerSeconds) > 0 ? { timerSeconds: Number(st.timerSeconds) } : {}),
               }))
             : buildDefaultStepsForDish(String(item.title), usedIngs);
@@ -122,7 +117,6 @@ export function extractMenuFromLLMResponse(rawText: string): {
         return {
           id: "sugg_" + Math.random().toString(36).substring(2, 9) + "_" + idx,
           title: String(item.title),
-          titleZh: String(item.titleZh || item.title),
           cuisine: String(item.cuisine || "Chef Special"),
           cookTimeMinutes: Number(item.cookTimeMinutes) || 20,
           difficulty:
@@ -131,18 +125,16 @@ export function extractMenuFromLLMResponse(rawText: string): {
           description: String(
             item.description || `Chef's freshly prepared ${item.title} with step-by-step guidance.`
           ),
-          descriptionZh: String(item.descriptionZh || item.description || item.title),
           usedUserIngredients: usedIngs,
           extraIngredientsNeeded: Array.isArray(item.extraIngredientsNeeded)
             ? item.extraIngredientsNeeded.map((ex: any) => ({
                 name: String(ex.name || "Seasoning"),
-                nameZh: String(ex.nameZh || ex.name || "調味料"),
                 amount: Number(ex.amount) || 1,
                 unit: String(ex.unit || "tbsp"),
               }))
             : [],
           estimatedCostHkd: Number(item.estimatedCostHkd) || 58,
-          availabilityNote: "All ingredients available across Hong Kong supermarkets.",
+          availabilityNote: "",
           steps,
         };
       });
@@ -151,7 +143,7 @@ export function extractMenuFromLLMResponse(rawText: string): {
       return {
         cleanMessage:
           cleanMessage ||
-          "Here is the menu I prepared for you! Click **Start Step-by-Step Cooking** on any dish below and I'll walk you through every step in our kitchen.",
+          "Here are a few dishes. Tap See the recipe on one below, then start cooking when you're ready.",
         menuDishes: normalized,
       };
     }
@@ -168,41 +160,31 @@ function buildDefaultStepsForDish(title: string, ingredients: string[]): RecipeS
     {
       step: 1,
       title: "Mise en Place & Prep",
-      titleZh: "食材準備與切配",
       text: `Wash and pat dry ${ingText}. Cut into uniform bite-sized pieces so everything cooks evenly for ${title}.`,
-      textZh: `將 ${ingText} 洗淨印乾，切成大小均勻的適口塊狀，確保受熱一致。`,
       timerSeconds: 180,
     },
     {
       step: 2,
       title: "Marinate & Season Base",
-      titleZh: "基礎醃製入味",
       text: `Lightly toss the main ingredients with a pinch of salt, light soy sauce, and a touch of cornstarch to lock in juices.`,
-      textZh: `加入少許鹽、生抽與生粉抓勻醃製，鎖住肉汁與鮮味。`,
       timerSeconds: 300,
     },
     {
       step: 3,
       title: "Aromatics & High-Heat Sear",
-      titleZh: "爆香辛香料與快炒",
       text: `Heat 1 tbsp oil in your pan or wok over medium-high heat until shimmering. Sear the main ingredients until golden at the edges.`,
-      textZh: `熱鑊下油至微煙，放入主料中大火煎炒至邊緣金黃香口。`,
       timerSeconds: 240,
     },
     {
       step: 4,
       title: "Simmer & Glaze",
-      titleZh: "合炒收汁",
       text: `Add the remaining ingredients and sauce mixture. Toss briskly so the glossy sauce coats every piece evenly.`,
-      textZh: `加入其餘配料與醬汁，大火快手兜勻至醬汁濃稠掛汁。`,
       timerSeconds: 180,
     },
     {
       step: 5,
       title: "Garnish & Serve Hot",
-      titleZh: "裝盤趁熱享用",
       text: `Transfer to a warmed plate, garnish with fresh herbs or spring onions, and serve immediately!`,
-      textZh: `盛入溫熱餐盤，撒上蔥花或香草點綴，即成美味佳餚！`,
     },
   ];
 }
@@ -319,7 +301,6 @@ function extractIngredientsFromUserText(text: string): string[] {
     const firstWord = item.en.toLowerCase().split(/[\s(/]+/)[0];
     if (
       lower.includes(item.en.toLowerCase()) ||
-      text.includes(item.zh) ||
       (firstWord.length >= 4 && new RegExp(`\\b${firstWord}s?\\b`, "i").test(lower))
     ) {
       if (!matched.includes(item.en)) matched.push(item.en);
@@ -340,70 +321,58 @@ export function generateLocalMockCookingResponse(
       ? detectedFromChat
       : ["Seasonal Greens", "Garlic", "Fresh Protein"];
 
-  const cuisine = quickStart?.cuisine || "Cantonese";
-  const cuisineFlavor = cuisine.replace(/\s*(food|cuisine|料理|菜)\s*$/i, "").trim() || cuisine;
+  const cuisine = quickStart?.cuisine && quickStart.cuisine !== "any" ? quickStart.cuisine : "Home-style";
+  const cuisineFlavor = cuisine.replace(/\s*(food|cuisine)\s*$/i, "").trim() || cuisine;
   const servings = quickStart?.servings || 2;
   const ingListStr = ingredients.join(", ");
 
   // Dish 1: Stir-fry / Wok style using all ingredients + full 5-step guide
   const dish1: DishSuggestion = {
     id: "sugg_" + Math.random().toString(36).substring(2, 9),
-    title: `Homestyle ${cuisineFlavor} Wok Sauté of ${ingredients.slice(0, 2).join(" & ")}`,
-    titleZh: `港式鑊氣家常快炒 (${ingredients.slice(0, 2).join("伴")})`,
+    title: `${cuisine === "Home-style" ? "" : `${cuisineFlavor} `}Wok Sauté of ${ingredients.slice(0, 2).join(" & ")}`,
     cuisine: cuisine,
     cookTimeMinutes: 18,
     difficulty: "Easy",
     servings: servings,
-    description: `A fragrant, high-heat Hong Kong stir-fry incorporating ${ingListStr} with aromatic garlic and light soy reduction.`,
-    descriptionZh: `大牌檔風味鑊氣快炒，將${ingListStr}配上蒜香與生抽大火爆炒，爽脆滑嫩。`,
+    description: `A fragrant, high-heat stir-fry with ${ingListStr} with aromatic garlic and light soy reduction.`,
     usedUserIngredients: [...ingredients],
     extraIngredientsNeeded: [
-      { name: "Lee Kum Kee Premium Light Soy Sauce", nameZh: "特級生抽", amount: 1.5, unit: "tbsp" },
-      { name: "Shaoxing Cooking Rice Wine", nameZh: "紹興花雕廚酒", amount: 1, unit: "tbsp" },
-      { name: "Pure Cornstarch", nameZh: "廚用生粉", amount: 1, unit: "tsp" },
+      { name: "Lee Kum Kee Premium Light Soy Sauce", amount: 1.5, unit: "tbsp" },
+      { name: "Shaoxing Cooking Rice Wine", amount: 1, unit: "tbsp" },
+      { name: "Pure Cornstarch", amount: 1, unit: "tsp" },
     ],
     localSubstituteNotes:
       "If Shaoxing wine is unavailable, dry sherry or a teaspoon of apple cider vinegar with a pinch of sugar works well.",
     estimatedCostHkd: 48.0 + ingredients.length * 6.5,
-    availabilityNote: "All ingredients readily available across ParkGrocer, WellMart, and local HK wet markets.",
+    availabilityNote: "",
     steps: [
       {
         step: 1,
         title: "Slice & Velvet the Ingredients",
-        titleZh: "食材切配與漿醃",
         text: `Wash and dry ${ingListStr}. Slice the protein into bite-sized pieces and toss with 1 tsp light soy sauce, 1 tsp Shaoxing wine, and 1 tsp cornstarch. Let sit for 5 minutes.`,
-        textZh: `將 ${ingListStr} 洗淨印乾。主料切適口片狀，加入生抽、花雕酒及生粉抓勻醃製 5 分鐘。`,
         timerSeconds: 300,
       },
       {
         step: 2,
         title: "Whisk the Wok Glaze Sauce",
-        titleZh: "調配鑊氣碗汁",
         text: `In a small bowl, combine 1 tbsp light soy sauce, 2 tbsp water, and a pinch of sugar so it is ready beside your stove.`,
-        textZh: `小碗中混合 1 湯匙生抽、2 湯匙清水與少許糖備用，炒菜時可一氣呵成。`,
       },
       {
         step: 3,
         title: "High-Heat Sear",
-        titleZh: "大火爆香主料",
         text: `Heat your wok or skillet over high heat until smoking hot. Add 1 tbsp oil, swirl to coat, and sear ${ingredients[0] || "the main ingredient"} undisturbed for 90 seconds before tossing until 80% cooked.`,
-        textZh: `燒熱鑊至微煙，下油潤鑊，放入 ${ingredients[0] || "主料"} 煎 90 秒至金黃，再翻炒至八成熟。`,
         timerSeconds: 150,
       },
       {
         step: 4,
         title: "Toss Greens & Splash Wine",
-        titleZh: "合炒配菜與灒酒",
         text: `Add the remaining ingredients (${ingredients.slice(1).join(", ") || "aromatics"}) and sizzle Shaoxing wine around the hot rim of the wok for authentic wok hei aroma.`,
-        textZh: `加入其餘食材 (${ingredients.slice(1).join("、") || "配料"})，沿鑊邊灒入花雕酒激發香氣。`,
         timerSeconds: 120,
       },
       {
         step: 5,
         title: "Glaze & Plate Hot",
-        titleZh: "收汁上碟",
         text: `Pour in the prepared soy glaze, toss briskly for 30 seconds until glossy, and transfer immediately to a warm serving platter.`,
-        textZh: `倒入碗汁大火快手兜勻 30 秒至亮澤掛汁，即刻上碟趁熱享用！`,
         timerSeconds: 30,
       },
     ],
@@ -413,54 +382,44 @@ export function generateLocalMockCookingResponse(
   const dish2: DishSuggestion = {
     id: "sugg_" + Math.random().toString(36).substring(2, 9),
     title: `Savory Claypot-Style Braised ${ingredients[0] || "Main"} with ${ingredients[1] || "Greens"}`,
-    titleZh: `砂鍋濃汁燜煮 (${ingredients[0] || "主料"})`,
     cuisine: cuisine,
     cookTimeMinutes: 28,
     difficulty: "Easy",
     servings: servings,
     description: `A comforting braised dish simmering ${ingListStr} gently in a rich umami broth until tender and full of flavor.`,
-    descriptionZh: `濃郁砂鍋燜煮，令${ingListStr}充分吸收高湯精華，軟嫩入味下飯一流。`,
     usedUserIngredients: [...ingredients],
     extraIngredientsNeeded: [
-      { name: "Lee Kum Kee Premium Oyster Sauce", nameZh: "特級蠔油", amount: 1.5, unit: "tbsp" },
-      { name: "Pure Toasted Sesame Oil", nameZh: "純正黑芝麻油", amount: 1, unit: "tsp" },
-      { name: "Thai Hom Mali Jasmine Rice", nameZh: "泰國頂級香米", amount: 2, unit: "cups" },
+      { name: "Lee Kum Kee Premium Oyster Sauce", amount: 1.5, unit: "tbsp" },
+      { name: "Pure Toasted Sesame Oil", amount: 1, unit: "tsp" },
+      { name: "Thai Hom Mali Jasmine Rice", amount: 2, unit: "cups" },
     ],
     localSubstituteNotes:
       "Oyster sauce can be substituted with vegetarian mushroom stir-fry sauce if cooking vegetarian.",
     estimatedCostHkd: 54.0 + ingredients.length * 7.0,
-    availabilityNote: "100% in stock at all 4 Hong Kong supermarket partners.",
+    availabilityNote: "",
     steps: [
       {
         step: 1,
         title: "Prep & Cut Uniform Pieces",
-        titleZh: "食材切塊備用",
         text: `Cut ${ingListStr} into hearty 3cm chunks suited for braising so they stay juicy and tender.`,
-        textZh: `將 ${ingListStr} 切成約 3 厘米塊狀，燜煮時更易鎖住肉汁。`,
         timerSeconds: 180,
       },
       {
         step: 2,
         title: "Brown the Aromatics & Main",
-        titleZh: "煎香主料與香料",
         text: `Warm oil in a heavy pot or claypot over medium-high heat. Sear ${ingredients[0] || "the main ingredients"} until golden brown on both sides.`,
-        textZh: `在砂鍋或深鍋中熱油，放入 ${ingredients[0] || "主料"} 煎至兩面金黃焦香。`,
         timerSeconds: 240,
       },
       {
         step: 3,
         title: "Simmer in Oyster Umami Broth",
-        titleZh: "加入蠔油高湯慢燜",
         text: `Stir in 1.5 tbsp oyster sauce and 150ml warm water or broth. Bring to a boil, cover with a lid, and simmer on low heat for 12 minutes.`,
-        textZh: `加入 1.5 湯匙蠔油及 150 毫升溫水，煮沸後加蓋轉小火燜煮 12 分鐘。`,
         timerSeconds: 720,
       },
       {
         step: 4,
         title: "Fold in Tender Greens & Sesame Oil",
-        titleZh: "加入翠綠蔬菜與麻油",
         text: `Uncover, add the quicker-cooking greens (${ingredients.slice(1).join(", ") || "vegetables"}), and simmer for 3 more minutes. Drizzle with toasted sesame oil and serve over steamed jasmine rice.`,
-        textZh: `開蓋加入易熟配菜續煮 3 分鐘，淋上黑芝麻油提香，伴泰國香米飯享用！`,
         timerSeconds: 180,
       },
     ],
@@ -469,59 +428,49 @@ export function generateLocalMockCookingResponse(
   // Dish 3: Nourishing Soup / Quick Noodle Bowl
   const dish3: DishSuggestion = {
     id: "sugg_" + Math.random().toString(36).substring(2, 9),
-    title: `Hong Kong Café Noodle Broth Bowl with ${ingListStr}`,
-    titleZh: `港式茶餐廳鮮味湯麵配 (${ingListStr})`,
+    title: `Ginger Noodle Soup with ${ingListStr}`,
     cuisine: cuisine,
     cookTimeMinutes: 15,
     difficulty: "Easy",
     servings: servings,
-    description: `A quick, soul-warming Hong Kong noodle soup showcasing ${ingListStr} in a clear aromatic ginger broth.`,
-    descriptionZh: `港式茶餐廳經典湯麵，以薑絲清雞湯滾熟${ingListStr}，清鮮而不油膩。`,
+    description: `A quick noodle soup with ${ingListStr} in a clear aromatic ginger broth.`,
     usedUserIngredients: [...ingredients],
     extraIngredientsNeeded: [
-      { name: "Hong Kong Fresh Wonton Egg Noodles", nameZh: "本地鮮造全蛋幼麵", amount: 2, unit: "bundles" },
-      { name: "Old Ginger Root", nameZh: "老薑", amount: 15, unit: "g" },
-      { name: "Natural Fine Sea Salt", nameZh: "細海鹽", amount: 0.5, unit: "tsp" },
+      { name: "Egg noodles", amount: 2, unit: "bundles" },
+      { name: "Ginger", amount: 15, unit: "g" },
+      { name: "Natural Fine Sea Salt", amount: 0.5, unit: "tsp" },
     ],
-    localSubstituteNotes: "Egg noodles can be substituted with vermicelli (米粉) or ramen noodles.",
+    localSubstituteNotes: "Egg noodles can be substituted with rice vermicelli or ramen noodles.",
     estimatedCostHkd: 39.0 + ingredients.length * 5.0,
-    availabilityNote: "Available at all Hong Kong grocers and neighborhood supermarkets.",
+    availabilityNote: "",
     steps: [
       {
         step: 1,
         title: "Infuse Ginger Broth Base",
-        titleZh: "熬製薑絲清湯底",
         text: `Bring 700ml water or chicken stock to a gentle boil with sliced old ginger root to build a fragrant soup base.`,
-        textZh: `鍋中倒入 700 毫升清水或雞湯，加入老薑片煮沸釋放香氣。`,
         timerSeconds: 240,
       },
       {
         step: 2,
         title: "Poach Ingredients Until Tender",
-        titleZh: "滾熟鮮嫩食材",
         text: `Add ${ingListStr} to the simmering broth and poach gently for 5 minutes until just cooked through and flavorful.`,
-        textZh: `放入 ${ingListStr}，中火滾煮約 5 分鐘至熟透鮮甜。`,
         timerSeconds: 300,
       },
       {
         step: 3,
         title: "Blanch Fresh Egg Noodles",
-        titleZh: "淥熟全蛋幼麵",
         text: `In a separate pot of boiling water, loosen and cook the fresh wonton egg noodles for 60–90 seconds until al dente, then drain and divide into bowls.`,
-        textZh: `另起一鍋沸水，放入全蛋幼麵鬆開淥 60 至 90 秒至爽彈，瀝乾盛入碗中。`,
         timerSeconds: 90,
       },
       {
         step: 4,
         title: "Ladle Broth & Serve",
-        titleZh: "注入熱湯上桌",
         text: `Season the broth with fine sea salt and a drop of sesame oil, ladle generously over the noodles, and top neatly with the poached ingredients.`,
-        textZh: `湯底加少許海鹽調味，淋在幼麵上並鋪好食材，即成茶餐廳級數靚湯麵！`,
       },
     ],
   };
 
-  const message = `Here are 3 tailored ${cuisine} recipes designed specifically around all ${ingredients.length} of your ingredients (${ingListStr})! Click **Start Step-by-Step Cooking** on any dish card below and I'll walk you through every step in our kitchen.`;
+  const message = `Here are 3 ideas using ${ingListStr}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`;
 
   return {
     message,
@@ -564,7 +513,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     if (hasSpoonacularKey() && hasQuickStart && quickStartData?.ingredients) {
       const live = await fetchLiveRecipes(
         quickStartData.ingredients,
-        quickStartData.cuisine || "Cantonese",
+        (quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""),
         3,
         quickStartData.servings || 2
       );
@@ -670,7 +619,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
           Authorization: `Bearer ${openRouterApiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "CookCart",
+          "X-Title": "Bon Taste",
         },
         body: JSON.stringify({
           model: "nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -826,7 +775,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   if (hasSpoonacularKey() && quickStartData?.ingredients?.length) {
     const liveSuggestions = await fetchLiveRecipes(
       quickStartData.ingredients,
-      quickStartData.cuisine || "Cantonese",
+      (quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""),
       3,
       quickStartData.servings || 2
     );
@@ -843,7 +792,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
 
       const ingredientList = quickStartData.ingredients.join(", ");
       return {
-        message: `Here are ${liveSuggestions.length} real ${quickStartData.cuisine || "Cantonese"} recipes built around ${ingredientList}. Click **Start Step-by-Step Cooking** on any card below to open the interactive cooking guide!`,
+        message: `Here are ${liveSuggestions.length} real ${(quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : "")} recipes built around ${ingredientList}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`,
         structuredSuggestions: liveSuggestions,
         tokensUsed: liveTokens,
         modelUsed: "spoonacular-live-recipes",
@@ -905,14 +854,14 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   }
 
   // 8. Default / Fallback: Intelligent Local Culinary Engine
-  const isDirectGreeting = /^(hi|hello|hey|yo|good morning|good afternoon|good evening|你好|早晨|哈囉)/i.test(
+  const isDirectGreeting = /^(hi|hello|hey|yo|good morning|good afternoon|good evening)/i.test(
     lastUserMessage.trim()
   );
 
   if (isDirectGreeting && !quickStartData?.ingredients?.length) {
     return {
       message:
-        "Hello! I am Chef Cart, your personal culinary and Hong Kong grocery assistant. What kind of meal are you planning to make, or what ingredients do you have in your fridge today?",
+        "Hello, I'm your chef. What would you like to cook, or what do you have in the fridge today?",
       tokensUsed: { prompt: 20, completion: 40, total: 60 },
       modelUsed: "cookcart-local-engine",
     };

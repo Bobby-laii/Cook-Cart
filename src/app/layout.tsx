@@ -1,18 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Atkinson_Hyperlegible } from "next/font/google";
+import { Atkinson_Hyperlegible, Newsreader } from "next/font/google";
 import "./globals.css";
-import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { AuthProvider } from "@/lib/auth/AuthContext";
-import { CartProvider } from "@/lib/cart/CartContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { OnboardingGate } from "@/components/avatar/OnboardingGate";
+import { THEME_BOOT_SCRIPT } from "@/components/ThemeSwitch";
 
 // Designed for low-vision readers: the same problem as reading a step from across a kitchen.
 const sans = Atkinson_Hyperlegible({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+// Dish names and page titles: a reading serif, like a cooking magazine.
+const display = Newsreader({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -32,7 +39,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F4F6F8",
+  // Matches the page in each mode (stone-50 light / dark in globals.css).
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#171614" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -46,19 +57,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={sans.variable}
+      className={`${sans.variable} ${display.variable}`}
+      // The boot script may set data-theme before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="font-sans antialiased">
-        <LanguageProvider>
-          <AuthProvider>
-            <CartProvider>
-              <OnboardingGate />
-              <Navbar />
-              <main className="flex-1 w-full pb-tabbar">{children}</main>
-              <Footer />
-            </CartProvider>
-          </AuthProvider>
-        </LanguageProvider>
+        <AuthProvider>
+          <OnboardingGate />
+          <Navbar />
+          <main className="flex-1 w-full pb-tabbar">{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

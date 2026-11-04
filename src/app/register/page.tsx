@@ -3,14 +3,17 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { UtensilsCrossed, AlertCircle } from "lucide-react";
+
+const inputClass =
+  "h-[52px] w-full rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none";
+const labelClass = "mb-2 block text-[15px] font-bold text-stone-900";
+const hintClass = "mt-2 text-[14px] text-stone-500";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { refreshUser } = useAuth();
-  const { t, language } = useLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +38,6 @@ export default function RegisterPage() {
           name,
           dietaryRestrictions: dietary,
           allergies,
-          preferredLanguage: language,
         }),
       });
 
@@ -47,124 +49,130 @@ export default function RegisterPage() {
         // First-time users go straight to designing their personal chef.
         router.push("/onboarding/chef?next=/chat");
       } else {
-        setError(data.error || "Registration failed");
+        setError(data.error || "We couldn't create your account. Please try again.");
       }
     } catch (err: any) {
       setLoading(false);
-      setError(err.message || "Network error");
+      setError(err.message || "Network error. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-brand-500 items-center justify-center text-white shadow-md">
-            <UtensilsCrossed className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-black text-stone-900">
-            {language === "zh-HK" ? "建立 CookCart 帳號" : "Create your CookCart Account"}
-          </h2>
-          <p className="text-sm text-stone-600">
-            {language === "zh-HK"
-              ? "加入香港 AI 買餸社群，解鎖個人化食譜與格價"
-              : "Join Hong Kong's AI cooking community for custom meals & shopping"}
+    <div className="mx-auto w-full max-w-md px-5 pb-12 pt-8 sm:pt-16">
+      <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900">Create an account</h1>
+      <p className="mt-2 text-[17px] text-stone-500">
+        Keep the recipes you love and meet your own chef.
+      </p>
+
+      {error && (
+        <div role="alert" className="mt-6 flex items-start gap-2 text-[15px] text-danger">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <div>
+          <label htmlFor="register-name" className={labelClass}>
+            Your name
+          </label>
+          <input
+            id="register-name"
+            type="text"
+            required
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="register-email" className={labelClass}>
+            Email
+          </label>
+          <input
+            id="register-email"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="register-password" className={labelClass}>
+            Password
+          </label>
+          <input
+            id="register-password"
+            type="password"
+            required
+            minLength={6}
+            autoComplete="new-password"
+            aria-describedby="register-password-hint"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+          />
+          <p id="register-password-hint" className={hintClass}>
+            At least 6 characters.
           </p>
         </div>
 
-        {error && (
-          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        <div className="border-t border-stone-200 pt-5">
+          <p className="text-[15px] text-stone-500">
+            Optional. Your chef keeps these in mind when suggesting dishes.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200 space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Full Name
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Alice Chan"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
+        <div>
+          <label htmlFor="register-dietary" className={labelClass}>
+            How you eat
+          </label>
+          <input
+            id="register-dietary"
+            type="text"
+            value={dietary}
+            onChange={(e) => setDietary(e.target.value)}
+            placeholder="Vegetarian, halal, no pork"
+            className={inputClass}
+          />
+        </div>
 
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.hk"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
+        <div>
+          <label htmlFor="register-allergies" className={labelClass}>
+            Allergies
+          </label>
+          <input
+            id="register-allergies"
+            type="text"
+            value={allergies}
+            onChange={(e) => setAllergies(e.target.value)}
+            placeholder="Peanuts, shellfish"
+            className={inputClass}
+          />
+        </div>
 
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Password (Min 6 characters)
-            </label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand-500 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+        >
+          {loading && <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden />}
+          {loading ? "Creating your account..." : "Create account"}
+        </button>
+      </form>
 
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Dietary Restrictions (Optional)
-            </label>
-            <input
-              type="text"
-              value={dietary}
-              onChange={(e) => setDietary(e.target.value)}
-              placeholder="e.g. Vegetarian, Halal, None"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Food Allergies (Optional - kept strictly private)
-            </label>
-            <input
-              type="text"
-              value={allergies}
-              onChange={(e) => setAllergies(e.target.value)}
-              placeholder="e.g. Peanuts, Shellfish, None"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm shadow-md transition disabled:opacity-50"
-          >
-            {loading ? t("loading") : t("navRegister")}
-          </button>
-
-          <div className="pt-2 text-center text-xs text-stone-600">
-            {language === "zh-HK" ? "已有帳號？" : "Already have an account?"}{" "}
-            <Link href="/login" className="text-brand-600 font-bold hover:underline">
-              {language === "zh-HK" ? "點此登入" : "Sign in here"}
-            </Link>
-          </div>
-        </form>
-      </div>
+      <p className="mt-8 text-[15px] text-stone-500">
+        {"Already have an account? "}
+        <Link href="/login" className="font-bold text-stone-900 underline underline-offset-4">
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 }

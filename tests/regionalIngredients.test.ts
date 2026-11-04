@@ -20,37 +20,27 @@ describe("Regional & European Distinctive Ingredients Benchmark", () => {
   });
 
   it("excludes universal basics like plain table salt or white sugar", () => {
-    const namesLower = TOP_50_EUROPEAN_INGREDIENTS.flatMap((item) => [
-      item.en.toLowerCase(),
-      item.zh,
-    ]);
+    const namesLower = TOP_50_EUROPEAN_INGREDIENTS.map((item) => item.en.toLowerCase());
     expect(namesLower).not.toContain("salt");
     expect(namesLower).not.toContain("table salt");
     expect(namesLower).not.toContain("sugar");
     expect(namesLower).not.toContain("white sugar");
-    expect(namesLower).not.toContain("白糖");
-    expect(namesLower).not.toContain("食鹽");
   });
 
   it("ranks Butter #1 and Olive Oil #2 according to the definitive benchmark", () => {
     expect(TOP_50_EUROPEAN_INGREDIENTS[0].en).toBe("Butter");
-    expect(TOP_50_EUROPEAN_INGREDIENTS[0].zh).toBe("牛油");
     expect(TOP_50_EUROPEAN_INGREDIENTS[0].rank).toBe(1);
     expect(TOP_50_EUROPEAN_INGREDIENTS[0].consolidatedUsagePct).toBe(64.4);
 
     expect(TOP_50_EUROPEAN_INGREDIENTS[1].en).toBe("Extra-Virgin Olive Oil");
-    expect(TOP_50_EUROPEAN_INGREDIENTS[1].zh).toBe("特級初榨橄欖油");
     expect(TOP_50_EUROPEAN_INGREDIENTS[1].rank).toBe(2);
     expect(TOP_50_EUROPEAN_INGREDIENTS[1].consolidatedUsagePct).toBe(52.7);
   });
 
-  it("has valid bilingual English and Traditional Chinese names for all 50 items", () => {
+  it("has an id and an English name for all 50 items", () => {
     for (const item of TOP_50_EUROPEAN_INGREDIENTS) {
       expect(item.id).toBeTruthy();
       expect(item.en).toBeTruthy();
-      expect(item.zh).toBeTruthy();
-      // Ensure zh contains Chinese characters
-      expect(/[\u3400-\u9FFF\uF900-\uFAFF]/.test(item.zh)).toBe(true);
     }
   });
 

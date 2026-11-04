@@ -30,35 +30,34 @@ export type HeadwearStyle = (typeof HEADWEAR_STYLES)[number];
 export type GlassesStyle = (typeof GLASSES_STYLES)[number];
 
 /**
- * Badge backdrops. Each one is a flat enamel colour that fills the inner circle of the
- * badge; the renderer adds the white rim and navy edge. Ids are stored in saved configs,
- * so never rename or remove them.
+ * Backdrops. Each one is a soft, muted colour that fills the avatar's round background.
+ * Ids are stored in saved configs, so never rename or remove them (the old enamel names
+ * are kept as ids; the label is what people see).
  */
 export interface BackdropPreset {
   id: string;
   fill: string;
   label: string;
-  labelZh: string;
 }
 
 export const BACKDROPS: BackdropPreset[] = [
-  { id: "saffron", fill: "#f5c842", label: "Butter", labelZh: "牛油黃" },
-  { id: "tomato", fill: "#d9553b", label: "Tomato", labelZh: "番茄紅" },
-  { id: "basil", fill: "#3f8a5c", label: "Herb", labelZh: "香草綠" },
-  { id: "blueberry", fill: "#2a4fbf", label: "Cobalt", labelZh: "鈷藍" },
-  { id: "matcha", fill: "#a9c67e", label: "Matcha", labelZh: "抹茶" },
-  { id: "peach", fill: "#f0a47c", label: "Peach", labelZh: "蜜桃" },
-  { id: "taro", fill: "#a48cc4", label: "Taro", labelZh: "香芋" },
-  { id: "charcoal", fill: "#47526b", label: "Slate", labelZh: "石板灰" },
+  { id: "peach", fill: "#f4d9c6", label: "Peach" },
+  { id: "basil", fill: "#d5e0cd", label: "Sage" },
+  { id: "blueberry", fill: "#d4e1ed", label: "Sky" },
+  { id: "saffron", fill: "#f3e4b9", label: "Butter" },
+  { id: "taro", fill: "#e2d8ec", label: "Lilac" },
+  { id: "matcha", fill: "#ebe2d3", label: "Sand" },
+  { id: "tomato", fill: "#f1d1cb", label: "Rose" },
+  { id: "charcoal", fill: "#dfe4e9", label: "Mist" },
 ];
 
 /** Light to deep. All lowercase: the validator lowercases colours. */
 export const SKIN_TONES = ["#fbe3cf", "#f3cfae", "#e6b48c", "#d39c6f", "#b87d52", "#96603c", "#744528", "#55311d"];
 /** The first eight are natural shades (the randomiser prefers them). */
 export const HAIR_COLORS = ["#1d1a22", "#3b2618", "#6a4128", "#8f4a26", "#c46a2f", "#b98a4e", "#e2c17c", "#9aa0a8", "#eef0f2", "#2a4fbf", "#23744a", "#c2557a"];
-export const OUTFIT_COLORS = ["#ffffff", "#12204a", "#2a4fbf", "#8aa2e3", "#23744a", "#d9553b", "#f5c842", "#f3ead8", "#47526b", "#a48cc4"];
-export const ACCENT_COLORS = ["#d9553b", "#2a4fbf", "#f5c842", "#23744a", "#12204a", "#ffffff", "#8aa2e3", "#e58fa0"];
-export const HEADWEAR_COLORS = ["#ffffff", "#12204a", "#2a4fbf", "#d9553b", "#f5c842", "#23744a", "#8aa2e3", "#f3ead8"];
+export const OUTFIT_COLORS = ["#ffffff", "#f3ede2", "#3f4a5a", "#86a3c8", "#93b59c", "#e39a84", "#efce82", "#bcaad2", "#d9c8b2", "#5f7d68"];
+export const ACCENT_COLORS = ["#e39a84", "#86a3c8", "#efce82", "#6f9a7c", "#3f4a5a", "#ffffff", "#bcaad2", "#eab0ba"];
+export const HEADWEAR_COLORS = ["#ffffff", "#3f4a5a", "#86a3c8", "#e39a84", "#efce82", "#6f9a7c", "#bcaad2", "#f3ede2"];
 
 export interface ChefAvatarConfig {
   v: 1;
@@ -94,67 +93,65 @@ export const DEFAULT_CHEF_AVATAR: ChefAvatarConfig = {
   hairColor: "#3b2618",
   outfit: "chefCoat",
   outfitColor: "#ffffff",
-  accentColor: "#d9553b",
+  accentColor: "#e39a84",
   neckerchief: true,
   headwear: "toque",
   headwearColor: "#ffffff",
   glasses: "none",
-  backdrop: "blueberry",
+  backdrop: "peach",
 };
 
 /** Human labels for every option, used by the customizer UI. */
-export const OPTION_LABELS: Record<string, { en: string; zh: string }> = {
+export const OPTION_LABELS: Record<string, string> = {
   // face
-  oval: { en: "Oval", zh: "鵝蛋臉" },
-  round: { en: "Round", zh: "圓臉" },
-  square: { en: "Square", zh: "方臉" },
-  heart: { en: "Heart", zh: "心形臉" },
+  oval: "Oval",
+  round: "Round",
+  square: "Square",
+  heart: "Heart",
   // eyes
-  friendly: { en: "Friendly", zh: "親切" },
-  focused: { en: "Focused", zh: "專注" },
-  happy: { en: "Happy", zh: "開心" },
-  wink: { en: "Wink", zh: "眨眼" },
-  calm: { en: "Calm", zh: "平靜" },
+  friendly: "Friendly",
+  focused: "Focused",
+  happy: "Happy",
+  wink: "Wink",
+  calm: "Calm",
   // brows
-  soft: { en: "Soft", zh: "柔和" },
-  bold: { en: "Bold", zh: "濃眉" },
-  arched: { en: "Arched", zh: "挑眉" },
+  soft: "Soft",
+  bold: "Bold",
+  arched: "Arched",
   // mouth
-  smile: { en: "Smile", zh: "微笑" },
-  grin: { en: "Big grin", zh: "大笑" },
-  smirk: { en: "Smirk", zh: "自信笑" },
+  smile: "Smile",
+  grin: "Big grin",
+  smirk: "Smirk",
   // facial hair
-  none: { en: "None", zh: "無" },
-  stubble: { en: "Stubble", zh: "鬍渣" },
-  mustache: { en: "Mustache", zh: "八字鬍" },
-  goatee: { en: "Goatee", zh: "山羊鬍" },
-  beard: { en: "Beard", zh: "絡腮鬍" },
+  none: "None",
+  stubble: "Stubble",
+  mustache: "Mustache",
+  goatee: "Goatee",
+  beard: "Beard",
   // hair
-  short: { en: "Short crop", zh: "短髮" },
-  sidePart: { en: "Side part", zh: "側分" },
-  curly: { en: "Curly", zh: "捲髮" },
-  bun: { en: "Chef bun", zh: "丸子頭" },
-  long: { en: "Long", zh: "長髮" },
-  ponytail: { en: "Ponytail", zh: "馬尾" },
-  buzz: { en: "Buzz cut", zh: "平頭" },
-  bald: { en: "Bald", zh: "光頭" },
+  short: "Short crop",
+  sidePart: "Side part",
+  curly: "Curly",
+  bun: "Chef bun",
+  long: "Long",
+  ponytail: "Ponytail",
+  buzz: "Buzz cut",
+  bald: "Bald",
   // outfit
-  chefCoat: { en: "Chef coat", zh: "廚師服" },
-  apron: { en: "Bistro apron", zh: "小館圍裙" },
-  tee: { en: "Kitchen tee", zh: "廚房 T 恤" },
-  kimono: { en: "Sushi wrap", zh: "壽司師傅服" },
+  chefCoat: "Chef coat",
+  apron: "Bistro apron",
+  tee: "Kitchen tee",
+  kimono: "Sushi wrap",
   // headwear
-  toque: { en: "Toque", zh: "高帽" },
-  bandana: { en: "Bandana", zh: "頭巾" },
-  cap: { en: "Flat cap", zh: "鴨舌帽" },
-  beret: { en: "Beret", zh: "貝雷帽" },
+  toque: "Toque",
+  bandana: "Bandana",
+  cap: "Flat cap",
+  beret: "Beret",
   // glasses (round/square reuse face keys above)
 };
 
-export function optionLabel(id: string, language: string): string {
-  const entry = OPTION_LABELS[id];
-  if (!entry) return id;
-  return language === "zh-HK" ? entry.zh : entry.en;
+export function optionLabel(id: string): string {
+  return OPTION_LABELS[id] ?? id;
 }
 
 /* ---------------------------------- Personalities ---------------------------------- */
@@ -162,43 +159,27 @@ export function optionLabel(id: string, language: string): string {
 export const CHEF_PERSONALITIES = [
   {
     id: "friendly",
-    emoji: "🌟",
     label: "Friendly and warm",
-    labelZh: "親切溫暖",
     description: "Supportive and encouraging, like a close friend in the kitchen.",
-    descriptionZh: "溫暖鼓勵、善解人意，就像在廚房陪著你的好朋友。",
     greeting: "Hi! I'm so happy to meet you. Let's cook something cozy together — no pressure, ever.",
-    greetingZh: "你好！好開心認識你。我哋一齊煮啲溫暖嘅嘢食，唔使有壓力！",
   },
   {
     id: "professional",
-    emoji: "🔥",
     label: "Executive chef",
-    labelZh: "專業星廚",
     description: "Precise techniques and Michelin-standard plating advice.",
-    descriptionZh: "注重精準刀工火候、米芝蓮星級技巧。",
     greeting: "Welcome to my kitchen. Sharp knives, hot pans, clean station — let's make something exceptional.",
-    greetingZh: "歡迎來到我的廚房。刀要利、鑊要熱，我們一起做出出色的菜式。",
   },
   {
     id: "playful",
-    emoji: "🎉",
     label: "Playful and fun",
-    labelZh: "活潑搞怪",
     description: "Energetic, full of food puns and upbeat vibes.",
-    descriptionZh: "幽默生動、活力滿滿，讓烹飪充滿歡笑。",
     greeting: "Heyyy! Ready to have a grate time? I promise my puns are only slightly cheesy.",
-    greetingZh: "嘿！準備好一齊玩轉廚房未？我保證笑話只係少少「芝士」！",
   },
   {
     id: "calm",
-    emoji: "🍵",
     label: "Mindful and calm",
-    labelZh: "療癒平靜",
     description: "Patient and soothing — stress-free comfort cooking.",
-    descriptionZh: "沉穩舒緩、耐性陪伴，帶來放鬆的療癒美食。",
     greeting: "Hello, friend. Take a breath. We'll cook slowly and simply, one gentle step at a time.",
-    greetingZh: "你好，朋友。深呼吸一下，我們慢慢來，一步一步輕鬆煮。",
   },
 ] as const;
 

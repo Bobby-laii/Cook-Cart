@@ -28,13 +28,13 @@ type TabId = "face" | "expression" | "hair" | "outfit" | "headwear" | "backdrop"
 type ColorField = "skinTone" | "hairColor" | "outfitColor" | "accentColor" | "headwearColor";
 type ToggleField = "blush" | "neckerchief";
 
-const TABS: { id: TabId; en: string; zh: string; icon: React.ElementType }[] = [
-  { id: "face", en: "Skin and face", zh: "膚色與臉型", icon: Palette },
-  { id: "expression", en: "Expression", zh: "表情", icon: Smile },
-  { id: "hair", en: "Hair", zh: "髮型", icon: Scissors },
-  { id: "outfit", en: "Outfit", zh: "服裝", icon: Shirt },
-  { id: "headwear", en: "Hat and glasses", zh: "帽子與眼鏡", icon: ChefHat },
-  { id: "backdrop", en: "Badge", zh: "徽章底色", icon: ImageIcon },
+const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: "face", label: "Skin and face", icon: Palette },
+  { id: "expression", label: "Expression", icon: Smile },
+  { id: "hair", label: "Hair", icon: Scissors },
+  { id: "outfit", label: "Outfit", icon: Shirt },
+  { id: "headwear", label: "Hat and glasses", icon: ChefHat },
+  { id: "backdrop", label: "Background", icon: ImageIcon },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -45,7 +45,6 @@ const TABS: { id: TabId; en: string; zh: string; icon: React.ElementType }[] = [
 interface EditorCtx {
   value: ChefAvatarConfig;
   set: <K extends keyof ChefAvatarConfig>(field: K, v: ChefAvatarConfig[K]) => void;
-  language: string;
 }
 
 const Ctx = createContext<EditorCtx | null>(null);
@@ -75,12 +74,12 @@ function OptionGrid<K extends keyof ChefAvatarConfig>({
   options: readonly ChefAvatarConfig[K][];
   labelFor?: (o: ChefAvatarConfig[K]) => string;
 }) {
-  const { value, set, language } = useEditor();
+  const { value, set } = useEditor();
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
       {options.map((opt) => {
         const active = value[field] === opt;
-        const label = labelFor ? labelFor(opt) : optionLabel(String(opt), language);
+        const label = labelFor ? labelFor(opt) : optionLabel(String(opt));
         return (
           <button
             key={String(opt)}
@@ -106,7 +105,7 @@ function OptionGrid<K extends keyof ChefAvatarConfig>({
 }
 
 function Swatches({ field, colors }: { field: ColorField; colors: string[] }) {
-  const { value, set, language } = useEditor();
+  const { value, set } = useEditor();
   const current = value[field];
   const isCustom = !colors.includes(current);
   const ring = "outline outline-[3px] outline-offset-2 outline-brand-500";
@@ -124,7 +123,7 @@ function Swatches({ field, colors }: { field: ColorField; colors: string[] }) {
             className={`h-12 w-12 rounded-full border-2 border-stone-900/15 transition-[outline-color] ${active ? ring : "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-brand-500"}`}
             style={{ backgroundColor: color }}
           >
-            {active && <Check className="mx-auto h-5 w-5" strokeWidth={3} color={luminance(color) > 150 ? "#12204A" : "#FFFFFF"} aria-hidden />}
+            {active && <Check className="mx-auto h-5 w-5" strokeWidth={3} color={luminance(color) > 150 ? "#1a1a1a" : "#ffffff"} aria-hidden />}
           </button>
         );
       })}
@@ -133,10 +132,10 @@ function Swatches({ field, colors }: { field: ColorField; colors: string[] }) {
           isCustom ? `border-stone-900/15 ${ring}` : "border-dashed border-stone-300 bg-stone-50"
         }`}
         style={isCustom ? { backgroundColor: current } : undefined}
-        title={language === "zh-HK" ? "自訂顏色" : "Custom colour"}
+        title="Custom colour"
       >
         {!isCustom && <Plus className="h-5 w-5 text-stone-500" aria-hidden />}
-        <span className="sr-only">{language === "zh-HK" ? "自訂顏色" : "Custom colour"}</span>
+        <span className="sr-only">Custom colour</span>
         <input
           type="color"
           value={current}
@@ -174,22 +173,19 @@ function Toggle({ field, label }: { field: ToggleField; label: string }) {
 export interface ChefAvatarCustomizerProps {
   value: ChefAvatarConfig;
   onChange: (next: ChefAvatarConfig, changedField: keyof ChefAvatarConfig) => void;
-  language: string;
 }
 
-export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCustomizerProps) {
+export function ChefAvatarCustomizer({ value, onChange }: ChefAvatarCustomizerProps) {
   const [tab, setTab] = useState<TabId>("face");
-  const zh = language === "zh-HK";
-  const L = (en: string, zhText: string) => (zh ? zhText : en);
 
   const set: EditorCtx["set"] = (field, v) => onChange({ ...value, [field]: v }, field);
 
   return (
-    <Ctx.Provider value={{ value, set, language }}>
+    <Ctx.Provider value={{ value, set }}>
       <div className="overflow-hidden rounded-3xl border border-stone-200 bg-stone-50">
         {/* Category chips */}
-        <div role="tablist" aria-label={L("Parts of your chef", "大廚造型部分")} className="flex gap-2 overflow-x-auto border-b border-stone-200 px-4 py-3">
-          {TABS.map(({ id, en, zh: zhLabel, icon: Icon }) => {
+        <div role="tablist" aria-label="Parts of your chef" className="flex gap-2 overflow-x-auto border-b border-stone-200 px-4 py-3">
+          {TABS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
               <button
@@ -203,7 +199,7 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
                 }`}
               >
                 <Icon className="h-4 w-4" aria-hidden />
-                {zh ? zhLabel : en}
+                {label}
               </button>
             );
           })}
@@ -212,25 +208,25 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
         <div className="space-y-7 p-4 sm:p-6 lg:max-h-[600px] lg:overflow-y-auto">
           {tab === "face" && (
             <>
-              <Section title={L("Skin tone", "膚色")}>
+              <Section title="Skin tone">
                 <Swatches field="skinTone" colors={SKIN_TONES} />
               </Section>
-              <Section title={L("Face shape", "臉型")}>
+              <Section title="Face shape">
                 <OptionGrid field="faceShape" options={FACE_SHAPES} />
               </Section>
-              <Toggle field="blush" label={L("Rosy cheeks", "臉頰紅暈")} />
+              <Toggle field="blush" label="Rosy cheeks" />
             </>
           )}
 
           {tab === "expression" && (
             <>
-              <Section title={L("Eyes", "眼睛")}>
+              <Section title="Eyes">
                 <OptionGrid field="eyes" options={EYE_STYLES} />
               </Section>
-              <Section title={L("Mouth", "嘴巴")}>
+              <Section title="Mouth">
                 <OptionGrid field="mouth" options={MOUTH_STYLES} />
               </Section>
-              <Section title={L("Eyebrows", "眉毛")}>
+              <Section title="Eyebrows">
                 <OptionGrid field="brows" options={BROW_STYLES} />
               </Section>
             </>
@@ -238,13 +234,13 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
 
           {tab === "hair" && (
             <>
-              <Section title={L("Hair colour", "髮色")}>
+              <Section title="Hair colour">
                 <Swatches field="hairColor" colors={HAIR_COLORS} />
               </Section>
-              <Section title={L("Hairstyle", "髮型")}>
+              <Section title="Hairstyle">
                 <OptionGrid field="hairStyle" options={HAIR_STYLES} />
               </Section>
-              <Section title={L("Facial hair", "鬍子")}>
+              <Section title="Facial hair">
                 <OptionGrid field="facialHair" options={FACIAL_HAIR_STYLES} />
               </Section>
             </>
@@ -252,49 +248,45 @@ export function ChefAvatarCustomizer({ value, onChange, language }: ChefAvatarCu
 
           {tab === "outfit" && (
             <>
-              <Section title={L("Uniform", "制服")}>
+              <Section title="Uniform">
                 <OptionGrid field="outfit" options={OUTFIT_STYLES} />
               </Section>
-              <Section title={value.outfit === "apron" ? L("Apron colour", "圍裙顏色") : L("Fabric colour", "布料顏色")}>
+              <Section title={value.outfit === "apron" ? "Apron colour" : "Fabric colour"}>
                 <Swatches field="outfitColor" colors={OUTFIT_COLORS} />
               </Section>
               <Section
-                title={value.outfit === "apron" ? L("Shirt and neckerchief colour", "襯衫與領巾顏色") : L("Trim and neckerchief colour", "滾邊與領巾顏色")}
+                title={value.outfit === "apron" ? "Shirt and neckerchief colour" : "Trim and neckerchief colour"}
               >
                 <Swatches field="accentColor" colors={ACCENT_COLORS} />
               </Section>
-              <Toggle field="neckerchief" label={L("Neckerchief", "領巾")} />
+              <Toggle field="neckerchief" label="Neckerchief" />
             </>
           )}
 
           {tab === "headwear" && (
             <>
-              <Section title={L("Headwear", "帽子")}>
+              <Section title="Headwear">
                 <OptionGrid field="headwear" options={HEADWEAR_STYLES} />
               </Section>
               {value.headwear !== "none" && (
-                <Section title={L("Hat colour", "帽子顏色")}>
+                <Section title="Hat colour">
                   <Swatches field="headwearColor" colors={HEADWEAR_COLORS} />
                 </Section>
               )}
-              <Section title={L("Glasses", "眼鏡")}>
-                <OptionGrid
-                  field="glasses"
-                  options={GLASSES_STYLES}
-                  labelFor={(o) => (o === "none" ? L("None", "無") : o === "round" ? L("Round", "圓框") : L("Square", "方框"))}
-                />
+              <Section title="Glasses">
+                <OptionGrid field="glasses" options={GLASSES_STYLES} />
               </Section>
             </>
           )}
 
           {tab === "backdrop" && (
-            <Section title={L("Badge colour", "徽章底色")}>
+            <Section title="Background colour">
               <OptionGrid
                 field="backdrop"
                 options={BACKDROPS.map((b) => b.id)}
                 labelFor={(id) => {
                   const b = BACKDROPS.find((x) => x.id === id);
-                  return b ? (zh ? b.labelZh : b.label) : String(id);
+                  return b ? b.label : String(id);
                 }}
               />
             </Section>

@@ -28,31 +28,32 @@ export interface UserSession {
 
 export interface RecipeIngredient {
   name: string;
-  nameZh: string;
   amount: number;
   unit: string;
   optional?: boolean;
+  // How it is prepared, split off the measure ("2 cloves minced" -> "minced").
+  note?: string;
+  // Further amounts of the same ingredient in a unit that can't be added to the
+  // first, e.g. a recipe asking for "2 tbsp" and later "1 clove" of one thing.
+  // Shown as "2 tbsp + 1 clove"; scale them the same way as `amount`.
+  also?: { amount: number; unit: string }[];
 }
 
 export interface RecipeStep {
   step: number;
   title: string;
-  titleZh?: string;
   text: string;
-  textZh?: string;
   timerSeconds?: number;
 }
 
 export interface DishSuggestion {
   id: string;
   title: string;
-  titleZh: string;
   cuisine: string;
   cookTimeMinutes: number;
   difficulty: "Easy" | "Medium" | "Hard";
   servings: number;
   description: string;
-  descriptionZh: string;
   usedUserIngredients: string[]; // Ingredients from user input
   extraIngredientsNeeded: RecipeIngredient[]; // Extra needed
   omittedUserIngredients?: { ingredient: string; reason: string }[];
@@ -78,7 +79,6 @@ export interface DishSuggestion {
 export interface StoreComparisonResult {
   storeId: string;
   storeName: string;
-  storeNameZh: string;
   slug: string;
   totalPrice: number;
   availableItemsCount: number;

@@ -66,8 +66,8 @@ export async function POST(req: Request) {
       });
       if (user) {
         chefProfile = {
-          chefName: user.chefName || "Chef Cart",
-          chefAvatarUrl: user.chefAvatarUrl || "🧑‍🍳",
+          chefName: user.chefName || "Your chef",
+          chefAvatarUrl: user.chefAvatarUrl || undefined,
           chefPersonality: user.chefPersonality || "friendly",
         };
       }
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
               id: convoId,
               userId: session.userId,
               title,
-              cuisine: quickStartData?.cuisine || "Cantonese",
+              cuisine: quickStartData?.cuisine || "any",
               ingredients: JSON.stringify(quickStartData?.ingredients || []),
               messages: JSON.stringify(fullMessages),
             },

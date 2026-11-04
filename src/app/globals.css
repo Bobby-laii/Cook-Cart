@@ -2,9 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Enamelware: see DESIGN.md. Tokens live in tailwind.config.ts. */
+/* Colour tokens as RGB channels (see tailwind.config.ts). Light is the default; dark
+   follows the phone's setting unless the user picked one (html[data-theme]). Dark is a
+   warm near-black, not #000, with soft light ink; brand turns herb so white text on
+   primary buttons keeps its contrast. */
+:root {
+  color-scheme: light;
+  --stone-50: 255 255 255;
+  --stone-100: 246 245 243;
+  --stone-200: 235 234 231;
+  --stone-300: 214 212 207;
+  --stone-400: 163 160 154;
+  --stone-500: 107 104 98;
+  --stone-600: 85 82 77;
+  --stone-700: 61 59 55;
+  --stone-800: 38 37 34;
+  --stone-900: 26 26 26;
+  --stone-950: 15 15 14;
+  --brand-50: 246 245 243;
+  --brand-100: 235 234 231;
+  --brand-200: 214 212 207;
+  --brand-300: 163 160 154;
+  --brand-400: 107 104 98;
+  --brand-500: 26 26 26;
+  --brand-600: 26 26 26;
+  --brand-700: 15 15 14;
+  --brand-800: 15 15 14;
+  --brand-900: 15 15 14;
+  --brand-950: 0 0 0;
+  --herb-50: 238 245 239;
+  --herb-100: 220 235 223;
+  --herb-200: 188 216 194;
+  --herb-300: 141 187 152;
+  --herb-400: 79 143 95;
+  --herb-500: 47 107 63;
+  --herb-600: 47 107 63;
+  --herb-700: 35 79 47;
+  --danger: 179 38 30;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --stone-50: 23 22 20;
+    --stone-100: 32 31 28;
+    --stone-200: 46 44 41;
+    --stone-300: 66 64 60;
+    --stone-400: 125 121 114;
+    --stone-500: 169 165 157;
+    --stone-600: 195 191 183;
+    --stone-700: 216 212 204;
+    --stone-800: 230 227 220;
+    --stone-900: 240 237 230;
+    --stone-950: 248 246 241;
+    --brand-50: 28 42 32;
+    --brand-100: 35 54 42;
+    --brand-200: 46 74 55;
+    --brand-300: 79 127 92;
+    --brand-400: 110 158 122;
+    --brand-500: 53 122 71;
+    --brand-600: 46 107 62;
+    --brand-700: 40 96 58;
+    --brand-800: 36 85 51;
+    --brand-900: 31 74 45;
+    --brand-950: 26 63 39;
+    --herb-50: 23 36 27;
+    --herb-100: 29 49 35;
+    --herb-200: 40 69 47;
+    --herb-300: 63 110 76;
+    --herb-400: 111 175 126;
+    --herb-500: 127 192 143;
+    --herb-600: 143 203 158;
+    --herb-700: 180 223 191;
+    --danger: 242 134 126;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --stone-50: 23 22 20;
+  --stone-100: 32 31 28;
+  --stone-200: 46 44 41;
+  --stone-300: 66 64 60;
+  --stone-400: 125 121 114;
+  --stone-500: 169 165 157;
+  --stone-600: 195 191 183;
+  --stone-700: 216 212 204;
+  --stone-800: 230 227 220;
+  --stone-900: 240 237 230;
+  --stone-950: 248 246 241;
+  --brand-50: 28 42 32;
+  --brand-100: 35 54 42;
+  --brand-200: 46 74 55;
+  --brand-300: 79 127 92;
+  --brand-400: 110 158 122;
+  --brand-500: 53 122 71;
+  --brand-600: 46 107 62;
+  --brand-700: 40 96 58;
+  --brand-800: 36 85 51;
+  --brand-900: 31 74 45;
+  --brand-950: 26 63 39;
+  --herb-50: 23 36 27;
+  --herb-100: 29 49 35;
+  --herb-200: 40 69 47;
+  --herb-300: 63 110 76;
+  --herb-400: 111 175 126;
+  --herb-500: 127 192 143;
+  --herb-600: 143 203 158;
+  --herb-700: 180 223 191;
+  --danger: 242 134 126;
+}
+
+/* Photo first: see DESIGN.md. Tokens live in tailwind.config.ts. */
 body {
-  @apply bg-stone-100 text-stone-900;
+  @apply bg-stone-50 text-stone-900;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
@@ -14,19 +123,32 @@ body {
 
 h1, h2, h3 {
   text-wrap: balance;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
+
+::placeholder {
+  @apply text-stone-500;
+  opacity: 1;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { @apply bg-stone-200 rounded-full; border: 3px solid transparent; background-clip: content-box; }
 
 p {
   text-wrap: pretty;
 }
 
 ::selection {
-  @apply bg-butter-300 text-stone-900;
+  @apply bg-fresh-100 text-stone-900;
 }
 
 :focus-visible {
-  @apply outline outline-[3px] outline-offset-2 outline-brand-500;
+  @apply outline outline-2 outline-offset-2 outline-stone-900;
+}
+
+html {
+  caret-color: rgb(var(--herb-500));
+  text-underline-offset: 0.2em;
 }
 
 /* Timers and counts line up without switching to a code font. */
@@ -34,16 +156,10 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
-/* Kept for older pages; renders as a plain small label, not tracked-out caps. */
-.label-caps {
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-/* The one bold element in the system: the enamel rim around the current step. */
+/* The current step in cooking mode: the one place the herb accent frames something. */
 .enamel-rim {
-  @apply bg-stone-50 rounded-3xl;
-  box-shadow: inset 0 0 0 3px theme("colors.brand.500");
+  @apply bg-stone-50 rounded-2xl;
+  box-shadow: inset 0 0 0 2px rgb(var(--herb-500));
 }
 
 /* Phone app shell: the bottom tab bar is var(--tabbar-h) tall plus the home indicator.
@@ -72,10 +188,9 @@ body[data-tabbar="hidden"] {
   bottom: var(--tabbar-space);
 }
 
-/* Chef avatar studio micro-animations */
+/* Answers an action: a ticked box, a new avatar, the finished screen. */
 @keyframes cc-pop {
-  0% { transform: scale(0.94); }
-  60% { transform: scale(1.04); }
+  0% { transform: scale(0.96); }
   100% { transform: scale(1); }
 }
 .cc-pop {
@@ -90,4 +205,35 @@ body[data-tabbar="hidden"] {
 }
 @media (prefers-reduced-motion: reduce) {
   .cc-pop, .cc-fade-in { animation: none; }
+}
+
+/* A new step arrives from the side it came from (cooking mode, far view). */
+@keyframes cc-step-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+.cc-step-in {
+  animation: cc-step-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-step-in { animation: cc-fade-in 0.2s ease-out; }
+}
+
+/* A tick draws itself in when an ingredient is ticked or a recipe is saved. */
+@keyframes cc-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.cc-tick path,
+.cc-tick polyline {
+  stroke-dasharray: 24;
+  animation: cc-draw 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-tick path, .cc-tick polyline { animation: none; }
+}
+
+/* Theme changes cross-fade instead of snapping (only background and text colour). */
+body {
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       if (typeof chefName !== "string") {
         return NextResponse.json({ error: "chefName must be a string" }, { status: 400 });
       }
-      data.chefName = chefName.trim().slice(0, MAX_CHEF_NAME) || "Chef Cart";
+      data.chefName = chefName.trim().slice(0, MAX_CHEF_NAME) || "Your chef";
     }
 
     if (chefAvatarUrl !== undefined) {

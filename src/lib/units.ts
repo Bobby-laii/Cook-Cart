@@ -109,3 +109,93 @@ export function convertTemperatures(text: string, system: UnitSystem): string {
 export function defaultUnitSystem(locale: string | undefined): UnitSystem {
     return locale && /^en-US$/i.test(locale) ? "us" : "metric";
 }
+
+/**
+ * One short spelling for each unit a recipe source might write ("Tablespoons",
+ * "tbs", "teaspoon", "grams" ...). Count words ("cloves", "slices") come back in
+ * the singular; formatQuantity puts the plural back for display.
+ */
+const SHORT_UNITS: Record<string, string> = {
+    teaspoon: "tsp", teaspoons: "tsp", tsp: "tsp", tsps: "tsp", tspn: "tsp",
+    tablespoon: "tbsp", tablespoons: "tbsp", tbsp: "tbsp", tbsps: "tbsp", tbs: "tbsp", tbls: "tbsp", tblsp: "tbsp",
+    cup: "cup", cups: "cup",
+    g: "g", gr: "g", gm: "g", gms: "g", gram: "g", grams: "g", gramme: "g", grammes: "g",
+    kg: "kg", kgs: "kg", kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg",
+    ml: "ml", mls: "ml", millilitre: "ml", millilitres: "ml", milliliter: "ml", milliliters: "ml",
+    l: "l", litre: "l", litres: "l", liter: "l", liters: "l", ltr: "l",
+    lb: "lb", lbs: "lb", pound: "lb", pounds: "lb",
+    oz: "oz", ounce: "oz", ounces: "oz",
+    clove: "clove", cloves: "clove",
+    slice: "slice", slices: "slice",
+    can: "can", cans: "can", tin: "tin", tins: "tin",
+    piece: "piece", pieces: "piece",
+    sprig: "sprig", sprigs: "sprig",
+    stalk: "stalk", stalks: "stalk",
+    stick: "stick", sticks: "stick",
+    bunch: "bunch", bunches: "bunch",
+    handful: "handful", handfuls: "handful",
+    pinch: "pinch", pinches: "pinch",
+    dash: "dash", dashes: "dash",
+    leaf: "leaf", leaves: "leaf",
+};
+
+const PLURALS: Record<string, string> = {
+    cup: "cups", clove: "cloves", slice: "slices", can: "cans", tin: "tins", piece: "pieces",
+    sprig: "sprigs", stalk: "stalks", stick: "sticks", bunch: "bunches", handful: "handfuls",
+    pinch: "pinches", dash: "dashes", leaf: "leaves",
+};
+
+/** The short form of a known unit word, or undefined for anything else ("large", "(12 oz.)"). */
+export function shortUnit(word: string): string | undefined {
+    return SHORT_UNITS[word.trim().toLowerCase().replace(/\.$/, "")];
+}
+
+const METRIC = new Set(["g", "kg", "ml", "l"]);
+
+/** Kitchen fractions an amount is rounded to; nobody measures 0.13 of a teaspoon. */
+const FRACTIONS: [number, string][] = [
+    [0, ""],
+    [1 / 8, "⅛"],
+    [1 / 4, "¼"],
+    [1 / 3, "⅓"],
+    [1 / 2, "½"],
+    [2 / 3, "⅔"],
+    [3 / 4, "¾"],
+    [1, ""],
+];
+
+/**
+ * An amount as a cook reads it: 0.125 → "⅛", 2.5 → "2½", 0.13 → "⅛".
+ * Metric weights and volumes stay decimal (1.4 kg, 250 g) since scales and jugs
+ * read that way; everything else snaps to the nearest kitchen fraction. A positive
+ * amount never shows as 0, and nothing ever shows more than one decimal.
+ */
+export function formatAmount(value: number, unit = ""): string {
+    if (!Number.isFinite(value) || value <= 0) return "";
+    if (METRIC.has(unit)) {
+        if (value >= 10) return String(Math.round(value));
+        return String(Math.max(0.1, Math.round(value * 10) / 10));
+    }
+    let whole = Math.floor(value);
+    const rest = value - whole;
+    // Past 10 of something, a third of a spoon no longer matters; keep halves only.
+    const options = whole >= 10 ? FRACTIONS.filter(([f]) => f === 0 || f === 0.5 || f === 1) : FRACTIONS;
+    let [f, glyph] = options.reduce((best, cur) => (Math.abs(cur[0] - rest) < Math.abs(best[0] - rest) ? cur : best));
+    if (f === 1) whole += 1;
+    if (whole === 0 && f === 0) [f, glyph] = FRACTIONS[1];
+    return `${whole || ""}${glyph}` || "0";
+}
+
+/**
+ * "2 cloves", "1½ tbsp", "250 g". An amount of 0 means the source gave no quantity
+ * ("to taste"), so only the unit text (if any) is shown.
+ */
+export function formatQuantity(amount: number, unit: string): string {
+    if (!(amount > 0)) return unit.trim();
+    const text = formatAmount(amount, unit);
+    // "½ cup" and "1 cup" read singular; "1½ cups" and "2 cups" plural.
+    const single = text === "1" || !/^\d/.test(text);
+    const plural = !single && PLURALS[unit] ? PLURALS[unit] : unit;
+    // A lone lowercase "l" reads as a 1 ("1.9 l"); litres are shown as "L".
+    return `${text} ${plural === "l" ? "L" : plural}`.trim();
+}

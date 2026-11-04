@@ -1,11 +1,17 @@
 import React from "react";
 
+export const INK = "#1A1A1A";
+export const HERB = "#2F6B3F";
+
 /**
- * Enamel pot mark: a cobalt pot with a white enamel rim, two handles and a butter
- * lid knob. Butter is the system's "live" colour, so the knob reads as "something
- * is cooking". The same drawing is used for the app icon (src/app/icons).
+ * The pot mark: a plain ink pot with a lid line, two handles and a herb-green knob.
+ * Herb is the system's only accent ("something is cooking"), so it is the one dot of
+ * colour in the mark. The same drawing is used for the app icon (src/app/icons).
+ *
+ * In the app the pot is drawn in `currentColor` and the knob in the herb token, so the
+ * mark follows light and dark mode. The icon images pass fixed colours instead.
  */
-export function BonTasteMark({ size = 28, className = "" }: { size?: number; className?: string }) {
+export function BonTasteMark({ size = 24, className = "" }: { size?: number | string; className?: string }) {
   return (
     <svg
       width={size}
@@ -16,24 +22,43 @@ export function BonTasteMark({ size = 28, className = "" }: { size?: number; cla
       className={className}
       aria-hidden="true"
     >
-      <circle cx="16" cy="7" r="2.6" fill="#F5C842" />
-      <path d="M6 11.5h20v1.8H6z" fill="#2A4FBF" />
-      <path d="M7 14h18v7.5a6.5 6.5 0 0 1-6.5 6.5h-5A6.5 6.5 0 0 1 7 21.5V14Z" fill="#2A4FBF" />
-      <path d="M8.6 16.2h14.8" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M7 16.5H4.2a1.6 1.6 0 0 0 0 3.2H7M25 16.5h2.8a1.6 1.6 0 0 1 0 3.2H25" stroke="#2A4FBF" strokeWidth="1.8" />
+      <PotPaths ink="currentColor" herb="rgb(var(--herb-500))" />
     </svg>
   );
 }
 
-/** Wordmark lockup used in the app bar. */
+/** The mark's drawing, shared with the ImageResponse icons. */
+export function PotPaths({ ink = INK, herb = HERB }: { ink?: string; herb?: string } = {}) {
+  return (
+    <>
+      <circle cx="16" cy="7.5" r="2.4" fill={herb} />
+      <path d="M5.5 12.25h21" stroke={ink} strokeWidth="2" strokeLinecap="round" />
+      <path d="M7.5 15h17v6.5a6 6 0 0 1-6 6h-5a6 6 0 0 1-6-6V15Z" fill={ink} />
+      <path
+        d="M7.5 17.2H5a1.5 1.5 0 0 0 0 3h2.5M24.5 17.2H27a1.5 1.5 0 0 1 0 3h-2.5"
+        stroke={ink}
+        strokeWidth="1.8"
+      />
+    </>
+  );
+}
+
+/**
+ * Wordmark lockup: the pot mark beside "Bon Taste" in Newsreader, in ink.
+ * Sizes are in em, so the lockup scales with the font size it is given.
+ */
 export function BonTasteLogo({ size = "md", className = "" }: { size?: "md" | "lg"; className?: string }) {
   const large = size === "lg";
   return (
-    <span className={`inline-flex items-center gap-2 select-none ${className}`} aria-label="Bon Taste">
-      <BonTasteMark size={large ? 36 : 28} />
-      <span className={`font-bold tracking-tight text-brand-600 leading-none ${large ? "text-3xl" : "text-xl"}`}>
-        Bon Taste
-      </span>
+    <span
+      className={`inline-flex items-center gap-[0.35em] select-none leading-none text-stone-900 ${
+        large ? "text-[38px]" : "text-[20px]"
+      } ${className}`}
+      aria-label="Bon Taste"
+      role="img"
+    >
+      <BonTasteMark size="1em" className="shrink-0 -mt-[0.08em]" />
+      <span className="font-display font-medium tracking-[-0.01em]">Bon Taste</span>
     </span>
   );
 }
