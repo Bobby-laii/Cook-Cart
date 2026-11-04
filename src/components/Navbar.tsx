@@ -30,6 +30,9 @@ export function Navbar() {
   const { user } = useAuth();
   const pathname = usePathname() ?? "/";
   const isCookMode = /^\/recipe\/[^/]+\/cook(\/|$)/.test(pathname);
+  // On the sign-in and sign-up pages, a header link to the same page is noise.
+  const onLogin = pathname === "/login";
+  const onRegister = pathname === "/register";
 
   useEffect(() => {
     if (isCookMode) {
@@ -61,7 +64,7 @@ export function Navbar() {
 
   return (
     <>
-      <PhoneHeader signedIn={Boolean(user)} />
+      <PhoneHeader signedIn={Boolean(user)} hideSignIn={onLogin} />
 
       <header className="hidden md:block sticky top-0 z-50 bg-stone-50 border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
@@ -93,18 +96,22 @@ export function Navbar() {
               <AccountMenu />
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="flex items-center h-12 px-3 text-[0.95rem] text-stone-700 hover:text-stone-900 rounded-lg"
-                >
-                  {t("navLogin")}
-                </Link>
+                {!onLogin && (
+                  <Link
+                    href="/login"
+                    className="flex items-center h-12 px-3 text-[0.95rem] text-stone-700 hover:text-stone-900 rounded-lg"
+                  >
+                    {t("navLogin")}
+                  </Link>
+                )}
+                {!onRegister && (
                 <Link
                   href="/register"
                   className="flex items-center h-10 px-4 text-[0.95rem] font-bold text-stone-50 bg-stone-900 hover:bg-stone-800 rounded-lg transition-colors"
                 >
                   {t("navRegister")}
                 </Link>
+                )}
               </>
             )}
           </div>
@@ -145,7 +152,7 @@ export function Navbar() {
  * header has collapsed), and the wordmark's size and the hairline follow it, so the
  * change tracks the finger instead of toggling. With reduced motion it snaps.
  */
-function PhoneHeader({ signedIn }: { signedIn: boolean }) {
+function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: boolean }) {
   const { t } = useLanguage();
   const ref = useRef<HTMLElement>(null);
 
@@ -207,7 +214,7 @@ function PhoneHeader({ signedIn }: { signedIn: boolean }) {
           <ThemeSwitch />
           {signedIn ? (
             <AccountMenu />
-          ) : (
+          ) : hideSignIn ? null : (
             <Link
               href="/login"
               className="flex items-center h-12 px-3 text-[0.95rem] text-stone-900 rounded-lg"
