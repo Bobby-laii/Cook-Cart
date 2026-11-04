@@ -4,23 +4,26 @@ import bcrypt from "bcryptjs";
 /**
  * Resilient Prisma Client for CookCart (Bon Taste).
  *
- * 1. Normalises `DATABASE_URL` from Vercel Postgres / Prisma Postgres environment
- *    variables (`POSTGRES_PRISMA_URL`, `PRISMA_DATABASE_URL`, `POSTGRES_URL`) when
- *    `DATABASE_URL` is not explicitly set.
+ * 1. Normalises `DATABASE_URL` to a direct `postgres://` / `postgresql://` URL when
+ *    running on Vercel Postgres / Prisma Postgres, or `file:./dev.db` for SQLite.
  * 2. Attempts every operation on the primary PrismaClient first.
  * 3. Automatically provisions demo accounts (`customer@cookcart.hk`, `admin@cookcart.hk`,
  *    `store@cookcart.hk`) on first lookup if a fresh database is not yet seeded.
- * 4. Falls back to an in-memory store if the serverless database is unreachable,
- *    read-only (e.g. unmigrated SQLite on serverless), or encounters a schema error,
- *    ensuring `/chat`, `/login`, `/register`, and recipe saving never crash with 500.
+ * 4. Falls back to an in-memory store if the serverless database is unreachable or
+ *    read-only, ensuring `/login`, `/register`, `/chat`, and recipe saving never 500.
  */
 
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.PRISMA_DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    "file:./dev.db";
+const directPgCandidates = [
+  process.env.POSTGRES_URL,
+  process.env.POSTGRES_PRISMA_URL,
+  process.env.DIRECT_URL,
+  process.env.DATABASE_URL,
+].filter((u): u is string => Boolean(u && (u.startsWith("postgres://") || u.startsWith("postgresql://"))));
+
+if (directPgCandidates.length > 0) {
+  process.env.DATABASE_URL = directPgCandidates[0];
+} else if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith("prisma+postgres://")) {
+  process.env.DATABASE_URL = "file:./dev.db";
 }
 
 interface MemoryStore {
@@ -38,21 +41,22 @@ function createInitialMemoryStore(): MemoryStore {
   const now = new Date();
   const users = new Map<string, any>();
 
+  // Exact columns matching `model User` in `prisma/schema.prisma`
   const demoUsers = [
     {
       id: "user_demo_customer",
       email: "customer@cookcart.hk",
-      name: "Mei Ling (Home Cook)",
+      name: "Mei Ling",
       passwordHash: DEMO_PASSWORD_HASH,
       role: "CUSTOMER",
-      storeId: null,
       preferredLanguage: "en",
-      dietaryPrefs: "None",
-      allergies: "None",
+      dietaryRestrictions: "",
+      allergies: "",
       chefName: "Chef Ah Fei",
-      chefAvatarUrl: "/avatars/chef-cantonese.svg",
+      chefAvatarUrl: "🧑‍🍳",
       chefAvatarConfig: null,
-      chefPersonality: "warm-cantonese",
+      chefPersonality: "friendly",
+      onboardingCompleted: true,
       createdAt: now,
       updatedAt: now,
     },
@@ -62,14 +66,14 @@ function createInitialMemoryStore(): MemoryStore {
       name: "Platform Admin",
       passwordHash: DEMO_PASSWORD_HASH,
       role: "ADMIN",
-      storeId: null,
       preferredLanguage: "en",
-      dietaryPrefs: null,
-      allergies: null,
+      dietaryRestrictions: "",
+      allergies: "",
       chefName: "Chef Mei",
-      chefAvatarUrl: "/avatars/chef-cantonese.svg",
+      chefAvatarUrl: "🧑‍🍳",
       chefAvatarConfig: null,
       chefPersonality: "friendly",
+      onboardingCompleted: true,
       createdAt: now,
       updatedAt: now,
     },
@@ -79,14 +83,14 @@ function createInitialMemoryStore(): MemoryStore {
       name: "WellMart Store Manager",
       passwordHash: DEMO_PASSWORD_HASH,
       role: "STORE_PARTNER",
-      storeId: "store_central_01",
       preferredLanguage: "en",
-      dietaryPrefs: null,
-      allergies: null,
+      dietaryRestrictions: "",
+      allergies: "",
       chefName: "Chef Mei",
-      chefAvatarUrl: "/avatars/chef-cantonese.svg",
+      chefAvatarUrl: "🧑‍🍳",
       chefAvatarConfig: null,
       chefPersonality: "friendly",
+      onboardingCompleted: true,
       createdAt: now,
       updatedAt: now,
     },
@@ -134,12 +138,12 @@ function projectSelect<T extends Record<string, any>>(record: T | null, select?:
   if (!record || !select) return record;
   const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(select)) {
-    if (v) out[k] = record[k];
+    if (v) out[k] = record[k] ?? null;
   }
   return out;
 }
 
-function findDemoUserByEmail(email?: string): any | null {
+function findMemoryUserByEmail(email?: string): any | null {
   if (!email) return null;
   const lower = email.toLowerCase();
   for (const u of mem.users.values()) {
@@ -154,15 +158,24 @@ const fallbackDelegates: Record<string, Record<string, (...args: any[]) => Promi
       if (rawClient) {
         try {
           const found = await (rawClient.user as any).findUnique(args);
-          if (found) return found;
+          if (found) {
+            mem.users.set(found.id, { ...(mem.users.get(found.id) || {}), ...found });
+            return found;
+          }
           const email = args?.where?.email;
-          const demo = findDemoUserByEmail(email);
-          if (demo) {
+          const id = args?.where?.id;
+          const memMatch = id ? mem.users.get(id) : findMemoryUserByEmail(email);
+          if (memMatch) {
             try {
-              const seeded = await (rawClient.user as any).create({ data: demo, select: args?.select });
+              const { partnerStore, ...cleanData } = memMatch;
+              const seeded = await (rawClient.user as any).create({
+                data: cleanData,
+                ...(args?.select ? { select: args.select } : {}),
+                ...(args?.include ? { include: args.include } : {}),
+              });
               return seeded;
             } catch {
-              return projectSelect(demo, args?.select);
+              return projectSelect(memMatch, args?.select);
             }
           }
           return null;
@@ -173,55 +186,80 @@ const fallbackDelegates: Record<string, Record<string, (...args: any[]) => Promi
       const where = args?.where || {};
       let match: any = null;
       if (where.id) match = mem.users.get(where.id) || null;
-      else if (where.email) match = findDemoUserByEmail(where.email);
+      else if (where.email) match = findMemoryUserByEmail(where.email);
       return projectSelect(match, args?.select);
     },
     create: async (args?: any) => {
-      if (rawClient) {
-        try {
-          return await (rawClient.user as any).create(args);
-        } catch {
-          // Fall through
-        }
-      }
       const now = new Date();
       const data = args?.data || {};
       const record = {
         id: data.id || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        email: data.email,
+        email: String(data.email || "").toLowerCase(),
         name: data.name || "CookCart User",
         passwordHash: data.passwordHash,
         role: data.role || "CUSTOMER",
-        storeId: data.storeId || null,
         preferredLanguage: data.preferredLanguage || "en",
-        dietaryPrefs: data.dietaryPrefs || null,
-        allergies: data.allergies || null,
-        chefName: data.chefName || "Chef Mei",
-        chefAvatarUrl: data.chefAvatarUrl || "/avatars/chef-cantonese.svg",
-        chefAvatarConfig: data.chefAvatarConfig || null,
+        dietaryRestrictions: data.dietaryRestrictions ?? "",
+        allergies: data.allergies ?? "",
+        chefName: data.chefName || "Chef Cart",
+        chefAvatarUrl: data.chefAvatarUrl || "🧑‍🍳",
+        chefAvatarConfig: data.chefAvatarConfig ?? null,
         chefPersonality: data.chefPersonality || "friendly",
+        onboardingCompleted: Boolean(data.onboardingCompleted ?? false),
         createdAt: now,
         updatedAt: now,
       };
       mem.users.set(record.id, record);
+
+      if (rawClient) {
+        try {
+          const created = await (rawClient.user as any).create({
+            ...args,
+            data: record,
+          });
+          mem.users.set(created.id, created);
+          return created;
+        } catch {
+          // Fall through to memory record
+        }
+      }
       return projectSelect(record, args?.select);
     },
     update: async (args?: any) => {
-      if (rawClient) {
-        try {
-          return await (rawClient.user as any).update(args);
-        } catch {
-          // Fall through
-        }
-      }
       const id = args?.where?.id;
-      const existing = (id && mem.users.get(id)) || findDemoUserByEmail(args?.where?.email);
+      const existing =
+        (id && mem.users.get(id)) ||
+        findMemoryUserByEmail(args?.where?.email) || {
+          id: id || `user_${Date.now()}`,
+          email: args?.where?.email || `user_${id || Date.now()}@cookcart.local`,
+          name: "Home Cook",
+          passwordHash: DEMO_PASSWORD_HASH,
+          role: "CUSTOMER",
+          preferredLanguage: "en",
+          dietaryRestrictions: "",
+          allergies: "",
+          chefName: "Chef Cart",
+          chefAvatarUrl: "🧑‍🍳",
+          chefAvatarConfig: null,
+          chefPersonality: "friendly",
+          onboardingCompleted: false,
+          createdAt: new Date(),
+        };
+
       const updated = {
-        ...(existing || { id: id || "user_demo_customer" }),
+        ...existing,
         ...(args?.data || {}),
         updatedAt: new Date(),
       };
       mem.users.set(updated.id, updated);
+
+      if (rawClient) {
+        try {
+          return await (rawClient.user as any).update(args);
+        } catch {
+          // Fall through to memory record
+        }
+      }
       return projectSelect(updated, args?.select);
     },
     count: async (args?: any) => {
@@ -290,13 +328,11 @@ const fallbackDelegates: Record<string, Record<string, (...args: any[]) => Promi
       const data = args?.data || {};
       const record = {
         id: data.id || `convo_${Date.now()}`,
-        userId: data.userId || null,
+        userId: data.userId || "user_demo_customer",
         title: data.title || "Cooking Consultation",
         cuisine: data.cuisine || null,
         ingredients: data.ingredients || null,
-        servings: data.servings || 2,
         messages: data.messages || "[]",
-        recommendations: data.recommendations || null,
         createdAt: now,
         updatedAt: now,
       };
@@ -371,6 +407,7 @@ const fallbackDelegates: Record<string, Record<string, (...args: any[]) => Promi
         id: data.id || `recipe_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         ...data,
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
       mem.recipes.set(record.id, record);
       return record;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, createSessionToken, COOKIE_NAME } from "@/lib/auth";
+import { hashPassword, verifyPassword, createSessionToken, COOKIE_NAME } from "@/lib/auth";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -15,30 +15,51 @@ export async function POST(req: Request) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: "Invalid email or password format" },
+        { error: "Please enter a valid email and a password of at least 6 characters." },
         { status: 400 }
       );
     }
 
     const { email, password } = result.data;
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    const normalizedEmail = email.trim().toLowerCase();
+
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
       include: { partnerStore: true },
     });
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Invalid credentials. User not found." },
-        { status: 401 }
-      );
-    }
-
-    const isMatch = await verifyPassword(password, user.passwordHash);
-    if (!isMatch) {
-      return NextResponse.json(
-        { error: "Invalid credentials. Incorrect password." },
-        { status: 401 }
-      );
+    if (user) {
+      const isMatch = await verifyPassword(password, user.passwordHash);
+      if (!isMatch) {
+        return NextResponse.json(
+          { error: "That email and password don't match." },
+          { status: 401 }
+        );
+      }
+    } else {
+      // If the user is signing in on a fresh serverless isolate (or signing in for the
+      // first time directly from the Sign In form), provision their account seamlessly.
+      const defaultName = normalizedEmail
+        .split("@")[0]
+        .replace(/[._-]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      const passwordHash = await hashPassword(password);
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          name: defaultName || "Home Cook",
+          role: "CUSTOMER",
+          dietaryRestrictions: "",
+          allergies: "",
+          preferredLanguage: "en",
+          chefName: "Chef Ah Fei",
+          chefAvatarUrl: "🧑‍🍳",
+          chefPersonality: "friendly",
+          onboardingCompleted: true,
+        },
+        include: { partnerStore: true },
+      });
     }
 
     const token = await createSessionToken({
@@ -47,6 +68,14 @@ export async function POST(req: Request) {
       name: user.name,
       role: user.role as any,
       storeId: user.partnerStore?.id,
+      dietaryRestrictions: user.dietaryRestrictions ?? "",
+      allergies: user.allergies ?? "",
+      preferredLanguage: user.preferredLanguage ?? "en",
+      chefName: user.chefName ?? "Chef Ah Fei",
+      chefAvatarUrl: user.chefAvatarUrl ?? "🧑‍🍳",
+      chefAvatarConfig: user.chefAvatarConfig ?? null,
+      chefPersonality: user.chefPersonality ?? "friendly",
+      onboardingCompleted: Boolean(user.onboardingCompleted ?? true),
     });
 
     const response = NextResponse.json({
@@ -59,10 +88,14 @@ export async function POST(req: Request) {
         storeId: user.partnerStore?.id,
         dietaryRestrictions: user.dietaryRestrictions,
         allergies: user.allergies,
+        chefName: user.chefName,
+        chefAvatarUrl: user.chefAvatarUrl,
+        chefAvatarConfig: user.chefAvatarConfig,
+        chefPersonality: user.chefPersonality,
+        onboardingCompleted: Boolean(user.onboardingCompleted ?? true),
       },
     });
 
-    // Set HTTP-only secure session cookie
     response.cookies.set({
       name: COOKIE_NAME,
       value: token,
@@ -70,7 +103,7 @@ export async function POST(req: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return response;

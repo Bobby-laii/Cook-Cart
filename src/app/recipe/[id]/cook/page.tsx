@@ -477,15 +477,16 @@ function CookSession({
             {!finished && stepCount > 0 && (
               <button
                 type="button"
+                aria-pressed={wave}
                 onClick={() => {
-                  setWave(true);
-                  setVoice(true);
-                  setFarView(true);
+                  const nextWave = !wave;
+                  setWave(nextWave);
+                  if (nextWave && !voice) setVoice(true);
                 }}
-                className={chip(false, "flex-shrink-0 font-bold")}
+                className={chip(wave, "flex-shrink-0 font-bold")}
               >
                 <Hand className="w-[18px] h-[18px]" aria-hidden />
-                Hands-free
+                {wave ? "Live cam on" : "Hands-free cam"}
               </button>
             )}
           </div>
@@ -527,6 +528,29 @@ function CookSession({
         />
       ) : (
         <main className="max-w-2xl mx-auto px-5 pt-1 pb-[calc(9rem_+_env(safe-area-inset-bottom))] space-y-4">
+          {wave && (
+            <LiveCameraStepFeed
+              cameraState={camera}
+              videoRef={videoRef}
+              motionLevel={motionLevel}
+              lastSwipe={lastSwipe}
+              facingMode={facingMode}
+              onToggleFacingMode={() =>
+                setFacingMode((prev) => (prev === "user" ? "environment" : "user"))
+              }
+              captureFrame={captureFrame}
+              dishTitle={dish.title}
+              stepNumber={stepIdx + 1}
+              totalSteps={stepCount}
+              stepTitle={stepTitle}
+              stepText={stepText}
+              speakFeedback={voice}
+              triggerCheckId={triggerCameraCheckId}
+              onNextStep={goNext}
+              onBackStep={stepIdx > 0 ? goBack : undefined}
+            />
+          )}
+
           <section key={stepIdx} className={`enamel-rim p-6 sm:p-8 space-y-4 ${motionClass}`} aria-live="polite">
             {stepTitle && <h1 className="text-body leading-snug font-bold text-stone-500">{stepTitle}</h1>}
             <p className={`${textSize} leading-[1.3] font-bold text-stone-900`}>{stepText}</p>
@@ -561,28 +585,6 @@ function CookSession({
             onToggleVoice={() => setVoice((v) => !v)}
             onFarView={() => setFarView(true)}
           />
-
-          {wave && (
-            <LiveCameraStepFeed
-              cameraState={camera}
-              videoRef={videoRef}
-              motionLevel={motionLevel}
-              lastSwipe={lastSwipe}
-              facingMode={facingMode}
-              onToggleFacingMode={() =>
-                setFacingMode((prev) => (prev === "user" ? "environment" : "user"))
-              }
-              captureFrame={captureFrame}
-              dishTitle={dish.title}
-              stepNumber={stepIdx + 1}
-              totalSteps={stepCount}
-              stepTitle={stepTitle}
-              stepText={stepText}
-              speakFeedback={voice}
-              triggerCheckId={triggerCameraCheckId}
-              onNextStep={goNext}
-            />
-          )}
 
           {voice && mic === "listening" && (
             <p className="text-sm text-stone-500" aria-live="polite">

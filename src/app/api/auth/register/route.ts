@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, createSessionToken, COOKIE_NAME } from "@/lib/auth";
+import { hashPassword, verifyPassword, createSessionToken, COOKIE_NAME } from "@/lib/auth";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -19,41 +19,58 @@ export async function POST(req: Request) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: "Validation failed: " + result.error.errors.map(e => e.message).join(", ") },
+        { error: "Validation failed: " + result.error.errors.map((e) => e.message).join(", ") },
         { status: 400 }
       );
     }
 
     const { email, password, name, dietaryRestrictions, allergies, preferredLanguage } = result.data;
+    const normalizedEmail = email.trim().toLowerCase();
+
     const existing = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: normalizedEmail },
     });
 
+    let user;
     if (existing) {
-      return NextResponse.json(
-        { error: "A user with this email already exists" },
-        { status: 409 }
-      );
+      // If the user already registered with this password, sign them in smoothly
+      const isSamePassword = await verifyPassword(password, existing.passwordHash);
+      if (!isSamePassword) {
+        return NextResponse.json(
+          { error: "An account with this email already exists. Try signing in instead." },
+          { status: 409 }
+        );
+      }
+      user = existing;
+    } else {
+      const passwordHash = await hashPassword(password);
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          name: name.trim(),
+          role: "CUSTOMER",
+          dietaryRestrictions,
+          allergies,
+          preferredLanguage,
+          onboardingCompleted: false,
+        },
+      });
     }
-
-    const passwordHash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        email: email.toLowerCase(),
-        passwordHash,
-        name,
-        role: "CUSTOMER", // Registration defaults to Customer role
-        dietaryRestrictions,
-        allergies,
-        preferredLanguage,
-      },
-    });
 
     const token = await createSessionToken({
       userId: user.id,
       email: user.email,
       name: user.name,
-      role: "CUSTOMER",
+      role: (user.role as any) || "CUSTOMER",
+      dietaryRestrictions: user.dietaryRestrictions ?? "",
+      allergies: user.allergies ?? "",
+      preferredLanguage: user.preferredLanguage ?? "en",
+      chefName: user.chefName ?? "Chef Cart",
+      chefAvatarUrl: user.chefAvatarUrl ?? "🧑‍🍳",
+      chefAvatarConfig: user.chefAvatarConfig ?? null,
+      chefPersonality: user.chefPersonality ?? "friendly",
+      onboardingCompleted: Boolean(user.onboardingCompleted ?? false),
     });
 
     const response = NextResponse.json({
@@ -65,6 +82,11 @@ export async function POST(req: Request) {
         role: user.role,
         dietaryRestrictions: user.dietaryRestrictions,
         allergies: user.allergies,
+        chefName: user.chefName,
+        chefAvatarUrl: user.chefAvatarUrl,
+        chefAvatarConfig: user.chefAvatarConfig,
+        chefPersonality: user.chefPersonality,
+        onboardingCompleted: Boolean(user.onboardingCompleted ?? false),
       },
     });
 

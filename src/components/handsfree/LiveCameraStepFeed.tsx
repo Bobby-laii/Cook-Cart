@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Camera, Check, Hand, Loader2, RefreshCw } from "lucide-react";
+import { Camera, Check, Eye, Hand, Loader2, RefreshCw } from "lucide-react";
 import type { CameraState } from "@/lib/handsfree/useWaveGesture";
 import type { Swipe } from "@/lib/handsfree/commands";
 import type { CameraFacingMode } from "@/lib/handsfree/cameraPlatform";
@@ -30,6 +30,7 @@ export function LiveCameraStepFeed({
   speakFeedback = false,
   triggerCheckId,
   onNextStep,
+  onBackStep,
 }: {
   cameraState: CameraState;
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -47,8 +48,10 @@ export function LiveCameraStepFeed({
   /** Incrementing timestamp/id from voice command ("check pan") triggers a live frame check. */
   triggerCheckId?: number | null;
   onNextStep?: () => void;
+  onBackStep?: () => void;
 }) {
   const [checking, setChecking] = useState(false);
+  const [autoWatch, setAutoWatch] = useState(false);
   const [checkError, setCheckError] = useState(false);
   const [result, setResult] = useState<StepCheckResult | null>(null);
 
@@ -120,6 +123,15 @@ export function LiveCameraStepFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerCheckId]);
 
+  // Auto-watch mode: periodically inspect a live frame every 15 seconds while cooking
+  useEffect(() => {
+    if (!autoWatch || cameraState !== "on") return;
+    const iv = window.setInterval(() => {
+      handleCheckStep();
+    }, 15000);
+    return () => window.clearInterval(iv);
+  }, [autoWatch, cameraState, handleCheckStep]);
+
   if (cameraState !== "on" && cameraState !== "starting") {
     return null;
   }
@@ -133,7 +145,7 @@ export function LiveCameraStepFeed({
       className="enamel-rim p-4 sm:p-5 space-y-3 cc-fade-in"
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="relative w-full sm:w-44 aspect-[4/3] rounded-xl overflow-hidden bg-stone-200 flex-shrink-0 border border-stone-200">
+        <div className="relative w-full sm:w-52 aspect-[4/3] rounded-xl overflow-hidden bg-stone-200 flex-shrink-0 border border-stone-200">
           <video
             ref={videoRef}
             muted
@@ -157,9 +169,11 @@ export function LiveCameraStepFeed({
             </div>
             <span className="font-mono text-[12px] text-stone-600">
               {recentSwipe === "next"
-                ? "Next"
+                ? "Wave -> Next"
                 : recentSwipe === "back"
-                ? "Back"
+                ? "Wave <- Back"
+                : cameraState === "starting"
+                ? "Starting…"
                 : "Live"}
             </span>
           </div>
@@ -180,7 +194,7 @@ export function LiveCameraStepFeed({
               type="button"
               onClick={handleCheckStep}
               disabled={checking || cameraState !== "on"}
-              className={button("secondary", "sm")}
+              className={button("primary", "sm")}
             >
               {checking ? (
                 <Loader2 className="w-4 h-4 motion-safe:animate-spin" aria-hidden />
@@ -188,6 +202,21 @@ export function LiveCameraStepFeed({
                 <Camera className="w-4 h-4" aria-hidden />
               )}
               {checking ? "Checking step…" : "Show the chef"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const next = !autoWatch;
+                setAutoWatch(next);
+                if (next && !result) handleCheckStep();
+              }}
+              disabled={cameraState !== "on"}
+              aria-pressed={autoWatch}
+              className={chip(autoWatch, "gap-1.5")}
+            >
+              <Eye className="w-4 h-4" aria-hidden />
+              {autoWatch ? "Auto watch on" : "Auto watch"}
             </button>
 
             <button
@@ -200,7 +229,7 @@ export function LiveCameraStepFeed({
               className={chip(false, "gap-1.5")}
             >
               <RefreshCw className="w-4 h-4" aria-hidden />
-              {facingMode === "user" ? "Front camera" : "Rear camera"}
+              {facingMode === "user" ? "Front cam" : "Rear cam"}
             </button>
           </div>
         </div>
@@ -218,25 +247,35 @@ export function LiveCameraStepFeed({
           className="rounded-xl bg-stone-100 p-4 space-y-3 border border-stone-200 cc-fade-in"
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-bold text-stone-600">Chef&apos;s step check</p>
+            <p className="text-sm font-bold text-stone-600">Chef&apos;s live step check</p>
             <span className="text-small font-bold text-fresh-600">
               {result.status === "ready" ? "Ready for next step" : "In progress"}
             </span>
           </div>
           <p className="text-body leading-relaxed text-stone-900">{result.feedback}</p>
-          {result.readyForNext && onNextStep && (
-            <button
-              type="button"
-              onClick={onNextStep}
-              className={button("primary", "sm")}
-            >
-              <Check className="w-4 h-4" aria-hidden />
-              Next step
-            </button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {result.readyForNext && onNextStep && (
+              <button
+                type="button"
+                onClick={onNextStep}
+                className={button("primary", "sm")}
+              >
+                <Check className="w-4 h-4" aria-hidden />
+                Next step
+              </button>
+            )}
+            {onBackStep && stepNumber > 1 && (
+              <button
+                type="button"
+                onClick={onBackStep}
+                className={button("secondary", "sm")}
+              >
+                Previous step
+              </button>
+            )}
+          </div>
         </div>
       )}
     </section>
   );
 }
-

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/auth";
+import { COOKIE_NAME, createSessionToken, getCurrentSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isValidPersonality, sanitizeChefAvatarConfig } from "@/lib/avatar/chefAvatar";
 
@@ -54,8 +54,6 @@ export async function POST(req: Request) {
     }
 
     if (chefAvatarConfig !== undefined) {
-      // null clears the custom avatar (falls back to the emoji). Anything else is
-      // coerced through the whitelist so only known parts and #rrggbb colours are stored.
       data.chefAvatarConfig = chefAvatarConfig === null ? null : JSON.stringify(sanitizeChefAvatarConfig(chefAvatarConfig));
     }
 
@@ -77,7 +75,27 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, user: updatedUser });
+    const refreshedToken = await createSessionToken({
+      ...session,
+      chefName: updatedUser.chefName ?? session.chefName,
+      chefAvatarUrl: updatedUser.chefAvatarUrl ?? session.chefAvatarUrl,
+      chefAvatarConfig: updatedUser.chefAvatarConfig ?? session.chefAvatarConfig,
+      chefPersonality: updatedUser.chefPersonality ?? session.chefPersonality,
+      onboardingCompleted: Boolean(updatedUser.onboardingCompleted ?? session.onboardingCompleted ?? true),
+    });
+
+    const response = NextResponse.json({ success: true, user: updatedUser });
+    response.cookies.set({
+      name: COOKIE_NAME,
+      value: refreshedToken,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return response;
   } catch (error: any) {
     console.error("Chef settings update error:", error);
     return NextResponse.json({ error: "Failed to update chef settings" }, { status: 500 });
