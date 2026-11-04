@@ -18,7 +18,9 @@ const sans = Atkinson_Hyperlegible({
 // Dish names and page titles: a reading serif, like a cooking magazine.
 const display = Newsreader({
   subsets: ["latin"],
-  weight: ["500", "600"],
+  // Variable font: one file covers 500 and 600. Asking for fixed weights made
+  // next/font fail to download it and silently fall back to Georgia.
+  weight: "variable",
   variable: "--font-display",
   display: "swap",
 });
