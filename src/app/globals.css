@@ -233,7 +233,18 @@ body[data-tabbar="hidden"] {
   .cc-tick path, .cc-tick polyline { animation: none; }
 }
 
-/* Theme changes cross-fade instead of snapping (only background and text colour). */
-body {
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* Switching light/dark: the whole page cross-fades as one picture (View Transitions,
+   see ThemeSwitch). Browsers without it get every colour easing together for a
+   moment instead, via html.theme-fading. Reduced motion switches instantly. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+html.theme-fading,
+html.theme-fading *,
+html.theme-fading *::before,
+html.theme-fading *::after {
+  transition: background-color 0.28s ease, color 0.28s ease, border-color 0.28s ease,
+    fill 0.28s ease, stroke 0.28s ease !important;
 }

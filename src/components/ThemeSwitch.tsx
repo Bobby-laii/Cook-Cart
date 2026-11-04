@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { Moon, Sun } from "lucide-react";
 
 export type ThemeChoice = "auto" | "light" | "dark";
@@ -45,8 +46,23 @@ export function ThemeSwitch() {
   }, []);
 
   const flip = () => {
-    applyTheme(dark ? "light" : "dark");
-    setDark(!dark);
+    const to: ThemeChoice = dark ? "light" : "dark";
+    const change = () => {
+      applyTheme(to);
+      setDark(!dark);
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
+
+    // One cross-fade of the whole page, so nothing changes colour before the rest.
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+    if (doc.startViewTransition) {
+      doc.startViewTransition(() => flushSync(change));
+      return;
+    }
+    const root = document.documentElement;
+    root.classList.add("theme-fading");
+    change();
+    window.setTimeout(() => root.classList.remove("theme-fading"), 320);
   };
 
   const Icon = dark ? Sun : Moon;
