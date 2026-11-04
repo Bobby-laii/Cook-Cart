@@ -74,7 +74,7 @@ function ChefOnboardingContent() {
     if (loading || initialised.current) return;
     initialised.current = true;
     if (!user) {
-      router.replace(`/login?callbackUrl=${encodeURIComponent("/onboarding/chef")}`);
+      window.location.replace(`/login?callbackUrl=${encodeURIComponent("/onboarding/chef")}`);
       return;
     }
     const saved = parseChefAvatarConfig(user.chefAvatarConfig);
@@ -120,6 +120,7 @@ function ChefOnboardingContent() {
       const res = await fetch("/api/user/chef-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           chefName: name,
           chefPersonality: personality,
@@ -130,11 +131,15 @@ function ChefOnboardingContent() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Save failed");
       await refreshUser();
+      if (isEditing) {
+        window.location.assign(nextUrl);
+        return;
+      }
       setStep(3);
-    } catch (e: any) {
-      setError(e?.message || "Could not save. Please try again.");
-    } finally {
       setSaving(false);
+    } catch (e: any) {
+      setSaving(false);
+      setError(e?.message || "Could not save. Please try again.");
     }
   };
 
@@ -144,12 +149,12 @@ function ChefOnboardingContent() {
       await fetch("/api/user/chef-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ completeOnboarding: true }),
       });
       await refreshUser();
     } finally {
-      setSaving(false);
-      router.push(nextUrl);
+      window.location.assign(nextUrl);
     }
   };
 
@@ -176,7 +181,7 @@ function ChefOnboardingContent() {
             <p className="mt-1 text-small text-stone-500">{personalityInfo.label}</p>
           </div>
           <p className="border-t border-stone-200 pt-5 text-body leading-relaxed text-stone-900">{personalityInfo.greeting}</p>
-          <button type="button" onClick={() => router.push(nextUrl)} className={primaryBtn}>
+          <button type="button" onClick={() => window.location.assign(nextUrl)} className={primaryBtn}>
             {goingToChat ? `Chat with ${displayName}` : "Done"}
           </button>
         </div>
@@ -348,7 +353,7 @@ function ChefOnboardingContent() {
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
               {step === 1 ? (
                 isEditing ? (
-                  <button type="button" onClick={() => router.push(nextUrl)} className={quietBtn}>
+                  <button type="button" onClick={() => window.location.assign(nextUrl)} className={quietBtn}>
                     Cancel
                   </button>
                 ) : (
@@ -387,4 +392,3 @@ export default function ChefOnboardingPage() {
     </Suspense>
   );
 }
-

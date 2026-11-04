@@ -34,7 +34,7 @@ export default function ChefSettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      router.push("/login?callbackUrl=/chef-settings");
+      window.location.assign("/login?callbackUrl=/chef-settings");
       return;
     }
 
@@ -46,6 +46,7 @@ export default function ChefSettingsPage() {
       const res = await fetch("/api/user/chef-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           chefName: displayName,
           chefPersonality: selectedPersonality,
@@ -55,11 +56,12 @@ export default function ChefSettingsPage() {
       if (!res.ok) throw new Error(String(res.status));
       await refreshUser?.();
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => {
+        window.location.assign("/chat");
+      }, 300);
     } catch {
-      setSaveError("We couldn't save your chef. Please try again.");
-    } finally {
       setIsSaving(false);
+      setSaveError("We couldn't save your chef. Please try again.");
     }
   };
 
@@ -78,7 +80,7 @@ export default function ChefSettingsPage() {
             <p className="font-display text-[22px] font-medium leading-tight text-stone-900">{displayName}</p>
             <button
               type="button"
-              onClick={() => router.push("/onboarding/chef?next=/chef-settings")}
+              onClick={() => router.push("/onboarding/chef?next=/chat")}
               className={button("secondary", "sm", "mt-3")}
             >
               {hasCustomAvatar ? "Change the look" : "Design the look"}

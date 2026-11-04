@@ -32,9 +32,9 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   login: async () => ({ success: false }),
-  logout: async () => {},
-  switchDemoRole: async () => {},
-  refreshUser: async () => {},
+  logout: async () => { },
+  switchDemoRole: async () => { },
+  refreshUser: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
