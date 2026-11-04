@@ -2,8 +2,8 @@
 
 import React from "react";
 import type { MenuDish } from "@/lib/recipes/mealdb";
-import { dishLine } from "./picks";
-import { Loader2, RefreshCw } from "lucide-react";
+import { dishLine, formatQuizSummary, type CravingQuizAnswers } from "./picks";
+import { Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { button } from "@/components/ui/styles";
 
 /**
@@ -16,30 +16,78 @@ export function TonightPicks({
   onOpen,
   opening,
   onShuffle,
+  quiz = null,
+  onOpenQuiz,
+  onClearQuiz,
 }: {
   /** null while the day's picks are worked out on this device. */
   picks: MenuDish[] | null;
   onOpen: (dish: MenuDish) => void;
   opening: string | null;
   onShuffle: () => void;
+  quiz?: CravingQuizAnswers | null;
+  onOpenQuiz?: () => void;
+  onClearQuiz?: () => void;
 }) {
   const [lead, ...rest] = picks ?? [];
 
   return (
     <section aria-labelledby="tonight-title">
-      <div className="flex items-end justify-between gap-4">
-        <h1 id="tonight-title" className="font-display font-medium text-[34px] md:text-[40px] leading-[1.1] text-stone-900">
-          Tonight
-        </h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 id="tonight-title" className="font-display font-medium text-[34px] md:text-[40px] leading-[1.1] text-stone-900">
+            {quiz ? "Suggestions for you" : "Tonight"}
+          </h1>
+          {quiz && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-small text-stone-600">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-brand-700 font-medium">
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                {formatQuizSummary(quiz)}
+              </span>
+              {onOpenQuiz && (
+                <button
+                  type="button"
+                  onClick={onOpenQuiz}
+                  className="text-stone-600 underline underline-offset-4 decoration-stone-300 hover:text-stone-900 px-1 py-0.5"
+                >
+                  Change answers
+                </button>
+              )}
+              {onClearQuiz && (
+                <button
+                  type="button"
+                  onClick={onClearQuiz}
+                  aria-label="Clear preference filter"
+                  className="inline-flex items-center gap-1 text-stone-500 hover:text-stone-900 px-1 py-0.5"
+                >
+                  <X className="w-3.5 h-3.5" aria-hidden="true" />
+                  Reset
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         {picks && picks.length > 1 && (
-          <button
-            type="button"
-            onClick={onShuffle}
-            className={button("ghost", "sm", "-mr-2 px-2 font-normal text-stone-500 hover:text-stone-900")}
-          >
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
-            Show me others
-          </button>
+          <div className="flex items-center gap-1">
+            {!quiz && onOpenQuiz && (
+              <button
+                type="button"
+                onClick={onOpenQuiz}
+                className={button("ghost", "sm", "px-2.5 font-normal text-stone-500 hover:text-stone-900")}
+              >
+                <Sparkles className="w-4 h-4 text-brand-600" aria-hidden="true" />
+                Help me pick
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onShuffle}
+              className={button("ghost", "sm", "-mr-2 px-2.5 font-normal text-stone-500 hover:text-stone-900")}
+            >
+              <RefreshCw className="w-4 h-4" aria-hidden="true" />
+              Show me others
+            </button>
+          </div>
         )}
       </div>
 

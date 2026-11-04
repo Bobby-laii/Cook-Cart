@@ -1,6 +1,12 @@
 import { cuisineLabel } from "@/lib/recipes/cuisines";
 import type { MenuDish } from "@/lib/recipes/mealdb";
 
+export interface CravingQuizAnswers {
+  pace: "quick" | "unhurried" | "hearty";
+  style: "soupy" | "crispy" | "fresh";
+  flavour: "umami" | "mediterranean" | "spiced" | "classic";
+}
+
 /** Small, fast, seedable PRNG (mulberry32). */
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -29,23 +35,108 @@ export function localDayKey(date = new Date()): string {
   return `${date.getFullYear()}-${m}-${d}`;
 }
 
+const FLAVOUR_CUISINES: Record<CravingQuizAnswers["flavour"], string[]> = {
+  umami: ["Chinese", "Japanese", "Thai", "Vietnamese", "Malaysian", "Filipino"],
+  mediterranean: ["Italian", "French", "Greek", "Spanish", "Portuguese", "Croatian"],
+  spiced: ["Indian", "Mexican", "Moroccan", "Turkish", "Jamaican", "Egyptian", "Tunisian", "Kenyan"],
+  classic: ["British", "American", "Irish", "Canadian", "Polish", "Dutch", "Russian", "Ukrainian"],
+};
+
+const STYLE_PATTERNS: Record<CravingQuizAnswers["style"], RegExp> = {
+  soupy: /\b(soup|stew|curry|brais|broth|noodle|ramen|laksa|tagine|chili|congee|chowder|sauce|simmer|pot|goulash|casserole)\b/i,
+  crispy: /\b(fry|fried|sear|crisp|roast|grill|stir[- ]?fry|wok|pan|cutlet|tempura|katsu|schnitzel|taco|fajita|satay|cake)\b/i,
+  fresh: /\b(salad|fish|salmon|prawn|shrimp|seafood|herb|lemon|lime|vegetable|vegan|vegetarian|Summer|roll|ceviche|pasta|light)\b/i,
+};
+
+const PACE_PATTERNS: Record<CravingQuizAnswers["pace"], RegExp> = {
+  quick: /\b(quick|stir[- ]?fry|noodle|omelette|egg|pasta|prawn|shrimp|taco|wrap|pan|15|20|minute)\b/i,
+  unhurried: /\b(brais|simmer|risotto|stew|curry|tagine|roast|bake|slow|broth|ragu)\b/i,
+  hearty: /\b(beef|pork|lamb|chicken|pie|stew|potato|rice|pasta|curry|burger|steak|casserole|lasagne)\b/i,
+};
+
+export function scoreDishForQuiz(dish: MenuDish, quiz: CravingQuizAnswers): number {
+  let score = 0;
+  const text = `${dish.title} ${dish.description || ""} ${dish.cuisine}`;
+
+  if (FLAVOUR_CUISINES[quiz.flavour]?.includes(dish.cuisine)) {
+    score += 4;
+  }
+  if (STYLE_PATTERNS[quiz.style]?.test(text)) {
+    score += 3;
+  }
+  if (PACE_PATTERNS[quiz.pace]?.test(text)) {
+    score += 2;
+  }
+  if (quiz.pace === "quick" && !dish.needsOven) {
+    score += 1;
+  }
+  return score;
+}
+
+export function formatQuizSummary(quiz: CravingQuizAnswers): string {
+  const paceLabel: Record<CravingQuizAnswers["pace"], string> = {
+    quick: "Quick & easy",
+    unhurried: "Relaxed evening cook",
+    hearty: "Hearty & filling",
+  };
+  const styleLabel: Record<CravingQuizAnswers["style"], string> = {
+    soupy: "Warm & saucy",
+    crispy: "Golden & seared",
+    fresh: "Fresh & bright",
+  };
+  const flavourLabel: Record<CravingQuizAnswers["flavour"], string> = {
+    umami: "Soy, ginger & garlic",
+    mediterranean: "Herbs, tomato & olive oil",
+    spiced: "Warm spices",
+    classic: "Cozy comfort",
+  };
+  return `${paceLabel[quiz.pace]} · ${styleLabel[quiz.style]} · ${flavourLabel[quiz.flavour]}`;
+}
+
 /**
- * Three picks for tonight. The same day (and the same reshuffle count) always gives
- * the same three, so the page does not change under you on reload. Dishes that need
- * an oven are left out when the kitchen has none. Picks come from different
- * cuisines where the menu allows it, so the three feel like a real choice.
- *
- * The menu list carries no step counts, so the pick is by seed alone.
+ * Three picks for tonight. Dishes that need an oven are left out when the kitchen has none.
+ * When `quiz` answers are provided, picks are drawn from the dishes that best match the
+ * cook's mood, texture craving, and flavour direction.
  */
 export function pickTonight(
   dishes: MenuDish[],
-  { day, round = 0, noOven = false, count = 3 }: { day: string; round?: number; noOven?: boolean; count?: number }
+  {
+    day,
+    round = 0,
+    noOven = false,
+    count = 3,
+    quiz = null,
+  }: {
+    day: string;
+    round?: number;
+    noOven?: boolean;
+    count?: number;
+    quiz?: CravingQuizAnswers | null;
+  }
 ): MenuDish[] {
-  const pool = dishes.filter((d) => !noOven || !d.needsOven);
-  if (pool.length === 0) return [];
+  const basePool = dishes.filter((d) => !noOven || !d.needsOven);
+  if (basePool.length === 0) return [];
 
-  const rand = mulberry32(hash(`${day}#${round}`));
-  // Fisher-Yates over a copy, seeded.
+  let pool = basePool;
+  if (quiz) {
+    const scored = basePool
+      .map((dish) => ({ dish, score: scoreDishForQuiz(dish, quiz) }))
+      .sort((a, b) => b.score - a.score);
+    const strongMatches = scored.filter((item) => item.score >= 5).map((item) => item.dish);
+    const goodMatches = scored.filter((item) => item.score >= 3).map((item) => item.dish);
+    if (strongMatches.length >= count) {
+      pool = strongMatches;
+    } else if (goodMatches.length >= count) {
+      pool = goodMatches;
+    } else {
+      pool = scored.slice(0, Math.max(count, Math.ceil(scored.length / 2))).map((item) => item.dish);
+    }
+  }
+
+  const seedKey = quiz
+    ? `${day}#${round}#${quiz.pace}-${quiz.style}-${quiz.flavour}`
+    : `${day}#${round}`;
+  const rand = mulberry32(hash(seedKey));
   const order = pool.slice();
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -60,12 +151,22 @@ export function pickTonight(
     picks.push(dish);
     cuisines.add(dish.cuisine);
   }
-  // Fewer cuisines than picks: fill up with whatever comes next.
   for (const dish of order) {
     if (picks.length === count) break;
     if (!picks.includes(dish)) picks.push(dish);
   }
   return picks;
+}
+
+/** Shuffle a full list of dishes deterministically from a seed so the menu grid varies on each visit. */
+export function shuffleDishes(dishes: MenuDish[], seed: string): MenuDish[] {
+  const rand = mulberry32(hash(seed));
+  const copy = dishes.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 /** A short, honest line about a dish from what the menu knows: its cuisine and the oven. */

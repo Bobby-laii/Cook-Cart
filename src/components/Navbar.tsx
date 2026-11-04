@@ -5,33 +5,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { BonTasteLogo, BonTasteMark } from "@/components/BonTasteLogo";
+import { BonTasteMark } from "@/components/BonTasteLogo";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { BookOpen, CircleUser, MessageCircle, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { button, iconButton } from "@/components/ui/styles";
 
 /**
- * How far the phone header travels before it is fully compact, in px. The header is
- * sticky at `top: -COLLAPSE`, so it scrolls exactly this far and then holds, leaving
- * the 56px bar; over the same distance the wordmark shrinks from 38px to 19px.
+ * How far the header travels before it is fully compact, in px.
+ * At the top of the page (`--p: 0`), the logo is large and prominent; as the user
+ * scrolls down (`--p: 1`), the header and logo smoothly shrink into a compact bar.
  */
-const COLLAPSE = 36;
-/** The large wordmark sits this far above the bar's centre at the top of the page. */
-const LIFT = 14;
+const COLLAPSE = 48;
+const LIFT = 16;
 
-/**
- * App shell. Phones: a large Bon Taste wordmark at the top of the page (like an iOS
- * large title) that shrinks into a compact sticky bar as you scroll, plus a fixed
- * bottom tab bar. From md up: one compact top bar with the links.
- * Cooking mode draws its own bar, so both are hidden there and the body is marked so
- * --tabbar-space collapses to 0.
- */
 export function Navbar() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const pathname = usePathname() ?? "/";
   const isCookMode = /^\/recipe\/[^/]+\/cook(\/|$)/.test(pathname);
-  // On the sign-in and sign-up pages, a header link to the same page is noise.
   const onLogin = pathname === "/login";
   const onRegister = pathname === "/register";
 
@@ -46,16 +37,12 @@ export function Navbar() {
     };
   }, [isCookMode]);
 
-  // Shops, orders and the partner/admin portals are hidden while Bon Taste is a
-  // cooking companion; their routes still exist for a later phase.
   const navLinks: { href: string; label: string; icon: LucideIcon }[] = [
     { href: "/", label: "Menu", icon: UtensilsCrossed },
     { href: "/chat", label: "Ask the chef", icon: MessageCircle },
     { href: "/my-recipes", label: t("navMyRecipes"), icon: BookOpen },
   ];
 
-  // "/" is a prefix of every path, so Menu is active on the home page and on recipe pages
-  // (browsing a dish from the menu), not everywhere.
   const isActive = (href: string) =>
     href === "/"
       ? pathname === "/" || pathname.startsWith("/recipe/")
@@ -67,57 +54,14 @@ export function Navbar() {
     <>
       <PhoneHeader signedIn={Boolean(user)} hideSignIn={onLogin} />
 
-      <header className="hidden md:block sticky top-0 z-50 bg-stone-50 border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
-          <Link href="/" aria-label="Bon Taste home" className="flex items-center h-12 rounded-lg">
-            <BonTasteLogo />
-          </Link>
-
-          <nav aria-label="Main" className="flex items-center gap-1 text-small">
-            {navLinks.map((link) => {
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center h-12 px-3 rounded-lg transition-colors ${
-                    active ? "text-stone-900 font-bold" : "text-stone-500 hover:text-stone-900"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <ThemeSwitch />
-            {user ? (
-              <AccountMenu />
-            ) : (
-              <>
-                {!onLogin && (
-                  <Link
-                    href="/login"
-                    className={button("ghost", "sm", "px-3 font-normal text-stone-700 hover:bg-transparent hover:text-stone-900")}
-                  >
-                    {t("navLogin")}
-                  </Link>
-                )}
-                {!onRegister && (
-                <Link
-                  href="/register"
-                  className={button("primary", "sm")}
-                >
-                  {t("navRegister")}
-                </Link>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <DesktopHeader
+        navLinks={navLinks}
+        isActive={isActive}
+        user={user}
+        onLogin={onLogin}
+        onRegister={onRegister}
+        t={t}
+      />
 
       <nav
         aria-label="Main"
@@ -149,9 +93,116 @@ export function Navbar() {
 }
 
 /**
- * Phone header. Scroll position drives `--p` (0 at the top of the page, 1 once the
- * header has collapsed), and the wordmark's size and the hairline follow it, so the
- * change tracks the finger instead of toggling. With reduced motion it snaps.
+ * Desktop header: starts with a large, prominent logo at the top of the page and
+ * smoothly shrinks into a compact sticky bar as you scroll down.
+ */
+function DesktopHeader({
+  navLinks,
+  isActive,
+  user,
+  onLogin,
+  onRegister,
+  t,
+}: {
+  navLinks: { href: string; label: string; icon: LucideIcon }[];
+  isActive: (href: string) => boolean;
+  user: ReturnType<typeof useAuth>["user"];
+  onLogin: boolean;
+  onRegister: boolean;
+  t: (key: any) => string;
+}) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const isDown = window.scrollY > 28;
+      setScrolled((prev) => (prev !== isDown ? isDown : prev));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header
+      className={`hidden md:block sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b transition-all duration-300 ${
+        scrolled ? "border-stone-200 py-0" : "border-transparent py-3"
+      }`}
+    >
+      <div
+        className={`max-w-6xl mx-auto px-6 lg:px-8 flex items-center justify-between gap-6 transition-all duration-300 ${
+          scrolled ? "h-14" : "h-20"
+        }`}
+      >
+        <Link
+          href="/"
+          aria-label="Bon Taste home"
+          className="flex items-center rounded-lg origin-left transition-transform duration-300"
+        >
+          <span
+            className={`inline-flex items-center gap-[0.32em] leading-none text-stone-900 select-none transition-all duration-300 ${
+              scrolled ? "text-[22px]" : "text-[42px]"
+            }`}
+          >
+            <BonTasteMark size="0.98em" className="shrink-0 -mt-[0.08em]" />
+            <span className="font-display font-medium tracking-[-0.01em] whitespace-nowrap">
+              Bon Taste
+            </span>
+          </span>
+        </Link>
+
+        <nav aria-label="Main" className="flex items-center gap-1 text-small">
+          {navLinks.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center h-12 px-3 rounded-lg transition-colors ${
+                  active ? "text-stone-900 font-bold" : "text-stone-500 hover:text-stone-900"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <ThemeSwitch />
+          {user ? (
+            <AccountMenu />
+          ) : (
+            <>
+              {!onLogin && (
+                <Link
+                  href="/login"
+                  className={button(
+                    "ghost",
+                    "sm",
+                    "px-3 font-normal text-stone-700 hover:bg-transparent hover:text-stone-900"
+                  )}
+                >
+                  {t("navLogin")}
+                </Link>
+              )}
+              {!onRegister && (
+                <Link href="/register" className={button("primary", "sm")}>
+                  {t("navRegister")}
+                </Link>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Phone header: starts with a bold 44px logo at the top of the page and smoothly
+ * scales down to 20px as the user scrolls (`--p` from 0 to 1).
  */
 function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: boolean }) {
   const { t } = useLanguage();
@@ -202,12 +253,13 @@ function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: 
           href="/"
           aria-label="Bon Taste home"
           className="flex items-center h-12 min-w-0 rounded-lg origin-left"
-          style={{ transform: `${lift} scale(calc(1 - var(--p) * 0.5))` }}
+          style={{ transform: `${lift} scale(calc(1 - var(--p) * 0.54))` }}
         >
-          {/* Drawn at the large size and scaled down, so the small state stays crisp. */}
-          <span className="inline-flex items-center gap-[0.3em] text-[38px] leading-none text-stone-900 select-none">
-            <BonTasteMark size="0.95em" className="shrink-0 -mt-[0.08em]" />
-            <span className="font-display font-medium tracking-[-0.01em] whitespace-nowrap">Bon Taste</span>
+          <span className="inline-flex items-center gap-[0.3em] text-[44px] leading-none text-stone-900 select-none">
+            <BonTasteMark size="0.98em" className="shrink-0 -mt-[0.08em]" />
+            <span className="font-display font-medium tracking-[-0.01em] whitespace-nowrap">
+              Bon Taste
+            </span>
           </span>
         </Link>
 
@@ -216,10 +268,7 @@ function PhoneHeader({ signedIn, hideSignIn }: { signedIn: boolean; hideSignIn: 
           {signedIn ? (
             <AccountMenu />
           ) : hideSignIn ? null : (
-            <Link
-              href="/login"
-              className={button("ghost", "sm", "px-3 font-normal")}
-            >
+            <Link href="/login" className={button("ghost", "sm", "px-3 font-normal")}>
               {t("navLogin")}
             </Link>
           )}

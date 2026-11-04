@@ -9,11 +9,19 @@ import { CUISINE_GUIDE } from "@/lib/recipes/cuisineGuide";
 import type { MenuDish } from "@/lib/recipes/mealdb";
 import { Search } from "lucide-react";
 import { TonightPicks } from "@/components/home/TonightPicks";
-import { localDayKey, pickTonight } from "@/components/home/picks";
+import { CravingQuizModal } from "@/components/home/CravingQuizModal";
+import {
+  localDayKey,
+  pickTonight,
+  scoreDishForQuiz,
+  shuffleDishes,
+  type CravingQuizAnswers,
+} from "@/components/home/picks";
 import { button, chip, errorText, field } from "@/components/ui/styles";
 
 const PAGE_SIZE = 24;
 const NO_OVEN_KEY = "bontaste_no_oven";
+const QUIZ_POPUP_THRESHOLD = 3;
 
 /**
  * Home: "Tonight" (three calm picks for this evening) and the full menu below it.
@@ -29,10 +37,15 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   // "My kitchen has no oven": hides baked and roasted dishes. Remembered in this
   // browser; storage can be blocked, so every access is guarded.
   const [noOven, setNoOven] = useState(false);
-  // Tonight's picks are seeded by the local date, which only the browser knows, so
-  // they are worked out after mount (the server render shows placeholders).
+  // Tonight's picks are seeded by the local date + a random visit seed on mount, so
+  // every visit shows a fresh variety of dishes while keeping server render hydrated cleanly.
   const [day, setDay] = useState<string | null>(null);
+  const [visitSeed, setVisitSeed] = useState<string | null>(null);
   const [round, setRound] = useState(0);
+  const [shuffleCount, setShuffleCount] = useState(0);
+  const [quiz, setQuiz] = useState<CravingQuizAnswers | null>(null);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizPrompted, setQuizPrompted] = useState(false);
 
   useEffect(() => {
     try {
@@ -40,7 +53,9 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     } catch {
       // Storage unavailable: start with every dish shown.
     }
-    setDay(localDayKey());
+    const randomSeed = String(Math.floor(Math.random() * 1_000_000));
+    setVisitSeed(randomSeed);
+    setDay(`${localDayKey()}-${randomSeed}`);
   }, []);
 
   const toggleNoOven = () => {
@@ -54,10 +69,41 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     }
   };
 
+  const handleShuffle = () => {
+    setRound((r) => r + 1);
+    const nextShuffles = shuffleCount + 1;
+    setShuffleCount(nextShuffles);
+    if (nextShuffles >= QUIZ_POPUP_THRESHOLD && !quiz && !quizPrompted) {
+      setQuizPrompted(true);
+      setQuizOpen(true);
+    }
+  };
+
+  const handleQuizComplete = (answers: CravingQuizAnswers) => {
+    setQuiz(answers);
+    setRound(0);
+    setQuizOpen(false);
+  };
+
+  const handleClearQuiz = () => {
+    setQuiz(null);
+    setRound((r) => r + 1);
+  };
+
   const picks = useMemo(
-    () => (day === null ? null : pickTonight(dishes, { day, round, noOven })),
-    [dishes, day, round, noOven]
+    () => (day === null ? null : pickTonight(dishes, { day, round, noOven, quiz })),
+    [dishes, day, round, noOven, quiz]
   );
+
+  // Randomize the menu dish order on each visit, and rank by quiz score if quiz is active.
+  const orderedDishes = useMemo(() => {
+    const base = visitSeed ? shuffleDishes(dishes, visitSeed) : dishes;
+    if (!quiz) return base;
+    return base
+      .map((d, idx) => ({ dish: d, score: scoreDishForQuiz(d, quiz), idx }))
+      .sort((a, b) => (b.score !== a.score ? b.score - a.score : a.idx - b.idx))
+      .map((item) => item.dish);
+  }, [dishes, visitSeed, quiz]);
 
   // Only offer chips for cuisines that actually came back with dishes.
   const cuisines = useMemo(
@@ -67,13 +113,13 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return dishes.filter(
+    return orderedDishes.filter(
       (d) =>
         (cuisine === "all" || d.cuisine === cuisine) &&
         (!noOven || !d.needsOven) &&
         (!q || d.title.toLowerCase().includes(q))
     );
-  }, [dishes, cuisine, query, noOven]);
+  }, [orderedDishes, cuisine, query, noOven]);
 
   // The selected cuisine's intro and first dishes (picks that fit a no-oven kitchen).
   const guide = cuisine !== "all" ? CUISINE_GUIDE[cuisine] : undefined;
@@ -137,7 +183,17 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
         picks={picks}
         onOpen={openDish}
         opening={opening}
-        onShuffle={() => setRound((r) => r + 1)}
+        onShuffle={handleShuffle}
+        quiz={quiz}
+        onOpenQuiz={() => setQuizOpen(true)}
+        onClearQuiz={handleClearQuiz}
+      />
+
+      <CravingQuizModal
+        open={quizOpen}
+        initialAnswers={quiz}
+        onClose={() => setQuizOpen(false)}
+        onComplete={handleQuizComplete}
       />
 
       {openError && (
