@@ -711,7 +711,7 @@ function EndScreen({
   }
   return (
     <main className={`max-w-md mx-auto px-5 pt-8 pb-10 text-center space-y-6 ${motionClass}`}>
-      <ChefAvatarBadge avatarConfig={chefConfig} size={96} title={chefName} className="mx-auto" />
+      <ChefAvatarBadge avatarConfig={chefConfig} size={96} title={chefName} className="mx-auto" mood="nod" />
       <div className="space-y-3">
         <h1 className="font-display text-[34px] leading-[1.1] font-medium">{`You made ${dish.title}`}</h1>
         <p className="text-stone-500 text-[17px]">Plate it up while it&apos;s hot. Enjoy it.</p>

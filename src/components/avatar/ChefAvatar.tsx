@@ -473,9 +473,16 @@ export interface ChefAvatarProps {
   size?: number;
   className?: string;
   title?: string;
+  /**
+   * still: no motion (default). idle: blinks now and then. thinking: bobs while
+   * waiting for an answer. nod: one small nod (give it a new React key to replay).
+   */
+  mood?: "still" | "idle" | "thinking" | "nod";
 }
 
-export function ChefAvatar({ config, size = 64, className, title }: ChefAvatarProps) {
+const MOOD_CLASS = { still: "", idle: "chef-idle", thinking: "chef-thinking", nod: "chef-nod chef-idle" } as const;
+
+export function ChefAvatar({ config, size = 64, className, title, mood = "still" }: ChefAvatarProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const c = config;
   const backdrop = BACKDROPS.find((b) => b.id === c.backdrop) ?? BACKDROPS[0];
@@ -488,7 +495,7 @@ export function ChefAvatar({ config, size = 64, className, title }: ChefAvatarPr
       viewBox="0 0 300 300"
       width={size}
       height={size}
-      className={className}
+      className={[MOOD_CLASS[mood], className].filter(Boolean).join(" ")}
       role="img"
       aria-label={title ?? "Chef avatar"}
       xmlns="http://www.w3.org/2000/svg"
@@ -538,7 +545,9 @@ export function ChefAvatar({ config, size = 64, className, title }: ChefAvatarPr
         <LowerFacialHair c={c} headClip={ids.head} beardClip={ids.beard} />
         <Mouth c={c} t={t} />
         <Mustache c={c} />
-        <Eyes c={c} t={t} />
+        <g className="chef-eyes">
+          <Eyes c={c} t={t} />
+        </g>
         <Brows c={c} t={t} />
         <Glasses c={c} t={t} />
 
@@ -559,8 +568,10 @@ export function ChefAvatarBadge({
   size = 36,
   className = "",
   title,
+  mood,
 }: {
   avatarConfig?: string | null;
+  mood?: ChefAvatarProps["mood"];
   /** @deprecated Emoji avatars are gone; ignored. TODO remove once callers stop passing it. */
   emoji?: string | null;
   size?: number;
@@ -568,7 +579,9 @@ export function ChefAvatarBadge({
   title?: string;
 }) {
   const config = parseChefAvatarConfig(avatarConfig) ?? DEFAULT_CHEF_AVATAR;
-  return <ChefAvatar config={config} size={size} title={title} className={`rounded-full flex-shrink-0 ${className}`} />;
+  return (
+    <ChefAvatar config={config} size={size} title={title} mood={mood} className={`rounded-full flex-shrink-0 ${className}`} />
+  );
 }
 
 export { DEFAULT_CHEF_AVATAR };

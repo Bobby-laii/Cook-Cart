@@ -19,9 +19,15 @@ export function BonTasteMark({ size = 24, className = "" }: { size?: number | st
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`bt-mark overflow-visible ${className}`}
       aria-hidden="true"
     >
+      {/* Two wisps of steam: rise once when the page opens and again on hover or tap
+          (globals.css, .bt-mark). Hidden at rest, so the still mark is unchanged. */}
+      <g className="bt-steam" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none">
+        <path d="M11 10c-1.2-1.6 1.2-2.6 0-4.4" />
+        <path d="M21 10c-1.2-1.6 1.2-2.6 0-4.4" />
+      </g>
       <PotPaths ink="currentColor" herb="rgb(var(--herb-500))" />
     </svg>
   );
@@ -31,7 +37,7 @@ export function BonTasteMark({ size = 24, className = "" }: { size?: number | st
 export function PotPaths({ ink = INK, herb = HERB }: { ink?: string; herb?: string } = {}) {
   return (
     <>
-      <circle cx="16" cy="7.5" r="2.4" fill={herb} />
+      <circle className="bt-knob" cx="16" cy="7.5" r="2.4" fill={herb} />
       <path d="M5.5 12.25h21" stroke={ink} strokeWidth="2" strokeLinecap="round" />
       <path d="M7.5 15h17v6.5a6 6 0 0 1-6 6h-5a6 6 0 0 1-6-6V15Z" fill={ink} />
       <path

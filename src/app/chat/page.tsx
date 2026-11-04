@@ -363,7 +363,7 @@ function ChatPageContent() {
         <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 lg:self-start">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <ChefAvatarBadge avatarConfig={activeChefConfig} size={48} title={activeChefName} />
+              <ChefAvatarBadge avatarConfig={activeChefConfig} size={48} title={activeChefName} mood={isLoading ? "thinking" : "idle"} />
               <p className="font-display font-medium text-[22px] leading-tight text-stone-900 truncate">
                 {activeChefName}
               </p>
@@ -408,7 +408,7 @@ function ChatPageContent() {
             {/* Phone and tablet header: chef, saved chats, new chat */}
             <div className="lg:hidden flex items-center justify-between gap-2 pb-4">
               <Link href="/chef-settings" className="flex items-center gap-3 min-w-0 min-h-12" aria-label={`${activeChefName}, chef settings`}>
-                <ChefAvatarBadge avatarConfig={activeChefConfig} size={40} title={activeChefName} />
+                <ChefAvatarBadge avatarConfig={activeChefConfig} size={40} title={activeChefName} mood={isLoading ? "thinking" : "idle"} />
                 <span className="font-display font-medium text-[20px] leading-tight text-stone-900 truncate">
                   {activeChefName}
                 </span>
@@ -454,7 +454,13 @@ function ChatPageContent() {
                 ) : (
                   <div key={idx} className="space-y-4">
                     <div className="flex items-end gap-2.5">
-                      <ChefAvatarBadge avatarConfig={activeChefConfig} size={36} title={activeChefName} />
+                      {/* Only the newest answer nods as it arrives. */}
+                      <ChefAvatarBadge
+                        avatarConfig={activeChefConfig}
+                        size={36}
+                        title={activeChefName}
+                        mood={idx === messages.length - 1 ? "nod" : "still"}
+                      />
                       <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-stone-100 text-stone-900 px-4 py-3">
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
@@ -484,7 +490,7 @@ function ChatPageContent() {
               {/* Thinking state */}
               {isLoading && (
                 <div className="flex items-end gap-2.5">
-                  <ChefAvatarBadge avatarConfig={activeChefConfig} size={36} title={activeChefName} />
+                  <ChefAvatarBadge avatarConfig={activeChefConfig} size={36} title={activeChefName} mood="thinking" />
                   <div className="rounded-2xl rounded-bl-md bg-stone-100 text-stone-500 px-4 py-3 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden />
                     <span key={thinkingIndex} className="cc-fade-in">

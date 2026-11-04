@@ -117,7 +117,13 @@ export function AskChef({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <ChefAvatarBadge avatarConfig={avatarConfig} size={48} title={chefName} />
+        <ChefAvatarBadge
+          key={reply?.kind === "answer" ? reply.text.length : "idle"}
+          avatarConfig={avatarConfig}
+          size={48}
+          title={chefName}
+          mood={asking || listening ? "thinking" : reply?.kind === "answer" ? "nod" : "idle"}
+        />
         <p className="text-stone-600 leading-snug">Ask about the step you are on.</p>
       </div>
 

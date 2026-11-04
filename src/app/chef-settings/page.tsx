@@ -72,7 +72,7 @@ export default function ChefSettingsPage() {
       <form onSubmit={handleSave} className="mt-8">
         {/* Look */}
         <section className="flex items-center gap-5">
-          <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} size={96} title={displayName} />
+          <ChefAvatarBadge avatarConfig={user?.chefAvatarConfig} size={96} title={displayName} mood="idle" />
           <div className="min-w-0 flex-1">
             <p className="font-display text-[22px] font-medium leading-tight text-stone-900">{displayName}</p>
             <button

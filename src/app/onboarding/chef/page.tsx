@@ -173,7 +173,7 @@ function ChefOnboardingContent() {
     return (
       <div className="flex min-h-[80vh] items-center justify-center px-5 py-12">
         <div className="w-full max-w-md space-y-6 text-center">
-          <ChefAvatar config={config} size={220} className="cc-pop mx-auto h-48 w-48 rounded-full sm:h-56 sm:w-56" title={displayName} />
+          <ChefAvatar config={config} size={220} className="cc-pop mx-auto h-48 w-48 rounded-full sm:h-56 sm:w-56" title={displayName} mood="idle" />
           <div>
             <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900">{`This is ${displayName}`}</h1>
             <p className="mt-1 text-[15px] text-stone-500">{personalityInfo.label}</p>
@@ -229,6 +229,7 @@ function ChefOnboardingContent() {
                   size={260}
                   className={`rounded-full ${step === 1 ? "h-44 w-44 sm:h-60 sm:w-60 lg:h-64 lg:w-64" : "h-36 w-36 sm:h-48 sm:w-48"}`}
                   title={displayName}
+                  mood="idle"
                 />
               </div>
 
