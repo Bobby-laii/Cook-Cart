@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Bookmark, BookmarkCheck, Check, Clock, ListChecks, Minus, Plus } from "lucide-react";
 import type { DishSuggestion, RecipeIngredient } from "@/types";
 import { loadDish } from "@/lib/recipes/loadDish";
-import { safeHttpUrl } from "@/lib/recipes/mealdb";
+import { safeHttpUrl } from "@/lib/recipes/mealdbLinks";
 import { convertAmount, convertTemperatures, formatQuantity, type UnitSystem } from "@/lib/units";
 import { useUnitSystem } from "@/lib/useUnitSystem";
 import { usePhotoArrival } from "@/lib/motion/photoFlip";

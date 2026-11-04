@@ -1,69 +1,40 @@
-# AGENTS.md — Bon Taste (CookCart)
+# Bon Taste: notes for AI coding assistants
 
-This document defines the architecture, design system rules, and engineering conventions for AI coding agents and contributors working on **Bon Taste** (`Cook-Cart`).
+Two friends build this, both with AI help (Claude Code, Gemini). Read this before you change anything.
 
----
+## What it is
 
-## 1. Product Purpose & Core Loop
+Bon Taste is a calm cooking companion for home cooks worldwide: a menu of real recipes, an AI chef you can ask, and step-by-step cooking mode (hands-free: wave at the camera, voice commands, far view). First users are working adults cooking after work to unwind. It's a phone web app now; the goal is an App Store app.
 
-Bon Taste is a guided cooking assistant built for real kitchens across both **Mobile/Desktop Web** and **React Native / Capacitor Phone App** shells.
+**Out of scope, don't add:** grocery shopping, prices, stores, checkout, delivery, partner shops. They were removed on purpose. **English only** (the Chinese version was removed on purpose).
 
-1. **Tell the chef what you have** (or pick from the photo-first recipe browser on `/`).
-2. **Choose a dish** on `/recipe/[id]` with clear ingredient scaling, metric/US unit conversion, and dietary swap chips.
-3. **Cook step by step** on `/recipe/[id]/cook` with one instruction per screen, automatic timers, hands-free wave gesture navigation, live camera step inspection ("Show the chef"), and voice commands ("next", "back", "repeat", "check pan", "start timer", "chef, ...").
+## Stack and commands
 
----
-
-## 2. Visual & UX Rules (`DESIGN.md` & `src/components/ui/styles.ts`)
-
-Always read [`DESIGN.md`](./DESIGN.md) before modifying any UI component or page.
-
-- **Photo-first hierarchy**: The dish photograph leads every recipe card and detail screen. Keep text overlays off photos.
-- **Colour tokens only**: Never hard-code `bg-white` or raw hex colours in components. Use the CSS variable-backed Tailwind tokens (`stone-50`, `stone-100`, `stone-200`, `stone-300`, `stone-500`, `stone-600`, `stone-900`, `brand-500`, `brand-600`, `fresh-500`, `fresh-600`, `butter-400`, `danger`) so light mode (Warm Stone) and dark mode (Cast Iron) adapt automatically.
-- **Shared control recipes**: Always import `button()`, `chip()`, `field()`, `iconButton()`, and `errorText` from [`src/components/ui/styles.ts`](./src/components/ui/styles.ts) rather than inventing ad-hoc button or input class strings.
-- **Typography**:
-  - `font-display` (*Newsreader*): Dish titles, screen headings, chef greetings.
-  - `font-sans` (*Atkinson Hyperlegible*): Body copy, buttons, ingredients, step instructions (minimum `16px` everywhere; `26px–32px` in Cook Mode; `clamp(32px, 5vw, 56px)` in Far View).
-  - `font-mono` (*JetBrains Mono*): Timers, quantities, temperatures, step counters.
-- **Copywriting**: Sentence case everywhere (`Start cooking`, `Save to My recipes`, `Ask the chef`). No emoji icons (`lucide-react` stroke icons only). No exclamation marks in chef responses.
-
----
-
-## 3. Directory & Module Architecture
-
-- **`src/config/`**:
-  - `appConfig.ts`: Central application settings, AI spending caps (`monthlySpendingCapHkd`, `dailyUserRequestLimit`), and supported cuisines (`CUISINES`).
-  - `systemPrompt.ts`: The chef persona rules (`COOKCART_SYSTEM_PROMPT` and `buildSystemPrompt`). Enforces concise replies, mandatory metric + US unit pairs, all-ingredient inclusion, and `<COOKCART_MENU>` JSON formatting.
-  - `ingredientsCatalogue.ts`: Common pantry and regional ingredient catalogue.
-- **`src/components/`**:
-  - `ui/styles.ts`: Single source of truth for buttons, chips, fields, icon buttons, and error text.
-  - `cook/`: Step-by-step cooking controls (`AskChef.tsx`, `BottomSheet.tsx`, `Timers.tsx`, `cookHelpers.ts`).
-  - `handsfree/`: Hands-free kitchen controls (`HandsFreeControls.tsx`, `FarView.tsx`, `LiveCameraStepFeed.tsx`).
-  - `avatar/`: SVG chef avatar renderer (`ChefAvatar.tsx`).
-- **`src/lib/`**:
-  - `ai/aiService.ts`: Unified AI service chain (Gemini `gemini-2.5-flash` -> OpenRouter -> Groq -> Ollama -> Spoonacular -> Pollinations -> Local Culinary & Step Q&A Engine) with Prisma usage logging and spending cap enforcement.
-  - `handsfree/`:
-    - `commands.ts`: Pure, unit-tested command parser (`parseCommand`) and optical motion/wave detector (`frameMotion`, `detectSwipe`).
-    - `cameraPlatform.ts`: Cross-platform camera & native mobile bridge (`getUserMedia`, frame capture, and `window.ReactNativeWebView` / `window.CookCartNativeCamera` hooks for phone app builds).
-    - `useWaveGesture.ts`: `useLiveCameraStep` and `useWaveGesture` hooks for real-time 48×36 greyscale wave detection and live step frame capture.
-    - `useVoiceCommands.ts` & `speech.ts`: Web Speech API recognition and natural voice synthesis (Gemini TTS + device speech fallback).
-  - `prisma.ts`: Resilient Prisma client supporting both local SQLite (`file:./dev.db`) and Vercel PostgreSQL (`POSTGRES_PRISMA_URL` / `DATABASE_URL`) with automatic demo account provisioning and serverless fallback.
-  - `jwtSecret.ts` & `auth.ts`: Edge-safe JWT session signing and verification.
-- **`prisma/` & `scripts/prepare-db.mjs`**:
-  - `prisma/schema.prisma`: Data model (`User`, `Recipe`, `SavedRecipe`, `ChatConversation`, `AIUsageLog`, `AppSetting`, `Store`, `Ingredient`, `StoreInventory`, `SavedPantry`).
-  - `scripts/prepare-db.mjs`: Pre-build hook that detects PostgreSQL URLs in serverless environments (such as Vercel Prisma Postgres) and configures `schema.prisma` automatically before `prisma generate && next build`.
-
----
-
-## 4. Verification & CI Commands
-
-Before opening a pull request or pushing to `main`, run all three checks:
+Next.js 14 App Router, React 18, TypeScript, Tailwind 3, Prisma (SQLite locally), Vitest.
 
 ```bash
-npx tsc --noEmit
-npm test -- --run
-npm run build
+npm install
+cp .env.example .env    # then fill in the values; never commit .env
+npm run db:push && npm run db:seed
+npm run dev             # http://localhost:3000
+npm test                # must pass before every commit
+npx tsc --noEmit        # must be clean
 ```
 
-All 15+ Vitest test suites in `tests/` must pass with zero TypeScript or Next.js build errors.
+Demo login: the "Try the demo account" button on /login.
 
+## Rules
+
+- **Secrets:** API keys live only in `.env` (git-ignored), GitHub Actions secrets, or the hosting provider's environment settings. Never write a key into code, docs, commits or issues.
+- **Recipes** come from TheMealDB (free, keyless) via `src/lib/recipes/mealdb.ts`, which also cleans them (step titles, timers, merged ingredients, kitchen fractions). Dish descriptions and oven flags are hand-written in `mealdbDescriptions.ts` / `mealdbMeta.ts`: honest, no made-up cook times or claims.
+- **The chef** (`src/lib/ai/aiService.ts`, prompt in `src/config/systemPrompt.ts`) uses Gemini first, then Groq/OpenRouter as backups, with a daily limit per user. It is a quiet kitchen voice: brief, never a therapist, no shop or price claims. When it fails, the UI says so; never show a made-up answer.
+- **Design:** follow `DESIGN.md` ("Photo first", light and dark mode). Use the shared helpers in `src/components/ui/styles.ts` (`button`, `chip`, `field`, `iconButton`) instead of new class strings. Colours only through the Tailwind tokens (`stone`, `brand`, `fresh`); never `bg-white` or hex colours in components, or dark mode breaks. Sentence case, no emoji as icons (use lucide-react), tap targets at least 48px.
+- **Git:** work on a branch, open a pull request into `main`, and let the other person review it. Don't push straight to `main`. Small commits with clear messages.
+- **Tests:** add or update a Vitest test in `tests/` for any logic you change (data cleaning, units, parsing, API routes).
+
+## Where things are
+
+- `src/app/`: pages (`/` menu, `/recipe/[id]`, `/recipe/[id]/cook`, `/chat`, `/my-recipes`, `/chef-settings`) and API routes (`src/app/api/`)
+- `src/components/`: shared UI; `cook/` and `handsfree/` for cooking mode; `avatar/` for the chef avatar
+- `src/lib/`: data, AI, units, hands-free logic
+- `DESIGN.md`: the design system; `prisma/schema.prisma`: the database

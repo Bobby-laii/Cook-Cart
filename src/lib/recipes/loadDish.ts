@@ -1,5 +1,5 @@
 import type { DishSuggestion } from "@/types";
-import { MEALDB_ID_PREFIX } from "@/lib/recipes/mealdb";
+import { MEALDB_ID_PREFIX } from "@/lib/recipes/mealdbLinks";
 
 /** The dish the user last opened, so recipe → cook mode needs no second fetch. */
 export const ACTIVE_DISH_KEY = "cookcart_active_dish";

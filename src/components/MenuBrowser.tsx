@@ -4,7 +4,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { rememberPhoto } from "@/lib/motion/photoFlip";
 import { useRouter } from "next/navigation";
-import { MENU_CUISINES, type MenuDish } from "@/lib/recipes/mealdb";
+import { MENU_CUISINES, cuisineLabel } from "@/lib/recipes/cuisines";
+import { CUISINE_GUIDE } from "@/lib/recipes/cuisineGuide";
+import type { MenuDish } from "@/lib/recipes/mealdb";
 import { Search } from "lucide-react";
 import { TonightPicks } from "@/components/home/TonightPicks";
 import { localDayKey, pickTonight } from "@/components/home/picks";
@@ -73,6 +75,15 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     );
   }, [dishes, cuisine, query, noOven]);
 
+  // The selected cuisine's intro and first dishes (picks that fit a no-oven kitchen).
+  const guide = cuisine !== "all" ? CUISINE_GUIDE[cuisine] : undefined;
+  const guidePicks = useMemo(() => {
+    if (!guide) return [];
+    return guide.picks
+      .map((id) => dishes.find((d) => d.id === `mealdb-${id}`))
+      .filter((d): d is MenuDish => Boolean(d) && (!noOven || !d!.needsOven));
+  }, [guide, dishes, noOven]);
+
   const pickCuisine = (area: string) => {
     setCuisine(area);
     setShown(PAGE_SIZE);
@@ -99,7 +110,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
 
   const chips = [
     { area: "all", label: "All" },
-    ...cuisines.map((c) => ({ area: c.area, label: c.area })),
+    ...cuisines.map((c) => ({ area: c.area, label: cuisineLabel(c.area) })),
   ];
 
   if (dishes.length === 0) {
@@ -171,11 +182,12 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
           </Link>
         </p>
 
-        <div className="mt-4 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+        <div className="mt-4 flex flex-col gap-2">
+          {/* 37 cuisines: one scrolling row at every width, not four wrapped rows. */}
           <div
             role="group"
             aria-label="Cuisines"
-            className="flex flex-nowrap gap-2 overflow-x-auto -mx-5 px-5 md:-mx-6 md:px-6 lg:mx-0 lg:px-0 lg:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex flex-nowrap gap-2 overflow-x-auto -mx-5 px-5 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {chips.map(({ area, label }) => (
               <button
@@ -200,6 +212,47 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
             <span className="text-stone-900">My kitchen has no oven</span>
           </label>
         </div>
+
+        {guide && (
+          <section aria-labelledby="cuisine-guide" className="mt-6 border-b border-stone-200 pb-8 cc-fade-in" key={cuisine}>
+            <h3 id="cuisine-guide" className="font-display font-medium text-[26px] leading-tight text-stone-900">
+              {cuisineLabel(cuisine)} cooking
+            </h3>
+            <p className="mt-2 max-w-2xl text-stone-700">{guide.intro}</p>
+            {guidePicks.length > 0 && (
+              <>
+                <h4 className="mt-5 text-small font-bold text-stone-900">Good first dishes</h4>
+                <ul className="mt-3 grid grid-cols-3 gap-3 md:gap-6 max-w-3xl">
+                  {guidePicks.map((dish) => (
+                    <li key={dish.id}>
+                      <button
+                        type="button"
+                        onClick={() => openDish(dish)}
+                        disabled={opening !== null}
+                        aria-label={dish.title}
+                        className="group block w-full text-left rounded-lg disabled:cursor-wait"
+                      >
+                        <div className="overflow-hidden rounded-lg bg-stone-100">
+                          <img
+                            data-dish-photo={dish.id}
+                            src={`${dish.imageUrl}/medium`}
+                            alt=""
+                            width={350}
+                            height={262}
+                            className={`aspect-[4/3] w-full object-cover transition-opacity ${opening === dish.id ? "opacity-60" : ""}`}
+                          />
+                        </div>
+                        <span className="mt-2 block font-display font-medium text-[16px] md:text-[18px] leading-snug text-stone-900 group-hover:underline underline-offset-4 decoration-stone-300">
+                          {dish.title}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        )}
 
         {filtered.length === 0 ? (
           <p className="mt-10 text-stone-500">
@@ -239,7 +292,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                       </span>
                     )}
                     <span className="mt-1 block text-sm text-stone-500">
-                      {opening === dish.id ? "Opening the recipe" : dish.cuisine}
+                      {opening === dish.id ? "Opening the recipe" : cuisineLabel(dish.cuisine)}
                     </span>
                   </button>
                 </li>

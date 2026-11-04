@@ -14,26 +14,15 @@ import type { DishSuggestion, RecipeIngredient, RecipeStep } from "@/types";
 import { MENU_NEEDS_OVEN } from "@/lib/recipes/mealdbMeta";
 import { MENU_DESCRIPTIONS } from "@/lib/recipes/mealdbDescriptions";
 import { shortUnit } from "@/lib/units";
+import { MENU_CUISINES, cuisineLabel } from "@/lib/recipes/cuisines";
+import { MEALDB_ID_PREFIX, safeHttpUrl, safeMealDbImage } from "@/lib/recipes/mealdbLinks";
+
+// The cuisine list lives in its own small module so browser code can import it
+// without pulling in every dish description.
+export { MENU_CUISINES, cuisineLabel, MEALDB_ID_PREFIX, safeHttpUrl, safeMealDbImage };
 
 const MEALDB = "https://www.themealdb.com/api/json/v1/1";
-export const MEALDB_ID_PREFIX = "mealdb-";
 
-/** Cuisines shown on the menu, in display order. Asia first. */
-export const MENU_CUISINES = [
-    { area: "Chinese" },
-    { area: "Thai" },
-    { area: "Vietnamese" },
-    { area: "Japanese" },
-    { area: "Malaysian" },
-    { area: "Filipino" },
-    { area: "Indian" },
-    { area: "Italian" },
-    { area: "Spanish" },
-    { area: "French" },
-    { area: "Greek" },
-    { area: "British" },
-    { area: "Mexican" },
-] as const;
 
 export interface MenuDish {
     id: string;
@@ -59,27 +48,6 @@ export type MealDbMeal = MealDbSummary & {
     [key: string]: string | null | undefined;
 };
 
-/**
- * TheMealDB is third-party data. Its source links end up in an <a href> and its
- * photos in an <img src>, so only plain web links are kept: a "javascript:" or
- * "data:" value would otherwise run in the page when clicked.
- */
-export function safeHttpUrl(value: string | null | undefined): string | undefined {
-    if (!value) return undefined;
-    try {
-        const url = new URL(value);
-        return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
-    } catch {
-        return undefined;
-    }
-}
-
-/** Photos must come from TheMealDB's own image host. */
-export function safeMealDbImage(value: string | null | undefined): string | undefined {
-    const url = safeHttpUrl(value);
-    return url && new URL(url).hostname === "www.themealdb.com" && url.startsWith("https://") ? url : undefined;
-}
-
 async function getJson<T>(path: string): Promise<T | null> {
     try {
         const res = await fetch(`${MEALDB}/${path}`, {
@@ -98,31 +66,47 @@ async function getJson<T>(path: string): Promise<T | null> {
  * Every menu dish, grouped by cuisine order. A cuisine the provider returns
  * nothing for is skipped, so an outage shrinks the menu instead of breaking it.
  */
+/** How many cuisine lists are fetched at once; TheMealDB throttles bursts. */
+const MENU_BATCH = 6;
+
+/**
+ * One cuisine's dishes. When TheMealDB is throttling it answers 200 with
+ * `{"meals": null}`, and Next would cache that empty list for 6 hours. So an empty
+ * answer is retried under a different URL (a new cache key) after a short pause.
+ */
+async function fetchArea(area: string): Promise<MealDbSummary[]> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const retry = attempt ? `&try=${attempt}` : "";
+        const data = await getJson<{ meals: MealDbSummary[] | null }>(`filter.php?a=${encodeURIComponent(area)}${retry}`);
+        if (data?.meals?.length) return data.meals;
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
+    return [];
+}
+
 export async function fetchMenu(): Promise<MenuDish[]> {
-    const lists = await Promise.all(
-        MENU_CUISINES.map(async ({ area }) => {
-            const data = await getJson<{ meals: MealDbSummary[] | null }>(
-                `filter.php?a=${encodeURIComponent(area)}`
-            );
-            return (data?.meals ?? []).flatMap((m) => {
+    const dishes: MenuDish[] = [];
+    for (let i = 0; i < MENU_CUISINES.length; i += MENU_BATCH) {
+        const batch = MENU_CUISINES.slice(i, i + MENU_BATCH);
+        const lists = await Promise.all(batch.map(({ area }) => fetchArea(area).then((meals) => ({ area, meals }))));
+        for (const { area, meals } of lists) {
+            for (const m of meals) {
                 const imageUrl = safeMealDbImage(m.strMealThumb);
                 // A dish without a usable photo is left off the menu rather than shown broken.
-                return imageUrl
-                    ? [
-                          {
-                              id: `${MEALDB_ID_PREFIX}${m.idMeal}`,
-                              title: m.strMeal.trim(),
-                              needsOven: MENU_NEEDS_OVEN[m.idMeal] ?? false,
-                              cuisine: area,
-                              imageUrl,
-                              description: MENU_DESCRIPTIONS[m.idMeal] ?? "",
-                          },
-                      ]
-                    : [];
-            });
-        })
-    );
-    return lists.flat();
+                if (!imageUrl) continue;
+                dishes.push({
+                    id: `${MEALDB_ID_PREFIX}${m.idMeal}`,
+                    title: m.strMeal.trim(),
+                    needsOven: MENU_NEEDS_OVEN[m.idMeal] ?? false,
+                    // The filter key; show it with cuisineLabel().
+                    cuisine: area,
+                    imageUrl,
+                    description: MENU_DESCRIPTIONS[m.idMeal] ?? "",
+                });
+            }
+        }
+    }
+    return dishes;
 }
 
 export async function fetchMenuDish(id: string): Promise<DishSuggestion | null> {
@@ -429,7 +413,7 @@ export function mealToDish(meal: MealDbMeal): DishSuggestion {
     }
     const ingredients = mergeIngredients(raw);
 
-    const cuisine = meal.strArea || "World";
+    const cuisine = cuisineLabel(meal.strArea || "Unknown");
     return {
         id: `${MEALDB_ID_PREFIX}${meal.idMeal}`,
         title: meal.strMeal.trim(),
