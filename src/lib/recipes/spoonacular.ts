@@ -56,7 +56,6 @@ const CUISINE_TO_API: Record<string, string> = {
     western: "",
     "western food": "",
     "surprise me": "",
-    "🎲 surprise me!": "",
 };
 
 function apiCuisineFor(cuisine: string): string {
@@ -77,41 +76,6 @@ const searchCache = new Map<string, CachedResult>();
 
 export function hasSpoonacularKey(): boolean {
     return (process.env.SPOONACULAR_API_KEY || "").trim().length > 0;
-}
-
-/* ------------------------------------------------------------------ *
- * Minimal English -> Chinese glossary
- * ------------------------------------------------------------------ */
-
-/**
- * Spoonacular's catalogue is English-only, but the UI renders titleZh when the
- * user has chosen Chinese. Rather than echo English into a Chinese slot, map the
- * words that actually appear in dish titles. This is explicitly approximate:
- * unrecognised words are left in English instead of being guessed at, so the
- * output is never confidently wrong.
- */
-const ZH_GLOSSARY: Record<string, string> = {
-    chicken: "雞", beef: "牛", pork: "豬", lamb: "羊", fish: "魚",
-    salmon: "三文魚", shrimp: "蝦", prawn: "蝦", tofu: "豆腐", egg: "蛋",
-    garlic: "蒜", ginger: "薑", onion: "洋蔥", lemon: "檸檬", lime: "青檸",
-    tomato: "番茄", potato: "薯仔", mushroom: "蘑菇", spinach: "菠菜",
-    broccoli: "西蘭花", carrot: "甘筍", pepper: "椒", chili: "辣椒",
-    cheese: "芝士", cream: "忌廉", butter: "牛油", rice: "飯", noodle: "麵",
-    noodles: "麵", pasta: "意粉", bread: "麵包", soup: "湯", salad: "沙律",
-    roasted: "烤", grilled: "燒烤", fried: "炸", baked: "焗", slow: "慢煮",
-    braised: "燜", stir: "炒", curry: "咖喱", sauce: "醬汁", spicy: "香辣",
-    sweet: "甜", sour: "酸", creamy: "濃滑", easy: "簡易", quick: "快捷",
-};
-
-function approximateChineseTitle(title: string): string {
-    const words = title.toLowerCase().split(/[^a-z]+/).filter(Boolean);
-    const mapped = words.filter((w) => ZH_GLOSSARY[w]).map((w) => ZH_GLOSSARY[w]);
-
-    // Two or more recognised words is enough to be usefully readable. One word is
-    // not, so fall back to the English title rather than emitting a half-translated
-    // fragment that reads worse than the original.
-    if (mapped.length < 2) return title;
-    return mapped.join("") + "（食譜）";
 }
 
 /* ------------------------------------------------------------------ *
@@ -175,9 +139,6 @@ function buildSteps(recipe: SpoonacularRecipe): RecipeStep[] {
                 step: stepNumber,
                 title: `Step ${stepNumber}`,
                 text: (s.step as string).trim(),
-                // No Chinese translation exists in the source. The detail page falls
-                // back to `text` when `textZh` is absent, so leaving it undefined is
-                // correct — inventing one would put fabricated content in the UI.
             };
         });
 }
@@ -187,9 +148,6 @@ function buildIngredients(recipe: SpoonacularRecipe): RecipeIngredient[] {
         .filter((ing) => Boolean(ing.name))
         .map((ing) => ({
             name: ing.name as string,
-            // No Chinese name is available from the source, so this mirrors the English
-            // name. Emitting a fabricated translation would be worse than the truth.
-            nameZh: ing.name as string,
             amount: typeof ing.amount === "number" ? Math.round(ing.amount * 100) / 100 : 1,
             unit: ing.unit || "",
         }));
@@ -273,7 +231,6 @@ function mapRecipeToSuggestion(
     return {
         id: `spoon_${recipe.id}_${index}`,
         title,
-        titleZh: approximateChineseTitle(title),
         cuisine,
         cookTimeMinutes: readyInMinutes,
         difficulty: difficultyFor(readyInMinutes, steps.length),
@@ -282,14 +239,13 @@ function mapRecipeToSuggestion(
             .slice(0, 5)
             .map((i) => i.name)
             .join(", ")}. ${steps.length} cooking steps.`,
-        descriptionZh: `來自食譜資料庫的${cuisine}菜式，共 ${steps.length} 個烹調步驟。`,
         usedUserIngredients,
         extraIngredientsNeeded,
         // Spoonacular has no Hong Kong stock data. Claiming "in stock at all 4
         // supermarket partners" (as the local engine does) would be fabricated, so
         // this states the real limitation instead.
         availabilityNote:
-            "Live recipe — ingredient availability at Hong Kong stores is not verified.",
+            "",
         estimatedCostHkd,
         imageUrl: recipe.image || undefined,
         steps: buildSteps(recipe),

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
                 {
                   parts: [
                     {
-                      text: "Analyze this photo of food/fridge/ingredients. List only the distinct raw grocery ingredients you clearly identify. Return a JSON array of strings in English with common HK/Chinese terms, for example: [\"Chicken Thighs\", \"Bok Choy\", \"Eggs\", \"Garlic\", \"Ginger\"]. Do not output markdown, only valid JSON.",
+                      text: "Analyze this photo of food/fridge/ingredients. List only the distinct raw grocery ingredients you clearly identify. Return a JSON array of strings in plain English, for example: [\"Chicken Thighs\", \"Bok Choy\", \"Eggs\", \"Garlic\", \"Ginger\"]. Do not output markdown, only valid JSON.",
                     },
                     {
                       inlineData: {
@@ -63,9 +63,9 @@ export async function POST(req: Request) {
     // Intelligent Fallback Vision Detector for MVP
     // Returns realistic ingredients detected from common fridge/pantry photos
     const realisticDetectedItems = [
-      "Hong Kong Bok Choy",
+      "Bok Choy",
       "Fresh Eggs",
-      "Old Ginger Root",
+      "Ginger",
       "Whole Garlic Bulbs",
       "Chicken Thigh Fillets",
     ];
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       success: true,
       detectedIngredients: realisticDetectedItems,
       confidence: "demo-simulated",
-      note: "AI detected 5 common Hong Kong fresh items. Please confirm or edit before cooking.",
+      note: "These are sample ingredients, not read from your photo. Please confirm or edit before cooking.",
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

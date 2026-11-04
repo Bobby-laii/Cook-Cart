@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertAmount, convertTemperatures, defaultUnitSystem } from "@/lib/units";
+import { convertAmount, convertTemperatures, defaultUnitSystem, formatAmount, formatQuantity, shortUnit } from "@/lib/units";
 
 describe("convertAmount", () => {
     it("turns US volumes and weights into metric", () => {
@@ -45,5 +45,34 @@ describe("defaultUnitSystem", () => {
         expect(defaultUnitSystem("en-GB")).toBe("metric");
         expect(defaultUnitSystem("zh-HK")).toBe("metric");
         expect(defaultUnitSystem(undefined)).toBe("metric");
+    });
+});
+
+describe("shortUnit", () => {
+    it("gives one short spelling per unit and nothing for other words", () => {
+        expect(shortUnit("Tablespoons")).toBe("tbsp");
+        expect(shortUnit("teaspoon")).toBe("tsp");
+        expect(shortUnit("cups")).toBe("cup");
+        expect(shortUnit("Grams")).toBe("g");
+        expect(shortUnit("litres")).toBe("l");
+        expect(shortUnit("lbs")).toBe("lb");
+        expect(shortUnit("oz.")).toBe("oz");
+        expect(shortUnit("cloves")).toBe("clove");
+        expect(shortUnit("large")).toBeUndefined();
+    });
+});
+
+describe("formatAmount after conversion", () => {
+    it("shows converted US spoons as fractions, not decimals", () => {
+        const { amount, unit } = convertAmount(4, "ml", "us"); // 0.8 tsp
+        expect(`${formatAmount(amount, unit)} ${unit}`).toBe("¾ tsp");
+        const cups = convertAmount(500, "ml", "us"); // 2.08 cup
+        expect(formatQuantity(cups.amount, cups.unit)).toBe("2⅛ cups");
+    });
+
+    it("keeps metric amounts decimal and never blank for a positive amount", () => {
+        expect(formatAmount(1.36, "kg")).toBe("1.4");
+        expect(formatAmount(0.02, "l")).toBe("0.1");
+        expect(formatAmount(0, "g")).toBe("");
     });
 });

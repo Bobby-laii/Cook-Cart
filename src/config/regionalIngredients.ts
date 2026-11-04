@@ -10,7 +10,6 @@
 export interface RegionalIngredientItem {
   id: string;
   en: string;
-  zh: string;
   rank?: number;
   consolidatedUsagePct?: number;
   peakUsagePct?: number;
@@ -44,7 +43,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "butter",
     en: "Butter",
-    zh: "牛油",
     rank: 1,
     consolidatedUsagePct: 64.4,
     peakUsagePct: 84.0,
@@ -54,7 +52,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "olive-oil",
     en: "Extra-Virgin Olive Oil",
-    zh: "特級初榨橄欖油",
     rank: 2,
     consolidatedUsagePct: 52.7,
     peakUsagePct: 85.0,
@@ -64,7 +61,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "parmesan",
     en: "Parmigiano-Reggiano",
-    zh: "巴馬臣芝士",
     rank: 3,
     consolidatedUsagePct: 38.2,
     peakUsagePct: 65.0,
@@ -74,7 +70,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "pesto",
     en: "Pesto Genovese",
-    zh: "意式青醬",
     rank: 4,
     consolidatedUsagePct: 35.0,
     peakUsagePct: 35.0,
@@ -84,7 +79,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "parsley",
     en: "Flat-Leaf Parsley",
-    zh: "歐芹",
     rank: 5,
     consolidatedUsagePct: 34.8,
     peakUsagePct: 70.0,
@@ -94,7 +88,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "pasta",
     en: "Semolina Pasta",
-    zh: "意大利麵",
     rank: 6,
     consolidatedUsagePct: 31.6,
     peakUsagePct: 60.0,
@@ -104,7 +97,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "thyme",
     en: "Fresh Thyme",
-    zh: "百里香",
     rank: 7,
     consolidatedUsagePct: 29.5,
     peakUsagePct: 65.0,
@@ -114,7 +106,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "bay-leaves",
     en: "Bay Leaves",
-    zh: "香葉",
     rank: 8,
     consolidatedUsagePct: 28.5,
     peakUsagePct: 62.0,
@@ -124,7 +115,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "lemon",
     en: "Lemon",
-    zh: "檸檬",
     rank: 9,
     consolidatedUsagePct: 27.8,
     peakUsagePct: 39.0,
@@ -134,7 +124,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "feta",
     en: "Feta Cheese",
-    zh: "菲達芝士",
     rank: 10,
     consolidatedUsagePct: 27.2,
     peakUsagePct: 40.0,
@@ -144,7 +133,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "dijon-mustard",
     en: "Dijon Mustard",
-    zh: "第戎芥末醬",
     rank: 11,
     consolidatedUsagePct: 26.2,
     peakUsagePct: 49.0,
@@ -154,7 +142,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "gouda",
     en: "Gouda Cheese",
-    zh: "高達芝士",
     rank: 12,
     consolidatedUsagePct: 25.0,
     peakUsagePct: 25.0,
@@ -164,7 +151,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "gnocchi",
     en: "Gnocchi",
-    zh: "意式薯糰",
     rank: 13,
     consolidatedUsagePct: 25.0,
     peakUsagePct: 25.0,
@@ -174,7 +160,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "basil",
     en: "Fresh Basil",
-    zh: "羅勒",
     rank: 14,
     consolidatedUsagePct: 24.1,
     peakUsagePct: 56.0,
@@ -184,7 +169,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "white-wine",
     en: "White Wine",
-    zh: "白酒",
     rank: 15,
     consolidatedUsagePct: 23.4,
     peakUsagePct: 46.0,
@@ -194,7 +178,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "oregano",
     en: "Oregano",
-    zh: "牛至",
     rank: 16,
     consolidatedUsagePct: 23.1,
     peakUsagePct: 54.0,
@@ -204,7 +187,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "mozzarella",
     en: "Mozzarella",
-    zh: "水牛芝士",
     rank: 17,
     consolidatedUsagePct: 22.8,
     peakUsagePct: 45.0,
@@ -214,7 +196,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "rosemary",
     en: "Rosemary",
-    zh: "迷迭香",
     rank: 18,
     consolidatedUsagePct: 22.4,
     peakUsagePct: 53.0,
@@ -224,7 +205,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "cannellini-beans",
     en: "Cannellini Beans",
-    zh: "白豆",
     rank: 19,
     consolidatedUsagePct: 21.0,
     peakUsagePct: 21.0,
@@ -234,7 +214,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "red-wine",
     en: "Red Wine",
-    zh: "紅酒",
     rank: 20,
     consolidatedUsagePct: 20.7,
     peakUsagePct: 47.0,
@@ -244,7 +223,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "cheddar",
     en: "Cheddar Cheese",
-    zh: "車打芝士",
     rank: 21,
     consolidatedUsagePct: 20.7,
     peakUsagePct: 33.0,
@@ -254,7 +232,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "chorizo",
     en: "Spanish Chorizo",
-    zh: "西班牙辣腸",
     rank: 22,
     consolidatedUsagePct: 20.3,
     peakUsagePct: 30.0,
@@ -264,7 +241,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "prosciutto",
     en: "Prosciutto di Parma",
-    zh: "巴馬火腿",
     rank: 23,
     consolidatedUsagePct: 20.2,
     peakUsagePct: 45.0,
@@ -274,7 +250,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "sourdough",
     en: "Sourdough Bread",
-    zh: "酸種麵包",
     rank: 24,
     consolidatedUsagePct: 20.0,
     peakUsagePct: 20.0,
@@ -284,7 +259,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "goat-cheese",
     en: "Goat Cheese",
-    zh: "山羊芝士",
     rank: 25,
     consolidatedUsagePct: 20.0,
     peakUsagePct: 20.0,
@@ -294,7 +268,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "gruyere",
     en: "Gruyère Cheese",
-    zh: "格呂耶爾芝士",
     rank: 26,
     consolidatedUsagePct: 19.7,
     peakUsagePct: 32.0,
@@ -304,7 +277,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "wine-vinegar",
     en: "Wine Vinegar",
-    zh: "酒醋",
     rank: 27,
     consolidatedUsagePct: 18.7,
     peakUsagePct: 27.0,
@@ -314,7 +286,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "leeks",
     en: "Leeks",
-    zh: "韭蔥",
     rank: 28,
     consolidatedUsagePct: 18.2,
     peakUsagePct: 44.0,
@@ -324,7 +295,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "shallots",
     en: "Shallots",
-    zh: "干蔥",
     rank: 29,
     consolidatedUsagePct: 18.1,
     peakUsagePct: 42.0,
@@ -334,7 +304,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "lentils",
     en: "Green Lentils",
-    zh: "小扁豆",
     rank: 30,
     consolidatedUsagePct: 18.0,
     peakUsagePct: 18.0,
@@ -344,7 +313,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "chickpeas",
     en: "Chickpeas",
-    zh: "鷹嘴豆",
     rank: 31,
     consolidatedUsagePct: 18.0,
     peakUsagePct: 18.0,
@@ -354,7 +322,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "brie-camembert",
     en: "Brie Cheese",
-    zh: "布里芝士",
     rank: 32,
     consolidatedUsagePct: 17.3,
     peakUsagePct: 27.0,
@@ -364,7 +331,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "creme-fraiche",
     en: "Crème Fraîche",
-    zh: "法式酸忌廉",
     rank: 33,
     consolidatedUsagePct: 17.0,
     peakUsagePct: 27.0,
@@ -374,7 +340,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "pecorino",
     en: "Pecorino Romano",
-    zh: "佩科里諾羊奶芝士",
     rank: 34,
     consolidatedUsagePct: 16.8,
     peakUsagePct: 25.0,
@@ -384,7 +349,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "pancetta",
     en: "Pancetta",
-    zh: "意式生煙肉",
     rank: 35,
     consolidatedUsagePct: 16.8,
     peakUsagePct: 30.0,
@@ -394,7 +358,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "balsamic-vinegar",
     en: "Balsamic Vinegar of Modena",
-    zh: "摩德納香醋",
     rank: 36,
     consolidatedUsagePct: 16.4,
     peakUsagePct: 32.0,
@@ -404,7 +367,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "chives",
     en: "Fresh Chives",
-    zh: "細香蔥",
     rank: 37,
     consolidatedUsagePct: 15.7,
     peakUsagePct: 41.0,
@@ -414,7 +376,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "dill",
     en: "Fresh Dill",
-    zh: "蒔蘿",
     rank: 38,
     consolidatedUsagePct: 15.5,
     peakUsagePct: 40.0,
@@ -424,7 +385,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "salami",
     en: "Salami",
-    zh: "薩拉米香腸",
     rank: 39,
     consolidatedUsagePct: 15.5,
     peakUsagePct: 20.0,
@@ -434,7 +394,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "anchovies",
     en: "Anchovies",
-    zh: "銀魚柳",
     rank: 40,
     consolidatedUsagePct: 14.9,
     peakUsagePct: 36.0,
@@ -444,7 +403,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "capers",
     en: "Capers",
-    zh: "酸豆",
     rank: 41,
     consolidatedUsagePct: 14.4,
     peakUsagePct: 37.0,
@@ -454,7 +412,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "ricotta",
     en: "Ricotta",
-    zh: "意大利乳清芝士",
     rank: 42,
     consolidatedUsagePct: 13.9,
     peakUsagePct: 26.0,
@@ -464,7 +421,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "mascarpone",
     en: "Mascarpone",
-    zh: "馬斯卡彭芝士",
     rank: 43,
     consolidatedUsagePct: 12.8,
     peakUsagePct: 26.0,
@@ -474,7 +430,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "blue-cheese",
     en: "Blue Cheese",
-    zh: "藍芝士",
     rank: 44,
     consolidatedUsagePct: 12.6,
     peakUsagePct: 25.0,
@@ -484,7 +439,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "emmental",
     en: "Emmental Cheese",
-    zh: "埃曼塔芝士",
     rank: 45,
     consolidatedUsagePct: 11.7,
     peakUsagePct: 24.0,
@@ -494,7 +448,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "beetroot",
     en: "Beetroot",
-    zh: "紅菜頭",
     rank: 46,
     consolidatedUsagePct: 11.7,
     peakUsagePct: 22.0,
@@ -504,7 +457,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "sour-cream",
     en: "Sour Cream",
-    zh: "酸忌廉",
     rank: 47,
     consolidatedUsagePct: 10.4,
     peakUsagePct: 22.0,
@@ -514,7 +466,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "sauerkraut",
     en: "Sauerkraut",
-    zh: "德式酸菜",
     rank: 48,
     consolidatedUsagePct: 10.1,
     peakUsagePct: 18.0,
@@ -524,7 +475,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "horseradish",
     en: "Horseradish",
-    zh: "辣根",
     rank: 49,
     consolidatedUsagePct: 10.2,
     peakUsagePct: 17.0,
@@ -534,7 +484,6 @@ export const TOP_50_EUROPEAN_INGREDIENTS: RegionalIngredientItem[] = [
   {
     id: "caraway-seeds",
     en: "Caraway Seeds",
-    zh: "葛縷子",
     rank: 50,
     consolidatedUsagePct: 10.0,
     peakUsagePct: 16.0,
@@ -587,162 +536,178 @@ export function isEuropeanCuisine(cuisineId: string): boolean {
 /**
  * Regional ingredient mappings for non-European cuisines.
  */
-const NON_EUROPEAN_REGIONAL_INGREDIENTS: Record<string, { en: string; zh: string }[]> = {
+const NON_EUROPEAN_REGIONAL_INGREDIENTS: Record<string, { en: string }[]> = {
   cantonese: [
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Bok Choy", zh: "白菜仔" },
-    { en: "Gai Lan", zh: "芥蘭" },
-    { en: "Fresh Eggs", zh: "鮮雞蛋" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Sliced Beef", zh: "牛肉片" },
-    { en: "Shiitake Mushrooms", zh: "鮮冬菇" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Old Ginger", zh: "老薑" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Tomatoes", zh: "蕃茄" },
+    { en: "Chicken Thighs" },
+    { en: "Bok Choy" },
+    { en: "Fresh Eggs" },
+    { en: "Firm Tofu" },
+    { en: "Pork Belly" },
+    { en: "Sliced Beef" },
+    { en: "Shiitake Mushrooms" },
+    { en: "Garlic" },
+    { en: "Ginger" },
+    { en: "Spring Onions" },
+    { en: "Tomatoes" },
   ],
   asian: [
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Bok Choy", zh: "白菜仔" },
-    { en: "Fresh Eggs", zh: "鮮雞蛋" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Sliced Beef", zh: "牛肉片" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Old Ginger", zh: "老薑" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Jasmine White Rice", zh: "泰國香米" },
-    { en: "Fresh Prawns", zh: "鮮蝦" },
-    { en: "Shiitake Mushrooms", zh: "鮮冬菇" },
+    { en: "Chicken Thighs" },
+    { en: "Bok Choy" },
+    { en: "Fresh Eggs" },
+    { en: "Firm Tofu" },
+    { en: "Pork Belly" },
+    { en: "Sliced Beef" },
+    { en: "Garlic" },
+    { en: "Ginger" },
+    { en: "Spring Onions" },
+    { en: "Jasmine White Rice" },
+    { en: "Fresh Prawns" },
+    { en: "Shiitake Mushrooms" },
   ],
   sichuan: [
-    { en: "Sliced Beef", zh: "肥牛片" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Bean Sprouts", zh: "芽菜" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Old Ginger", zh: "老薑" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Shiitake Mushrooms", zh: "鮮冬菇" },
-    { en: "Chinese Cabbage", zh: "娃娃菜" },
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Cucumber", zh: "青瓜" },
-    { en: "Fresh Eggs", zh: "鮮雞蛋" },
+    { en: "Sliced Beef" },
+    { en: "Firm Tofu" },
+    { en: "Pork Belly" },
+    { en: "Bean Sprouts" },
+    { en: "Garlic" },
+    { en: "Ginger" },
+    { en: "Spring Onions" },
+    { en: "Shiitake Mushrooms" },
+    { en: "Chinese Cabbage" },
+    { en: "Chicken Thighs" },
+    { en: "Cucumber" },
+    { en: "Fresh Eggs" },
   ],
   japanese: [
-    { en: "Salmon Fillet", zh: "三文魚柳" },
-    { en: "Japanese Udon", zh: "烏冬" },
-    { en: "Fresh Eggs", zh: "鮮雞蛋" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Shiitake Mushrooms", zh: "鮮冬菇" },
-    { en: "Sliced Beef", zh: "肥牛片" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Cucumber", zh: "青瓜" },
-    { en: "Carrots", zh: "紅蘿蔔" },
-    { en: "Enoki Mushrooms", zh: "金針菇" },
-    { en: "Cod Fish Fillet", zh: "鱈魚柳" },
+    { en: "Salmon Fillet" },
+    { en: "Japanese Udon" },
+    { en: "Fresh Eggs" },
+    { en: "Firm Tofu" },
+    { en: "Shiitake Mushrooms" },
+    { en: "Sliced Beef" },
+    { en: "Spring Onions" },
+    { en: "Chicken Thighs" },
+    { en: "Cucumber" },
+    { en: "Carrots" },
+    { en: "Enoki Mushrooms" },
+    { en: "Cod Fish Fillet" },
   ],
   korean: [
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Sliced Beef", zh: "肥牛片" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Fresh Eggs", zh: "鮮雞蛋" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Enoki Mushrooms", zh: "金針菇" },
-    { en: "Chinese Cabbage", zh: "娃娃菜" },
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Bean Sprouts", zh: "芽菜" },
-    { en: "Zucchini", zh: "意大利西葫蘆" },
-    { en: "Yellow Onions", zh: "洋蔥" },
+    { en: "Pork Belly" },
+    { en: "Sliced Beef" },
+    { en: "Firm Tofu" },
+    { en: "Fresh Eggs" },
+    { en: "Spring Onions" },
+    { en: "Garlic" },
+    { en: "Enoki Mushrooms" },
+    { en: "Chinese Cabbage" },
+    { en: "Chicken Thighs" },
+    { en: "Bean Sprouts" },
+    { en: "Zucchini" },
+    { en: "Yellow Onions" },
   ],
   thai: [
-    { en: "Fresh Prawns", zh: "鮮蝦" },
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Tomatoes", zh: "蕃茄" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Squid", zh: "魷魚" },
-    { en: "Fresh Coriander", zh: "芫荽" },
-    { en: "Firm Tofu", zh: "硬豆腐" },
-    { en: "Bean Sprouts", zh: "芽菜" },
-    { en: "Jasmine White Rice", zh: "泰國香米" },
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Eggplant", zh: "茄子" },
+    { en: "Fresh Prawns" },
+    { en: "Chicken Thighs" },
+    { en: "Tomatoes" },
+    { en: "Garlic" },
+    { en: "Spring Onions" },
+    { en: "Squid" },
+    { en: "Fresh Coriander" },
+    { en: "Firm Tofu" },
+    { en: "Bean Sprouts" },
+    { en: "Jasmine White Rice" },
+    { en: "Pork Belly" },
+    { en: "Eggplant" },
   ],
   vietnamese: [
-    { en: "Sliced Beef", zh: "肥牛片" },
-    { en: "Rice Vermicelli", zh: "米粉" },
-    { en: "Fresh Prawns", zh: "鮮蝦" },
-    { en: "Bean Sprouts", zh: "芽菜" },
-    { en: "Fresh Coriander", zh: "芫荽" },
-    { en: "Cucumber", zh: "青瓜" },
-    { en: "Pork Belly", zh: "五花腩" },
-    { en: "Carrots", zh: "紅蘿蔔" },
-    { en: "Spring Onions", zh: "青蔥" },
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Old Ginger", zh: "老薑" },
+    { en: "Sliced Beef" },
+    { en: "Rice Vermicelli" },
+    { en: "Fresh Prawns" },
+    { en: "Bean Sprouts" },
+    { en: "Fresh Coriander" },
+    { en: "Cucumber" },
+    { en: "Pork Belly" },
+    { en: "Carrots" },
+    { en: "Spring Onions" },
+    { en: "Chicken Thighs" },
+    { en: "Garlic" },
+    { en: "Ginger" },
   ],
   indian: [
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Tomatoes", zh: "蕃茄" },
-    { en: "Yellow Onions", zh: "洋蔥" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Old Ginger", zh: "老薑" },
-    { en: "Chickpeas", zh: "鷹嘴豆" },
-    { en: "Spinach", zh: "菠菜" },
-    { en: "Potatoes", zh: "薯仔" },
-    { en: "Fresh Coriander", zh: "芫荽" },
-    { en: "Jasmine White Rice", zh: "香米" },
-    { en: "Butter", zh: "牛油" },
-    { en: "Cauliflower", zh: "椰菜花" },
+    { en: "Chicken Thighs" },
+    { en: "Tomatoes" },
+    { en: "Yellow Onions" },
+    { en: "Garlic" },
+    { en: "Ginger" },
+    { en: "Chickpeas" },
+    { en: "Spinach" },
+    { en: "Potatoes" },
+    { en: "Fresh Coriander" },
+    { en: "Jasmine White Rice" },
+    { en: "Butter" },
+    { en: "Cauliflower" },
   ],
   mexican: [
-    { en: "Chicken Breast", zh: "雞胸肉" },
-    { en: "Minced Beef", zh: "免治牛肉" },
-    { en: "Cheddar Cheese", zh: "車打芝士" },
-    { en: "Tomatoes", zh: "蕃茄" },
-    { en: "Red Onion", zh: "紫洋蔥" },
-    { en: "Fresh Coriander", zh: "芫荽" },
-    { en: "Bell Peppers", zh: "彩椒" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Sweet Corn", zh: "粟米" },
-    { en: "Prawns", zh: "鮮蝦" },
-    { en: "Sour Cream", zh: "酸忌廉" },
-    { en: "Cannellini Beans", zh: "白豆" },
+    { en: "Chicken Breast" },
+    { en: "Minced Beef" },
+    { en: "Cheddar Cheese" },
+    { en: "Tomatoes" },
+    { en: "Red Onion" },
+    { en: "Fresh Coriander" },
+    { en: "Bell Peppers" },
+    { en: "Garlic" },
+    { en: "Sweet Corn" },
+    { en: "Prawns" },
+    { en: "Sour Cream" },
+    { en: "Cannellini Beans" },
   ],
   american: [
-    { en: "Minced Beef", zh: "免治牛肉" },
-    { en: "Cheddar Cheese", zh: "車打芝士" },
-    { en: "Bacon", zh: "煙肉" },
-    { en: "Potatoes", zh: "薯仔" },
-    { en: "Butter", zh: "牛油" },
-    { en: "Yellow Onions", zh: "洋蔥" },
-    { en: "Tomatoes", zh: "蕃茄" },
-    { en: "Lettuce", zh: "生菜" },
-    { en: "Chicken Breast", zh: "雞胸肉" },
-    { en: "Sweet Corn", zh: "粟米" },
-    { en: "Sausages", zh: "香腸" },
-    { en: "Fresh Eggs", zh: "鮮雞蛋" },
+    { en: "Minced Beef" },
+    { en: "Cheddar Cheese" },
+    { en: "Bacon" },
+    { en: "Potatoes" },
+    { en: "Butter" },
+    { en: "Yellow Onions" },
+    { en: "Tomatoes" },
+    { en: "Lettuce" },
+    { en: "Chicken Breast" },
+    { en: "Sweet Corn" },
+    { en: "Sausages" },
+    { en: "Fresh Eggs" },
   ],
   african: [
-    { en: "Lamb Chops", zh: "羊扒" },
-    { en: "Chickpeas", zh: "鷹嘴豆" },
-    { en: "Tomatoes", zh: "蕃茄" },
-    { en: "Yellow Onions", zh: "洋蔥" },
-    { en: "Garlic", zh: "大蒜" },
-    { en: "Carrots", zh: "紅蘿蔔" },
-    { en: "Lemon", zh: "檸檬" },
-    { en: "Fresh Coriander", zh: "芫荽" },
-    { en: "Chicken Thighs", zh: "雞腿肉" },
-    { en: "Extra-Virgin Olive Oil", zh: "特級初榨橄欖油" },
-    { en: "Potatoes", zh: "薯仔" },
-    { en: "Zucchini", zh: "意大利西葫蘆" },
+    { en: "Lamb Chops" },
+    { en: "Chickpeas" },
+    { en: "Tomatoes" },
+    { en: "Yellow Onions" },
+    { en: "Garlic" },
+    { en: "Carrots" },
+    { en: "Lemon" },
+    { en: "Fresh Coriander" },
+    { en: "Chicken Thighs" },
+    { en: "Extra-Virgin Olive Oil" },
+    { en: "Potatoes" },
+    { en: "Zucchini" },
   ],
 };
+
+/**
+ * Everyday staples found in kitchens almost everywhere. Shown as quick-tap chips when
+ * no particular cuisine is chosen (the default).
+ */
+export const EVERYDAY_STAPLES: { en: string }[] = [
+  { en: "Eggs" },
+  { en: "Rice" },
+  { en: "Onion" },
+  { en: "Garlic" },
+  { en: "Tomatoes" },
+  { en: "Chicken" },
+  { en: "Pasta" },
+  { en: "Potatoes" },
+  { en: "Carrots" },
+  { en: "Cheese" },
+];
 
 /** Number of European benchmark ingredients shown as quick-tap chips. */
 export const EUROPEAN_QUICK_TAP_COUNT = 10;
@@ -754,15 +719,12 @@ export const EUROPEAN_QUICK_TAP_COUNT = 10;
 export function getPopularIngredientsForCuisine(
   cuisineId: string,
   limit: number = 14
-): { en: string; zh: string }[] {
-  const normalized = (cuisineId || "cantonese").trim().toLowerCase();
+): { en: string }[] {
+  const normalized = (cuisineId || "any").trim().toLowerCase();
 
   // Every European cuisine shows the Top 10 from the European benchmark, in rank order.
   if (isEuropeanCuisine(normalized)) {
-    return TOP_50_EUROPEAN_INGREDIENTS.slice(0, EUROPEAN_QUICK_TAP_COUNT).map((item) => ({
-      en: item.en,
-      zh: item.zh,
-    }));
+    return TOP_50_EUROPEAN_INGREDIENTS.slice(0, EUROPEAN_QUICK_TAP_COUNT).map((item) => ({ en: item.en }));
   }
 
   // Handle non-European cuisines
@@ -770,7 +732,7 @@ export function getPopularIngredientsForCuisine(
     return NON_EUROPEAN_REGIONAL_INGREDIENTS[normalized].slice(0, limit);
   }
 
-  // Fallback for surprise_me or unspecified
-  return NON_EUROPEAN_REGIONAL_INGREDIENTS.cantonese.slice(0, limit);
+  // "Any style" or anything unrecognised: everyday staples.
+  return EVERYDAY_STAPLES.slice(0, limit);
 }
 

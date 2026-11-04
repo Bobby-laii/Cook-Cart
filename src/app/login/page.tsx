@@ -3,141 +3,130 @@
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { UtensilsCrossed, AlertCircle, ArrowRight } from "lucide-react";
+
+const inputClass =
+  "h-[52px] w-full rounded-lg border border-stone-200 bg-stone-100 px-4 text-[17px] text-stone-900 placeholder:text-stone-500 focus:border-stone-900 focus:bg-stone-50 focus:outline-none";
+const labelClass = "mb-2 block text-[15px] font-bold text-stone-900";
+
+function safeCallback(raw: string | null): string {
+  // Same-origin relative paths only, so the login page can't be used as an open redirect.
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/";
+}
 
 function LoginPageContent() {
-  const { login, switchDemoRole } = useAuth();
-  const { t, language } = useLanguage();
+  const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/chat";
+  const callbackUrl = safeCallback(searchParams.get("callbackUrl"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"form" | "demo" | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const signIn = async (mode: "form" | "demo", address: string, secret: string) => {
     setError("");
-    setLoading(true);
-
-    const res = await login(email, password);
-    setLoading(false);
-
+    setLoading(mode);
+    const res = await login(address, secret);
+    setLoading(null);
     if (res.success) {
       router.push(callbackUrl);
       router.refresh();
     } else {
-      setError(res.error || "Login failed");
+      setError(res.error || "That email and password don't match.");
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    signIn("form", email, password);
+  };
+
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-brand-500 items-center justify-center text-white shadow-md">
-            <UtensilsCrossed className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-black text-stone-900">
-            {language === "zh-HK" ? "登入 CookCart" : "Sign In to CookCart"}
-          </h2>
-          <p className="text-sm text-stone-600">
-            {language === "zh-HK"
-              ? "登入以儲存食譜，同你嘅大廚傾偈"
-              : "Sign in to save recipes and chat with your chef"}
-          </p>
+    <div className="mx-auto w-full max-w-md px-5 pb-12 pt-8 sm:pt-16">
+      <h1 className="font-display text-[34px] font-medium leading-[1.1] text-stone-900">Sign in</h1>
+      <p className="mt-2 text-[17px] text-stone-500">
+        Save recipes and cook with your own chef.
+      </p>
+
+      {error && (
+        <div role="alert" className="mt-6 flex items-start gap-2 text-[15px] text-danger">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <div>
+          <label htmlFor="login-email" className={labelClass}>
+            Email
+          </label>
+          <input
+            id="login-email"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className={inputClass}
+          />
         </div>
 
-        {error && (
-          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-stone-200 space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. customer@cookcart.hk"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm shadow-md transition disabled:opacity-50"
-          >
-            {loading ? t("loading") : t("navLogin")}
-          </button>
-
-          <div className="pt-2 text-center text-xs text-stone-600">
-            {language === "zh-HK" ? "未有帳號？" : "Don't have an account?"}{" "}
-            <Link href="/register" className="text-brand-600 font-bold hover:underline">
-              {language === "zh-HK" ? "立即免費註冊" : "Register now"}
-            </Link>
-          </div>
-        </form>
-
-        {/* Quick Demo Logins */}
-        <div className="bg-stone-100 p-4 rounded-xl border border-stone-200 space-y-2">
-          <p className="text-xs font-bold text-stone-700 uppercase tracking-wider text-center">
-            ⚡ Quick 1-Click Demo Login
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => switchDemoRole("CUSTOMER")}
-              className="px-2 py-2 rounded bg-white hover:bg-stone-50 border border-stone-300 text-xs font-semibold text-stone-800 transition"
-            >
-              👤 Customer
-            </button>
-            <button
-              onClick={() => switchDemoRole("STORE_PARTNER")}
-              className="px-2 py-2 rounded bg-white hover:bg-stone-50 border border-stone-300 text-xs font-semibold text-stone-800 transition"
-            >
-              🏪 Partner
-            </button>
-            <button
-              onClick={() => switchDemoRole("ADMIN")}
-              className="px-2 py-2 rounded bg-white hover:bg-stone-50 border border-stone-300 text-xs font-semibold text-stone-800 transition"
-            >
-              🛡️ Admin
-            </button>
-          </div>
+        <div>
+          <label htmlFor="login-password" className={labelClass}>
+            Password
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+          />
         </div>
+
+        <button
+          type="submit"
+          disabled={loading !== null}
+          className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand-500 text-[17px] font-bold text-white transition-colors hover:bg-brand-600 disabled:opacity-60"
+        >
+          {loading === "form" && <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden />}
+          {loading === "form" ? "Signing in..." : "Sign in"}
+        </button>
+      </form>
+
+      <div className="mt-8 border-t border-stone-200 pt-6">
+        <p className="text-[15px] text-stone-500">Just looking around? Use the shared demo account.</p>
+        <button
+          type="button"
+          onClick={() => signIn("demo", "customer@cookcart.hk", "Password123!")}
+          disabled={loading !== null}
+          className="mt-3 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-lg border border-stone-900 bg-stone-50 text-[17px] font-bold text-stone-900 transition-colors hover:bg-stone-100 disabled:opacity-60"
+        >
+          {loading === "demo" && <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden />}
+          Try the demo account
+        </button>
       </div>
+
+      <p className="mt-8 text-[15px] text-stone-500">
+        {"New to Bon Taste? "}
+        <Link href="/register" className="font-bold text-stone-900 underline underline-offset-4">
+          Create an account
+        </Link>
+      </p>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-[80vh]" />}>
+    <Suspense fallback={<div className="min-h-[60vh]" />}>
       <LoginPageContent />
     </Suspense>
   );

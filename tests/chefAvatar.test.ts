@@ -68,3 +68,19 @@ describe("Chef avatar config", () => {
   });
 });
 
+
+import { CHEF_NAMES, randomChefName } from "@/lib/avatar/chefAvatar";
+
+describe("randomChefName", () => {
+  it("picks a name from the list and never repeats the current one", () => {
+    for (let i = 0; i < 50; i++) {
+      const name = randomChefName("Chef Mei");
+      expect(CHEF_NAMES).toContain(name);
+      expect(name).not.toBe("Chef Mei");
+    }
+  });
+
+  it("keeps every name within the 30-character limit", () => {
+    for (const n of CHEF_NAMES) expect(n.length).toBeLessThanOrEqual(30);
+  });
+});

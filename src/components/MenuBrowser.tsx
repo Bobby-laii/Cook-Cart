@@ -2,18 +2,21 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { rememberPhoto } from "@/lib/motion/photoFlip";
 import { useRouter } from "next/navigation";
-import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { MENU_CUISINES, type MenuDish } from "@/lib/recipes/mealdb";
 import { Search } from "lucide-react";
+import { TonightPicks } from "@/components/home/TonightPicks";
+import { localDayKey, pickTonight } from "@/components/home/picks";
 
 const PAGE_SIZE = 24;
 const NO_OVEN_KEY = "bontaste_no_oven";
 
+/**
+ * Home: "Tonight" (three calm picks for this evening) and the full menu below it.
+ */
 export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   const router = useRouter();
-  const { language } = useLanguage();
-  const zh = language === "zh-HK";
 
   const [cuisine, setCuisine] = useState<string>("all");
   const [query, setQuery] = useState("");
@@ -23,6 +26,10 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   // "My kitchen has no oven": hides baked and roasted dishes. Remembered in this
   // browser; storage can be blocked, so every access is guarded.
   const [noOven, setNoOven] = useState(false);
+  // Tonight's picks are seeded by the local date, which only the browser knows, so
+  // they are worked out after mount (the server render shows placeholders).
+  const [day, setDay] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
 
   useEffect(() => {
     try {
@@ -30,6 +37,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     } catch {
       // Storage unavailable: start with every dish shown.
     }
+    setDay(localDayKey());
   }, []);
 
   const toggleNoOven = () => {
@@ -43,6 +51,11 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     }
   };
 
+  const picks = useMemo(
+    () => (day === null ? null : pickTonight(dishes, { day, round, noOven })),
+    [dishes, day, round, noOven]
+  );
+
   // Only offer chips for cuisines that actually came back with dishes.
   const cuisines = useMemo(
     () => MENU_CUISINES.filter((c) => dishes.some((d) => d.cuisine === c.area)),
@@ -55,7 +68,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
       (d) =>
         (cuisine === "all" || d.cuisine === cuisine) &&
         (!noOven || !d.needsOven) &&
-        (!q || d.title.toLowerCase().includes(q) || d.titleZh.includes(query.trim()))
+        (!q || d.title.toLowerCase().includes(q))
     );
   }, [dishes, cuisine, query, noOven]);
 
@@ -65,7 +78,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   };
 
   // Same hand-off the chat uses: the recipe and cook pages read the active dish
-  // from sessionStorage, so a menu dish gets the full recipe, cart and cook mode.
+  // from sessionStorage, so a menu dish gets the full recipe and cook mode.
   const openDish = async (dish: MenuDish) => {
     setOpening(dish.id);
     setOpenError(false);
@@ -74,6 +87,8 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       sessionStorage.setItem("cookcart_active_dish", JSON.stringify(data.dish));
+      // Measured now, after the fetch, so a scroll while waiting doesn't throw it off.
+      rememberPhoto(dish.id, document.querySelector(`[data-dish-photo="${dish.id}"]`));
       router.push(`/recipe/${dish.id}`);
     } catch {
       setOpening(null);
@@ -81,157 +96,175 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
     }
   };
 
-  const cuisineLabel = (area: string) =>
-    zh ? MENU_CUISINES.find((c) => c.area === area)?.nameZh ?? area : area;
-
   const chips = [
-    { area: "all", label: zh ? "全部" : "All" },
-    ...cuisines.map((c) => ({ area: c.area, label: cuisineLabel(c.area) })),
+    { area: "all", label: "All" },
+    ...cuisines.map((c) => ({ area: c.area, label: c.area })),
   ];
 
-  return (
-    <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 pt-6 md:pt-10 pb-tabbar">
-      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
-        <div>
-          <h1 className="text-[32px] md:text-[40px] leading-[1.1] font-bold text-stone-900">
-            {zh ? "今晚想食乜？" : "What do you feel like eating?"}
-          </h1>
-          <p className="mt-2 text-stone-500 max-w-xl">
-            {zh
-              ? "揀一道菜，大廚會一步步陪你煮。"
-              : "Pick a dish, and your chef will walk you through it step by step."}
-          </p>
-        </div>
+  if (dishes.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 pt-4 md:pt-10 pb-12">
+        <h1 className="font-display font-medium text-[34px] md:text-[40px] leading-[1.1] text-stone-900">
+          Tonight
+        </h1>
+        <p className="mt-4 text-[19px] text-stone-900">{"The menu couldn't load right now."}</p>
+        <p className="mt-1 text-stone-500">{"You can still start from what's in your fridge."}</p>
         <Link
           href="/chat"
-          className="text-sm text-stone-500 underline underline-offset-4 decoration-stone-300 hover:text-brand-600 shrink-0 self-start md:self-auto py-2"
+          className="mt-5 inline-flex items-center justify-center h-[52px] px-6 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold"
         >
-          {zh ? "已經有食材？用食材搵食譜" : "Already have ingredients? Search by ingredients"}
+          Start with your ingredients
         </Link>
-      </header>
-
-      <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-        <nav
-          className="flex gap-2 overflow-x-auto -mx-5 px-5 md:-mx-6 md:px-6 lg:mx-0 lg:px-0 lg:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          aria-label={zh ? "菜系" : "Cuisines"}
-        >
-          {chips.map(({ area, label }) => (
-            <button
-              key={area}
-              onClick={() => pickCuisine(area)}
-              aria-pressed={cuisine === area}
-              className={`shrink-0 h-11 px-4 rounded-full border text-[15px] transition-colors ${
-                cuisine === area
-                  ? "bg-brand-500 border-brand-500 text-white font-bold"
-                  : "bg-stone-50 border-stone-200 text-stone-700 hover:border-stone-400"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-        <label className="relative block lg:w-72 shrink-0">
-          <span className="sr-only">{zh ? "搜尋菜式" : "Search dishes"}</span>
-          <Search className="w-5 h-5 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setShown(PAGE_SIZE);
-            }}
-            placeholder={zh ? "搜尋菜式" : "Search dishes"}
-            className="w-full h-12 pl-11 pr-4 rounded-md border border-stone-200 bg-stone-50 text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-500"
-          />
-        </label>
       </div>
+    );
+  }
 
-      <label className="mt-4 inline-flex items-center gap-3 min-h-12 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={noOven}
-          onChange={toggleNoOven}
-          className="w-5 h-5 rounded accent-brand-500"
-        />
-        <span className="text-stone-700">
-          {zh ? "我嘅廚房冇焗爐" : "My kitchen has no oven"}
-        </span>
-      </label>
+  return (
+    <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 pt-2 md:pt-10">
+      <TonightPicks
+        picks={picks}
+        onOpen={openDish}
+        opening={opening}
+        onShuffle={() => setRound((r) => r + 1)}
+      />
 
       {openError && (
         <p className="mt-5 text-sm text-danger" role="alert">
-          {zh ? "暫時打唔開呢道菜，請再試一次。" : "Couldn't open that dish just now. Please try again."}
+          {"Couldn't open that dish just now. Please try again."}
         </p>
       )}
 
-      {dishes.length === 0 ? (
-        <div className="mt-12 max-w-md">
-          <p className="text-[22px] leading-tight font-bold text-stone-900">
-            {zh ? "餐牌暫時載入唔到。" : "The menu couldn't load right now."}
-          </p>
-          <p className="mt-2 text-stone-500">
-            {zh ? "你仍然可以由雪櫃現有食材開始。" : "You can still start from what's in your fridge."}
-          </p>
+      <section aria-labelledby="menu-title" className="mt-14 md:mt-20 pt-8 md:pt-10 border-t border-stone-200">
+        <div className="md:flex md:items-end md:justify-between md:gap-8">
+          <h2 id="menu-title" className="font-display font-medium text-[28px] md:text-[32px] leading-[1.15] text-stone-900">
+            The menu
+          </h2>
+          <div className="mt-4 md:mt-0 md:w-96 shrink-0">
+            <label className="relative block">
+              <span className="sr-only">Search dishes</span>
+              <Search
+                className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setShown(PAGE_SIZE);
+                }}
+                placeholder="Search dishes"
+                className="w-full h-12 pl-11 pr-4 rounded-lg border border-transparent bg-stone-100 text-base text-stone-900 focus:outline-none focus:bg-stone-50 focus:border-stone-900"
+              />
+            </label>
+          </div>
+        </div>
+
+        <p className="mt-3 text-[15px] text-stone-500 md:text-right">
+          Already have ingredients?{" "}
           <Link
             href="/chat"
-            className="mt-5 inline-flex items-center justify-center h-[52px] px-6 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold"
+            className="text-stone-900 underline underline-offset-4 decoration-stone-300 hover:decoration-stone-900"
           >
-            {zh ? "由食材開始" : "Start with your ingredients"}
+            Search by ingredients
           </Link>
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="mt-12 text-stone-500">
-          {zh ? `搵唔到「${query}」。試下其他字眼。` : `Nothing matches "${query}". Try another word.`}
         </p>
-      ) : (
-        <>
-          <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-3 md:gap-x-6 md:gap-y-8 lg:grid-cols-4">
-            {filtered.slice(0, shown).map((dish) => (
-              <li key={dish.id}>
-                <button
-                  onClick={() => openDish(dish)}
-                  disabled={opening !== null}
-                  className="group block w-full text-left rounded-lg disabled:cursor-wait"
-                >
-                  <div className="overflow-hidden rounded-lg bg-stone-200">
-                    <img
-                      src={`${dish.imageUrl}/medium`}
-                      alt=""
-                      loading="lazy"
-                      width={350}
-                      height={350}
-                      className={`aspect-square w-full object-cover transition-opacity ${
-                        opening === dish.id ? "opacity-60" : ""
-                      }`}
-                    />
-                  </div>
-                  <p className="mt-2.5 text-[17px] leading-snug font-bold text-stone-900 group-hover:text-brand-600">
-                    {zh ? dish.titleZh : dish.title}
-                  </p>
-                  <p className="mt-0.5 text-sm text-stone-500">
-                    {opening === dish.id ? (zh ? "打開緊…" : "Opening…") : cuisineLabel(dish.cuisine)}
-                  </p>
-                </button>
-              </li>
-            ))}
-          </ul>
 
-          {filtered.length > shown && (
-            <div className="mt-10 flex justify-center">
+        <div className="mt-4 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+          <div
+            role="group"
+            aria-label="Cuisines"
+            className="flex flex-nowrap gap-2 overflow-x-auto -mx-5 px-5 md:-mx-6 md:px-6 lg:mx-0 lg:px-0 lg:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {chips.map(({ area, label }) => (
               <button
-                onClick={() => setShown(shown + PAGE_SIZE)}
-                className="h-12 px-6 rounded-md border border-stone-200 bg-stone-50 text-stone-900 font-bold hover:border-stone-400"
+                key={area}
+                type="button"
+                onClick={() => pickCuisine(area)}
+                aria-pressed={cuisine === area}
+                className={`shrink-0 h-11 px-4 rounded-full text-[15px] transition-colors ${
+                  cuisine === area
+                    ? "bg-stone-900 text-stone-50 font-bold"
+                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                }`}
               >
-                {zh ? `顯示更多（尚有 ${filtered.length - shown} 道）` : `Show more (${filtered.length - shown} left)`}
+                {label}
               </button>
-            </div>
-          )}
-        </>
-      )}
+            ))}
+          </div>
 
-      <p className="mt-12 pb-8 text-sm text-stone-500">
-        {zh ? "菜式及相片來自 TheMealDB。" : "Dishes and photos from TheMealDB."}
-      </p>
+          <label className="inline-flex items-center gap-3 min-h-12 cursor-pointer select-none shrink-0">
+            <input
+              type="checkbox"
+              checked={noOven}
+              onChange={toggleNoOven}
+              className="w-5 h-5 rounded accent-stone-900"
+            />
+            <span className="text-stone-900">My kitchen has no oven</span>
+          </label>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="mt-10 text-stone-500">
+            {query.trim() ? `Nothing matches "${query.trim()}". Try another word.` : "No dishes here yet."}
+          </p>
+        ) : (
+          <>
+            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-3 md:gap-x-6 md:gap-y-10 lg:grid-cols-4">
+              {filtered.slice(0, shown).map((dish) => (
+                <li key={dish.id}>
+                  <button
+                    type="button"
+                    onClick={() => openDish(dish)}
+                    disabled={opening !== null}
+                    aria-label={dish.title}
+                    className="group block w-full text-left rounded-lg disabled:cursor-wait"
+                  >
+                    <div className="overflow-hidden rounded-lg bg-stone-100">
+                      <img
+                        data-dish-photo={dish.id}
+                        src={`${dish.imageUrl}/medium`}
+                        alt=""
+                        loading="lazy"
+                        width={350}
+                        height={350}
+                        className={`aspect-square w-full object-cover transition-opacity ${
+                          opening === dish.id ? "opacity-60" : ""
+                        }`}
+                      />
+                    </div>
+                    <span className="mt-2.5 block font-display font-medium text-[18px] leading-[1.25] text-stone-900 group-hover:underline underline-offset-4 decoration-stone-300">
+                      {dish.title}
+                    </span>
+                    {dish.description && (
+                      <span className="mt-1 text-[15px] leading-snug text-stone-600 line-clamp-2">
+                        {dish.description}
+                      </span>
+                    )}
+                    <span className="mt-1 block text-sm text-stone-500">
+                      {opening === dish.id ? "Opening the recipe" : dish.cuisine}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {filtered.length > shown && (
+              <div className="mt-10 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShown(shown + PAGE_SIZE)}
+                  className="h-12 px-6 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold"
+                >
+                  {`Show more (${filtered.length - shown} left)`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <p className="mt-12 pb-8 text-sm text-stone-500">Dishes and photos from TheMealDB.</p>
     </div>
   );
 }

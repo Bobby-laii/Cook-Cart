@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { QuickStartForm } from "@/components/QuickStartForm";
+import { QuickStartForm, type QuickStartData } from "@/components/QuickStartForm";
 import { DishSuggestionCard } from "@/components/DishSuggestionCard";
 import { DishSuggestion } from "@/types";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
@@ -25,26 +25,14 @@ interface ConversationItem {
   updatedAt: string;
 }
 
-const THINKING_PHRASES_EN = [
-  "Hmm, let me think...",
-  "Simmering some delicious ideas...",
-  "Looking through my kitchen notebook...",
-  "Pairing flavours for you...",
-];
-
-const THINKING_PHRASES_ZH = [
-  "嗯……等我諗下先……",
-  "正在廚房筆記中尋找美味靈感……",
-  "慢慢品味緊最啱你口味嘅配搭……",
-  "熱鑊起油，即刻為你準備好……",
-];
+const THINKING_PHRASES = ["Thinking it through", "Checking what goes together", "Looking at your ingredients"];
 
 function ChatPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCuisineParam = searchParams.get("cuisine") || undefined;
 
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { user } = useAuth();
 
   const [conversationId, setConversationId] = useState<string>("");
@@ -57,18 +45,18 @@ function ChatPageContent() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const activeChefName = user?.chefName || "Chef Cart";
-  const activeChefAvatar = user?.chefAvatarUrl || "🧑‍🍳";
+  // "Chef Cart" was the old default name; treat it as unset.
+  const activeChefName = user?.chefName && user.chefName !== "Chef Cart" ? user.chefName : "Your chef";
   const activeChefConfig = user?.chefAvatarConfig ?? null;
 
-  // Rotate companion thoughts naturally while thinking
+  // Rotate the thinking line while the chef works
   useEffect(() => {
     if (!isLoading) {
       setThinkingIndex(0);
       return;
     }
     const interval = setInterval(() => {
-      setThinkingIndex((prev) => (prev + 1) % THINKING_PHRASES_EN.length);
+      setThinkingIndex((prev) => (prev + 1) % THINKING_PHRASES.length);
     }, 2200);
     return () => clearInterval(interval);
   }, [isLoading]);
@@ -87,7 +75,9 @@ function ChatPageContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Follow the conversation, but leave a fresh chat at the top so the form is in view.
   useEffect(() => {
+    if (!isLoading && !messages.some((m) => m.role === "user")) return;
     scrollToBottom();
   }, [messages, isLoading]);
 
@@ -148,30 +138,26 @@ function ChatPageContent() {
     const newId = "convo_" + Math.random().toString(36).substring(2, 9);
     setConversationId(newId);
 
-    const welcomeEn = cuisineHint
-      ? `Hello! I'm your personal chef and companion, ${activeChefName}. I see you're exploring ${cuisineHint} cuisine! Pick your ingredients above or ask me anything about ${cuisineHint} dishes, cookware, or how your day is going.`
-      : `Hello! I'm your personal chef and everyday companion, ${activeChefName}. Whether you want to chat about your day, relax, or ask me anything about recipes, ingredients, and cookware, I'm always here for you. How can I help today?`;
-
-    const welcomeZh = cuisineHint
-      ? `您好！我是您的專屬廚伴 ${activeChefName}。看到您正探索「${cuisineHint}」料理！歡迎在上方挑選食材，或隨時向我詢問正宗做法、調味秘訣，甚至聊聊今天的生活點滴！`
-      : `您好！我是您的專屬廚伴 ${activeChefName}。無論你想聊聊今天過得怎樣、尋求心靈放鬆，抑或探索各種菜式做法、食材挑選與鍋具心得，我都隨時在這裡陪伴你！今天想聊點甚麼呢？`;
+    const welcome = cuisineHint
+      ? `Tell me what's in your fridge, or ask anything about ${cuisineHint} cooking.`
+      : "Tell me what's in your fridge, or ask anything about cooking.";
 
     setMessages([
       {
         role: "assistant",
-        content: language === "zh-HK" ? welcomeZh : welcomeEn,
+        content: welcome,
         timestamp: new Date().toISOString(),
       },
     ]);
   };
 
-  const handleQuickStartSubmit = async (formData: any) => {
+  const handleQuickStartSubmit = async (formData: QuickStartData) => {
     setIsLoading(true);
 
-    const userPrompt =
-      language === "zh-HK"
-        ? `請為我推薦 3 款「${formData.cuisine}」菜式，必須全數使用以下食材：${formData.ingredients.join("、")}。用餐人數：${formData.servings}人。烹調時間：${formData.cookingTimeLimit}。設備：${formData.equipment.join("、")}。`
-        : `Please recommend 3 ${formData.cuisine} dishes that incorporate ALL of the following ingredients: ${formData.ingredients.join(", ")}. Servings: ${formData.servings} people. Time limit: ${formData.cookingTimeLimit}. Equipment: ${formData.equipment.join(", ")}.`;
+    // Shown as the user's message, so it reads like something a person would say.
+    const style = formData.cuisine === "Any style" ? "" : `${formData.cuisine} `;
+    const time = formData.cookingTimeLimit === "any" ? "" : `, ready in ${formData.cookingTimeLimit}`;
+    const userPrompt = `Three ${style}dishes using ${formData.ingredients.join(", ")}, for ${formData.servings} ${formData.servings === 1 ? "person" : "people"}${time}.`;
 
     const newMessages: ChatMessage[] = [
       ...messages,
@@ -217,18 +203,18 @@ function ChatPageContent() {
           ...newMessages,
           {
             role: "assistant",
-            content: "Sorry, I encountered an issue. " + (data.error || ""),
+            content: data.error || "Something went wrong on my side. Please try again.",
             timestamp: new Date().toISOString(),
           },
         ]);
       }
-    } catch (err: any) {
+    } catch {
       setIsLoading(false);
       setMessages([
         ...newMessages,
         {
           role: "assistant",
-          content: "Network connection error: " + err.message,
+          content: "I couldn't reach the kitchen. Check your connection and try again.",
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -286,18 +272,18 @@ function ChatPageContent() {
           ...newMessages,
           {
             role: "assistant",
-            content: "Error: " + (data.error || "Failed to respond"),
+            content: data.error || "Something went wrong on my side. Please try again.",
             timestamp: new Date().toISOString(),
           },
         ]);
       }
-    } catch (err: any) {
+    } catch {
       setIsLoading(false);
       setMessages([
         ...newMessages,
         {
           role: "assistant",
-          content: "Network error: " + err.message,
+          content: "I couldn't reach the kitchen. Check your connection and try again.",
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -322,23 +308,20 @@ function ChatPageContent() {
     }
   };
 
-  const zh = language === "zh-HK";
   const hasConversation = messages.some((m) => m.role === "user");
 
   const savedChatsList = (onPicked?: () => void) =>
     conversations.length === 0 ? (
-      <p className="text-sm text-stone-500 py-2">
-        {zh ? "暫時未有儲存嘅對話。" : "No saved chats yet."}
-      </p>
+      <p className="text-[15px] text-stone-500 py-2">No saved chats yet.</p>
     ) : (
-      <ul className="space-y-1">
+      <ul className="space-y-0.5">
         {conversations.map((c) => {
           const active = conversationId === c.id;
           return (
             <li
               key={c.id}
-              className={`flex items-center rounded-md ${
-                active ? "bg-brand-50 text-brand-700" : "text-stone-700 hover:bg-stone-100"
+              className={`flex items-center rounded-lg ${
+                active ? "bg-stone-100 text-stone-900" : "text-stone-700 hover:bg-stone-100"
               }`}
             >
               <button
@@ -348,21 +331,21 @@ function ChatPageContent() {
                   onPicked?.();
                 }}
                 aria-current={active ? "true" : undefined}
-                className={`flex-1 min-w-0 min-h-12 px-3 text-left text-sm flex items-center gap-2 ${
+                className={`flex-1 min-w-0 min-h-12 px-3 text-left text-[15px] flex items-center gap-2 ${
                   active ? "font-bold" : ""
                 }`}
               >
-                <MessageSquare className="w-4 h-4 shrink-0 text-stone-400" aria-hidden />
+                <MessageSquare className="w-4 h-4 shrink-0 text-stone-500" aria-hidden />
                 <span className="truncate">{c.title}</span>
               </button>
               <button
                 type="button"
                 onClick={(e) => handleDeleteConversation(e, c.id)}
-                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-md text-stone-400 hover:text-danger"
-                aria-label={zh ? `刪除對話：${c.title}` : `Delete chat: ${c.title}`}
-                title={zh ? "刪除對話" : "Delete chat"}
+                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-lg text-stone-500 hover:text-danger"
+                aria-label={`Delete chat: ${c.title}`}
+                title="Delete chat"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" aria-hidden />
               </button>
             </li>
           );
@@ -370,97 +353,84 @@ function ChatPageContent() {
       </ul>
     );
 
-  const newChatLabel = zh ? "新對話" : "New chat";
+  const newChatLabel = "New chat";
 
   return (
-    <div className="max-w-6xl mx-auto px-5 lg:px-8 pt-4 lg:pt-6">
-      <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-        {/* Sidebar: saved chats and the chef (desktop) */}
-        <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-6 lg:self-start">
+    <div className="max-w-6xl mx-auto px-5 md:px-6 lg:px-8 pt-2 md:pt-8">
+      <h1 className="sr-only">Ask the chef</h1>
+      <div className="lg:grid lg:grid-cols-12 lg:gap-10">
+        {/* Sidebar: the chef and saved chats (desktop) */}
+        <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 lg:self-start">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <ChefAvatarBadge avatarConfig={activeChefConfig} size={48} title={activeChefName} />
+              <p className="font-display font-medium text-[22px] leading-tight text-stone-900 truncate">
+                {activeChefName}
+              </p>
+            </div>
+            <Link
+              href="/chef-settings"
+              className="shrink-0 w-12 h-12 -mr-2 flex items-center justify-center rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+              title="Chef settings"
+              aria-label="Chef settings"
+            >
+              <Settings className="w-5 h-5" aria-hidden />
+            </Link>
+          </div>
+          <p className="mt-3 text-[15px] text-stone-500">
+            Ask how to cook anything, what to swap, or whether it is done.
+          </p>
+          <Link
+            href="/onboarding/chef?next=/chat"
+            className="mt-1 inline-flex items-center min-h-12 text-[15px] text-stone-900 underline underline-offset-4 decoration-stone-300 hover:decoration-stone-900"
+          >
+            {"Change your chef's look"}
+          </Link>
+
           <button
             type="button"
             onClick={() => startNewChat()}
-            className="w-full h-[52px] px-4 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2 transition"
+            className="mt-6 w-full h-[52px] px-4 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold flex items-center justify-center gap-2 transition-colors"
           >
             <Plus className="w-5 h-5" aria-hidden />
             <span>{newChatLabel}</span>
           </button>
 
-          <section className="rounded-2xl border border-stone-200 bg-stone-50 p-3">
-            <h2 className="px-2 pt-1 pb-2 font-bold text-stone-900">
-              {zh ? "已儲存對話" : "Saved chats"}
-            </h2>
-            <div className="max-h-[460px] overflow-y-auto">{savedChatsList()}</div>
-          </section>
-
-          {/* The chef */}
-          <section className="rounded-2xl border border-stone-200 bg-stone-50 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={44} title={activeChefName} />
-                <div className="min-w-0">
-                  <h2 className="font-bold text-stone-900 truncate">{activeChefName}</h2>
-                  <p className="text-sm text-stone-500">{zh ? "你嘅專屬大廚" : "Your own chef"}</p>
-                </div>
-              </div>
-              <Link
-                href="/chef-settings"
-                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-md text-stone-500 hover:text-brand-600 hover:bg-stone-100 transition"
-                title={zh ? "大廚設定" : "Chef settings"}
-                aria-label={zh ? "大廚設定" : "Chef settings"}
-              >
-                <Settings className="w-5 h-5" />
-              </Link>
-            </div>
-            <p className="text-sm text-stone-600">
-              {zh
-                ? "你嘅廚房拍檔：問佢點煮、點替代材料，或者一路煮一路傾兩句。"
-                : "Your kitchen companion: ask how to cook anything, what to swap, or just chat while you cook."}
-            </p>
-            <div className="space-y-1">
-              <Link
-                href="/onboarding/chef?next=/chat"
-                className="flex items-center justify-center h-12 px-3 rounded-md border border-stone-200 text-brand-600 font-bold text-sm hover:border-brand-500 transition"
-              >
-                {zh ? "打扮我的大廚" : "Design your chef's look"}
-              </Link>
-              <Link
-                href="/chef-settings"
-                className="flex items-center justify-center h-12 px-3 rounded-md text-brand-600 font-bold text-sm hover:bg-stone-100 transition"
-              >
-                {zh ? "自訂大廚形象與性格" : "Customise your chef"}
-              </Link>
-            </div>
+          <section className="mt-8 pt-6 border-t border-stone-200">
+            <h2 className="pb-2 font-bold text-stone-900">Saved chats</h2>
+            <div className="max-h-[460px] overflow-y-auto -mx-3">{savedChatsList()}</div>
           </section>
         </aside>
 
         {/* Chat column */}
         <div className="lg:col-span-8 xl:col-span-9">
           <div className="max-w-2xl mx-auto">
-            {/* Phone header: chef, saved chats, new chat */}
-            <div className="lg:hidden flex items-center justify-between gap-2 pb-3">
-              <Link href="/chef-settings" className="flex items-center gap-2 min-w-0 min-h-12">
-                <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={32} title={activeChefName} />
-                <span className="font-bold text-stone-900 truncate">{activeChefName}</span>
+            {/* Phone and tablet header: chef, saved chats, new chat */}
+            <div className="lg:hidden flex items-center justify-between gap-2 pb-4">
+              <Link href="/chef-settings" className="flex items-center gap-3 min-w-0 min-h-12" aria-label={`${activeChefName}, chef settings`}>
+                <ChefAvatarBadge avatarConfig={activeChefConfig} size={40} title={activeChefName} />
+                <span className="font-display font-medium text-[20px] leading-tight text-stone-900 truncate">
+                  {activeChefName}
+                </span>
               </Link>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1 shrink-0 -mr-2">
                 <button
                   type="button"
                   onClick={() => setSavedOpen(true)}
-                  className="h-12 px-3 rounded-md text-sm font-bold text-stone-700 hover:bg-stone-200/60 flex items-center gap-2"
+                  className="h-12 px-3 rounded-lg text-[15px] text-stone-900 hover:bg-stone-100 flex items-center gap-2"
                   aria-haspopup="dialog"
                 >
                   <MessageSquare className="w-4 h-4" aria-hidden />
-                  {zh ? "已儲存對話" : "Saved chats"}
+                  Saved chats
                 </button>
                 <button
                   type="button"
                   onClick={() => startNewChat()}
-                  className="w-12 h-12 rounded-md text-brand-600 hover:bg-stone-200/60 flex items-center justify-center"
+                  className="w-12 h-12 rounded-lg text-stone-900 hover:bg-stone-100 flex items-center justify-center"
                   aria-label={newChatLabel}
                   title={newChatLabel}
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-5 h-5" aria-hidden />
                 </button>
               </div>
             </div>
@@ -473,33 +443,28 @@ function ChatPageContent() {
             />
 
             {/* Messages. Bottom padding keeps the last message clear of the fixed input bar on phone. */}
-            <div
-              className="pt-5 space-y-5 pb-[calc(var(--tabbar-space)+6rem)] md:pb-4"
-              aria-live="polite"
-            >
+            <div className="pt-6 space-y-5 pb-[calc(var(--tabbar-space)+6rem)] md:pb-4" aria-live="polite">
               {messages.map((msg, idx) =>
                 msg.role === "user" ? (
                   <div key={idx} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-500 text-white px-4 py-3">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-stone-900 text-stone-50 px-4 py-3">
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   </div>
                 ) : (
-                  <div key={idx} className="space-y-3">
-                    <div className="flex items-end gap-2">
-                      <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={28} title={activeChefName} />
-                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-stone-50 border border-stone-200 text-stone-900 px-4 py-3">
+                  <div key={idx} className="space-y-4">
+                    <div className="flex items-end gap-2.5">
+                      <ChefAvatarBadge avatarConfig={activeChefConfig} size={36} title={activeChefName} />
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-stone-100 text-stone-900 px-4 py-3">
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
                     </div>
 
                     {/* Dish suggestions from the chef */}
                     {msg.structuredSuggestions && msg.structuredSuggestions.length > 0 && (
-                      <div className="space-y-3 md:pl-9">
-                        <h3 className="font-bold text-stone-900">
-                          {zh ? "用晒你所有食材嘅菜式" : "Dishes that use all your ingredients"}
-                        </h3>
-                        <div className="grid grid-cols-1 gap-4">
+                      <div className="md:pl-[46px]">
+                        <h3 className="sr-only">Dishes that use all your ingredients</h3>
+                        <div>
                           {msg.structuredSuggestions.map((suggestion) => (
                             <DishSuggestionCard
                               key={suggestion.id}
@@ -509,7 +474,7 @@ function ChatPageContent() {
                             />
                           ))}
                         </div>
-                        <p className="text-sm text-stone-500">{t("aiDisclaimer")}</p>
+                        <p className="mt-2 text-sm text-stone-500">{t("aiDisclaimer")}</p>
                       </div>
                     )}
                   </div>
@@ -518,12 +483,12 @@ function ChatPageContent() {
 
               {/* Thinking state */}
               {isLoading && (
-                <div className="flex items-end gap-2">
-                  <ChefAvatarBadge avatarConfig={activeChefConfig} emoji={activeChefAvatar} size={28} title={activeChefName} />
-                  <div className="rounded-2xl rounded-bl-md bg-stone-50 border border-stone-200 text-stone-600 px-4 py-3 flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 text-brand-500 animate-spin motion-reduce:animate-none" aria-hidden />
+                <div className="flex items-end gap-2.5">
+                  <ChefAvatarBadge avatarConfig={activeChefConfig} size={36} title={activeChefName} />
+                  <div className="rounded-2xl rounded-bl-md bg-stone-100 text-stone-500 px-4 py-3 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden />
                     <span key={thinkingIndex} className="cc-fade-in">
-                      {zh ? THINKING_PHRASES_ZH[thinkingIndex] : THINKING_PHRASES_EN[thinkingIndex]}
+                      {THINKING_PHRASES[thinkingIndex]}
                     </span>
                   </div>
                 </div>
@@ -533,31 +498,32 @@ function ChatPageContent() {
             </div>
 
             {/* Message input: fixed above the tab bar on phone, sticky at the bottom of the column from md up */}
-            <div className="fixed inset-x-0 above-tabbar z-20 md:sticky md:inset-x-auto border-t border-stone-200 md:border-t-0 bg-stone-100">
+            <div className="fixed inset-x-0 above-tabbar z-20 md:sticky md:inset-x-auto md:bottom-0 border-t border-stone-200 md:border-t-0 bg-stone-50">
               <form
                 onSubmit={handleSendMessage}
                 className="max-w-2xl mx-auto px-5 md:px-0 py-3 md:pb-5 flex items-center gap-2"
               >
                 <label htmlFor="chat-input" className="sr-only">
-                  {zh ? "傳訊息俾大廚" : "Message your chef"}
+                  Message your chef
                 </label>
                 <input
                   id="chat-input"
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder={zh ? "問你嘅大廚任何嘢" : "Ask your chef anything"}
-                  className="flex-1 min-w-0 h-12 px-4 rounded-md border border-stone-200 bg-stone-50 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-brand-500"
+                  placeholder="Ask anything about cooking"
+                  className="flex-1 min-w-0 h-12 px-4 rounded-lg border border-transparent bg-stone-100 text-stone-900 focus:outline-none focus:bg-stone-50 focus:border-stone-900"
                   autoComplete="off"
+                  enterKeyHint="send"
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !inputMessage.trim()}
-                  className="shrink-0 w-[52px] h-[52px] rounded-md bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center transition disabled:bg-stone-200 disabled:text-stone-500"
-                  aria-label={zh ? "發送" : "Send"}
-                  title={zh ? "發送" : "Send"}
+                  className="shrink-0 w-12 h-12 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 flex items-center justify-center transition-colors disabled:bg-stone-200 disabled:text-stone-500"
+                  aria-label="Send"
+                  title="Send"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-5 h-5" aria-hidden />
                 </button>
               </form>
             </div>
@@ -571,21 +537,21 @@ function ChatPageContent() {
           <button
             type="button"
             className="absolute inset-0 bg-stone-900/40"
-            aria-label={zh ? "關閉" : "Close"}
+            aria-label="Close"
             onClick={() => setSavedOpen(false)}
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[80dvh] flex flex-col rounded-t-2xl bg-stone-50 pb-safe">
             <div className="flex items-center justify-between gap-2 px-5 pt-3 pb-2 border-b border-stone-200">
-              <h2 id="saved-chats-title" className="text-[22px] font-bold text-stone-900">
-                {zh ? "已儲存對話" : "Saved chats"}
+              <h2 id="saved-chats-title" className="font-display font-medium text-[24px] text-stone-900">
+                Saved chats
               </h2>
               <button
                 type="button"
                 onClick={() => setSavedOpen(false)}
-                className="w-12 h-12 -mr-3 rounded-md flex items-center justify-center text-stone-500 hover:text-stone-900"
-                aria-label={zh ? "關閉" : "Close"}
+                className="w-12 h-12 -mr-3 rounded-lg flex items-center justify-center text-stone-500 hover:text-stone-900"
+                aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3">{savedChatsList(() => setSavedOpen(false))}</div>
@@ -596,7 +562,7 @@ function ChatPageContent() {
                   startNewChat();
                   setSavedOpen(false);
                 }}
-                className="w-full h-[52px] rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2"
+                className="w-full h-[52px] rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" aria-hidden />
                 {newChatLabel}
@@ -610,12 +576,7 @@ function ChatPageContent() {
 }
 
 function ChatLoading() {
-  const { language } = useLanguage();
-  return (
-    <div className="p-10 text-center text-sm text-stone-500">
-      {language === "zh-HK" ? "載入緊對話……" : "Loading chat…"}
-    </div>
-  );
+  return <div className="p-10 text-center text-[15px] text-stone-500">Loading the chat</div>;
 }
 
 export default function ChatPage() {

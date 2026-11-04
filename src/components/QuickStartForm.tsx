@@ -3,44 +3,59 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { APP_CONFIG } from "@/config/appConfig";
-import { COMMON_INGREDIENTS_CATALOGUE, IngredientItem } from "@/config/ingredientsCatalogue";
+import { COMMON_INGREDIENTS_CATALOGUE } from "@/config/ingredientsCatalogue";
 import {
   getPopularIngredientsForCuisine,
   isEuropeanCuisine,
   TOP_50_EUROPEAN_INGREDIENTS,
 } from "@/config/regionalIngredients";
-import { X, Check, ChevronDown, Loader2, Plus } from "lucide-react";
+import { X, Check, ChevronDown, Loader2, Plus, Minus } from "lucide-react";
+
+export interface QuickStartData {
+  cuisine: string;
+  ingredients: string[];
+  servings: number;
+  cookingTimeLimit: string;
+  skillLevel: string;
+  equipment: string[];
+  dietary: string;
+  allergies: string;
+}
 
 interface QuickStartFormProps {
-  onSubmit: (formData: {
-    cuisine: string;
-    ingredients: string[];
-    servings: number;
-    cookingTimeLimit: string;
-    skillLevel: string;
-    equipment: string[];
-    dietary: string;
-    allergies: string;
-  }) => void;
+  onSubmit: (formData: QuickStartData) => void;
   isLoading: boolean;
   initialCuisine?: string;
-  /** Collapse to the summary bar (e.g. once the conversation has messages). */
+  /** Fold down to a one-line summary (e.g. once the conversation has messages). */
   collapsed?: boolean;
 }
 
+/** Split typed text like "eggs, rice, tomato" into separate ingredients. */
+function splitTyped(text: string): string[] {
+  return text
+    .split(/[,\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * "What's in the fridge?": one ingredient field and Find dishes. Servings, style,
+ * time, skill and equipment live behind More options, already set to sensible
+ * defaults, so the common case is type and go.
+ */
 export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed = false }: QuickStartFormProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(!collapsed);
+  const [showOptions, setShowOptions] = useState(false);
 
   // Follow the parent: fold away once a conversation starts, open again for a new chat.
   useEffect(() => {
     setIsExpanded(!collapsed);
   }, [collapsed]);
 
-  // Form states
-  const [cuisine, setCuisine] = useState("cantonese");
+  const [cuisine, setCuisine] = useState("any");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!initialCuisine) return;
     const normalized = initialCuisine.trim().toLowerCase();
     const matched = APP_CONFIG.cuisines.find(
@@ -49,7 +64,6 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
         c.label.toLowerCase().includes(normalized) ||
         normalized.includes(c.id.toLowerCase()) ||
         (normalized === "chinese" && c.id === "cantonese") ||
-        (normalized === "british" && c.id === "western") ||
         (normalized === "latin american" && c.id === "mexican") ||
         (normalized === "australian" && c.id === "western")
     );
@@ -58,52 +72,41 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
       setIsExpanded(true);
     }
   }, [initialCuisine]);
+
   const [ingredientInput, setIngredientInput] = useState("");
-  // Start with clean empty array so user selects their own ingredients
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [servings, setServings] = useState(2);
   const [cookingTimeLimit, setCookingTimeLimit] = useState("30 mins");
   const [skillLevel, setSkillLevel] = useState("beginner");
-  const [equipment, setEquipment] = useState<string[]>(["stove", "rice_cooker"]);
-  const [dietary, setDietary] = useState("None");
-  const [allergies, setAllergies] = useState("");
+  const [equipment, setEquipment] = useState<string[]>(["stove"]);
+  const [dietary] = useState("None");
+  const [allergies] = useState("");
 
-  // Check if current cuisine selection is European
   const isEuropean = useMemo(() => isEuropeanCuisine(cuisine), [cuisine]);
 
-  // Quick tap: Top 10 for European cuisines, regional staples otherwise
-  const popularChips = useMemo(() => {
-    return getPopularIngredientsForCuisine(cuisine, 12);
-  }, [cuisine]);
+  // Quick-add chips: everyday staples by default, the chosen cuisine's staples otherwise.
+  const popularChips = useMemo(() => getPopularIngredientsForCuisine(cuisine, 10), [cuisine]);
 
-  // Searchable list: all 50 European benchmark ingredients + general catalogue.
-  // When a European cuisine is selected, the European items are ranked first.
+  // Searchable list: the general catalogue and the European benchmark ingredients.
+  // When a European cuisine is chosen, the European items are ranked first.
   const searchCatalogue = useMemo(() => {
-    const european = TOP_50_EUROPEAN_INGREDIENTS.map((i) => ({ en: i.en, zh: i.zh }));
+    const european = TOP_50_EUROPEAN_INGREDIENTS.map((i) => ({ en: i.en }));
     const europeanEn = new Set(european.map((i) => i.en.toLowerCase()));
     const general = COMMON_INGREDIENTS_CATALOGUE.filter((i) => !europeanEn.has(i.en.toLowerCase()));
     return isEuropean ? [...european, ...general] : [...general, ...european];
   }, [isEuropean]);
 
-  // Real-time local autocomplete: starts after 2 letters (or 1 Chinese character)
+  // Local autocomplete, from 2 letters.
   const matchingSuggestions = useMemo(() => {
     const query = ingredientInput.trim().toLowerCase();
-    const hasCjk = /[\u3400-\u9FFF]/.test(query);
-    if (!query || (!hasCjk && query.length < 2)) return [];
-    return searchCatalogue.filter((item) => {
-      const matchEn = item.en.toLowerCase().includes(query);
-      const matchZh = item.zh.includes(query);
-      const alreadySelected =
-        ingredients.includes(item.en) ||
-        ingredients.includes(item.zh) ||
-        ingredients.includes(language === "zh-HK" ? item.zh : item.en);
-      return (matchEn || matchZh) && !alreadySelected;
-    }).slice(0, 8);
-  }, [ingredientInput, ingredients, language, searchCatalogue]);
+    if (query.length < 2) return [];
+    return searchCatalogue
+      .filter((item) => item.en.toLowerCase().includes(query) && !ingredients.includes(item.en))
+      .slice(0, 8);
+  }, [ingredientInput, ingredients, searchCatalogue]);
 
-  // Close suggestions dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (inputContainerRef.current && !inputContainerRef.current.contains(e.target as Node)) {
@@ -114,13 +117,21 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleAddIngredient = (itemToAdd?: string) => {
-    const val = (itemToAdd || ingredientInput).trim();
-    if (val && !ingredients.includes(val)) {
-      setIngredients([...ingredients, val]);
-      setIngredientInput("");
-      setShowSuggestions(false);
+  const addIngredients = (items: string[]) => {
+    const next = [...ingredients];
+    for (const item of items) {
+      if (!next.some((i) => i.toLowerCase() === item.toLowerCase())) next.push(item);
     }
+    setIngredients(next);
+    return next;
+  };
+
+  const handleAddIngredient = (itemToAdd?: string) => {
+    const items = itemToAdd ? [itemToAdd] : splitTyped(ingredientInput);
+    if (items.length === 0) return;
+    addIngredients(items);
+    setIngredientInput("");
+    setShowSuggestions(false);
   };
 
   const handleRemoveIngredient = (itemToRemove: string) => {
@@ -128,38 +139,27 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
   };
 
   const handleToggleEquipment = (eqId: string) => {
-    if (equipment.includes(eqId)) {
-      setEquipment(equipment.filter((e) => e !== eqId));
-    } else {
-      setEquipment([...equipment, eqId]);
-    }
+    setEquipment(equipment.includes(eqId) ? equipment.filter((e) => e !== eqId) : [...equipment, eqId]);
   };
 
-  // Resolved display name for selected cuisine
-  const selectedCuisineObj = useMemo(
-    () => APP_CONFIG.cuisines.find((c) => c.id === cuisine),
-    [cuisine]
-  );
-  const cuisineDisplayName = selectedCuisineObj
-    ? language === "zh-HK"
-      ? selectedCuisineObj.labelZh
-      : selectedCuisineObj.label
-    : cuisine;
+  const selectedCuisineObj = useMemo(() => APP_CONFIG.cuisines.find((c) => c.id === cuisine), [cuisine]);
+  const cuisineDisplayName = selectedCuisineObj ? selectedCuisineObj.label : cuisine;
+
+  const peopleWord = servings === 1 ? "person" : t("people");
+  const typed = splitTyped(ingredientInput);
+  const canSubmit = !isLoading && (ingredients.length > 0 || typed.length > 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (ingredients.length === 0) {
-      alert(t("noIngredientsError"));
-      return;
-    }
-
-    // Send the label in the user's own language, so the AI reply matches the UI
-    // instead of quoting an English cuisine name back at a Chinese-speaking user.
-    const cuisineLabel = cuisineDisplayName;
+    // Whatever is still in the field counts too, so "eggs, rice" + Find dishes just works.
+    const all = typed.length > 0 ? addIngredients(typed) : ingredients;
+    if (all.length === 0) return;
+    setIngredientInput("");
+    setShowSuggestions(false);
 
     onSubmit({
-      cuisine: cuisineLabel,
-      ingredients,
+      cuisine: cuisineDisplayName,
+      ingredients: all,
       servings,
       cookingTimeLimit,
       skillLevel,
@@ -169,7 +169,6 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
     });
   };
 
-  const zh = language === "zh-HK";
   const timeLabel =
     cookingTimeLimit === "any"
       ? t("anyTime")
@@ -178,330 +177,293 @@ export function QuickStartForm({ onSubmit, isLoading, initialCuisine, collapsed 
         : cookingTimeLimit === "45 mins"
           ? t("quickUnder45")
           : t("quickUnder60");
-  const skillLabel = (() => {
-    const lvl = APP_CONFIG.skillLevels.find((l) => l.id === skillLevel);
-    return lvl ? (zh ? lvl.labelZh : lvl.label) : skillLevel;
-  })();
 
   const fieldClass =
-    "rounded-md border border-stone-200 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-500";
+    "rounded-lg border border-transparent bg-stone-100 text-stone-900 focus:outline-none focus:bg-stone-50 focus:border-stone-900";
 
-  // Collapsed once a conversation is under way so the messages get the screen; the
+  // Folded once a conversation is under way so the messages get the screen; the
   // summary keeps what was asked for visible.
   if (!isExpanded) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 py-3 border-y border-stone-200">
         <div className="min-w-0">
-          <p className="font-bold text-stone-900">{zh ? "用食材搵菜式" : "Search by ingredients"}</p>
+          <p className="font-bold text-stone-900">{"What's in the fridge?"}</p>
           <p className="text-sm text-stone-500 truncate">
             {ingredients.length > 0
-              ? zh
-                ? `${ingredients.join("、")}，${servings} ${t("people")}，${cuisineDisplayName}`
-                : `${ingredients.join(", ")} for ${servings} ${t("people")}, ${cuisineDisplayName}`
-              : zh
-                ? "話我知你有咩食材，我建議三道菜。"
-                : "Tell me what you have and I'll suggest three dishes."}
+              ? `${ingredients.join(", ")} for ${servings} ${peopleWord}`
+              : "Add what you have and I'll suggest three dishes."}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setIsExpanded(true)}
           aria-expanded={false}
-          className="shrink-0 h-12 px-4 rounded-md border border-stone-200 bg-stone-50 text-stone-900 font-bold hover:border-brand-500 hover:text-brand-600 transition"
+          className="shrink-0 h-12 px-4 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold transition-colors"
         >
-          {ingredients.length > 0 ? (zh ? "修改" : "Edit") : zh ? "打開" : "Open"}
+          {ingredients.length > 0 ? "Change" : "Open"}
         </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-[22px] leading-tight font-bold text-stone-900">
-            {zh ? "雪櫃有乜？" : "What's in the fridge?"}
+          <h2 className="font-display font-medium text-[26px] leading-[1.15] text-stone-900">
+            {"What's in the fridge?"}
           </h2>
-          <p className="mt-1 text-sm text-stone-500 max-w-xl">
-            {zh
-              ? "加入你手上有嘅食材。我哋會建議三道菜，每道都用晒佢哋。"
-              : "Add what you have. We'll suggest three dishes, each using all of it."}
-          </p>
+          <p className="mt-1 text-stone-500">{"Add what you have. I'll suggest three dishes that use all of it."}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsExpanded(false)}
-          aria-expanded={true}
-          className="shrink-0 h-12 -mt-2 -mr-2 px-3 rounded-md text-sm text-stone-500 hover:text-stone-900"
-        >
-          {zh ? "收起" : "Hide"}
-        </button>
+        {collapsed && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(false)}
+            aria-expanded={true}
+            className="shrink-0 h-12 -mt-2 -mr-2 px-3 rounded-lg text-[15px] text-stone-500 hover:text-stone-900"
+          >
+            Hide
+          </button>
+        )}
       </header>
 
-      {/* Ingredients: the one required input, so it comes first and gets the space. */}
-      <section className="space-y-3">
-        <div ref={inputContainerRef} className="relative">
+      {/* The one required input */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div ref={inputContainerRef} className="relative flex-1 min-w-0">
           <label htmlFor="ingredient-input" className="sr-only">
-            {t("ingredientsLabel")}
+            Ingredients you have
           </label>
-          <div className="flex gap-2">
-            <input
-              id="ingredient-input"
-              type="text"
-              value={ingredientInput}
-              onChange={(e) => {
-                setIngredientInput(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => {
-                if (ingredientInput.trim()) setShowSuggestions(true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (matchingSuggestions.length > 0 && showSuggestions) {
-                    const top = matchingSuggestions[0];
-                    handleAddIngredient(zh ? top.zh : top.en);
-                  } else {
-                    handleAddIngredient();
-                  }
-                } else if (e.key === "Escape") {
-                  setShowSuggestions(false);
+          <input
+            id="ingredient-input"
+            type="text"
+            value={ingredientInput}
+            onChange={(e) => {
+              setIngredientInput(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => {
+              if (ingredientInput.trim()) setShowSuggestions(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                // Enter adds what was typed; Find dishes sends.
+                e.preventDefault();
+                if (matchingSuggestions.length > 0 && showSuggestions) {
+                  handleAddIngredient(matchingSuggestions[0].en);
+                } else {
+                  handleAddIngredient();
                 }
-              }}
-              placeholder={zh ? "輸入食材，例如：雞蛋、白菜仔、豆腐" : "Type an ingredient, e.g. eggs, bok choy, tofu"}
-              className={`${fieldClass} flex-1 min-w-0 h-12 px-4 text-base placeholder:text-stone-400`}
-              autoComplete="off"
-            />
-            <button
-              type="button"
-              onClick={() => handleAddIngredient()}
-              className="h-12 px-5 rounded-md border border-brand-500 text-brand-600 font-bold hover:bg-brand-50 transition"
-            >
-              {t("addIngredientBtn")}
-            </button>
-          </div>
+              } else if (e.key === "Escape") {
+                setShowSuggestions(false);
+              }
+            }}
+            placeholder="Eggs, rice, tomatoes"
+            className={`${fieldClass} w-full h-[52px] px-4 text-base`}
+            autoComplete="off"
+            enterKeyHint="done"
+          />
 
           {showSuggestions && matchingSuggestions.length > 0 && (
-            <ul className="absolute z-30 left-0 right-0 sm:right-24 top-full mt-1 bg-stone-50 rounded-md border border-stone-200 max-h-64 overflow-y-auto py-1">
-              {matchingSuggestions.map((item, idx) => {
-                const main = zh ? item.zh : item.en;
-                const sub = zh ? item.en : item.zh;
-                return (
-                  <li key={item.en}>
-                    <button
-                      type="button"
-                      onClick={() => handleAddIngredient(main)}
-                      className={`w-full min-h-12 px-4 py-3 text-left flex items-baseline gap-2 hover:bg-stone-100 ${
-                        idx === 0 ? "bg-stone-100" : ""
-                      }`}
-                    >
-                      <span className="text-stone-900">{main}</span>
-                      <span className="text-sm text-stone-500">{sub}</span>
-                    </button>
-                  </li>
-                );
-              })}
+            <ul className="absolute z-30 left-0 right-0 top-full mt-1 bg-stone-50 rounded-lg border border-stone-200 max-h-64 overflow-y-auto py-1">
+              {matchingSuggestions.map((item, idx) => (
+                <li key={item.en}>
+                  <button
+                    type="button"
+                    onClick={() => handleAddIngredient(item.en)}
+                    className={`w-full min-h-12 px-4 py-3 text-left text-stone-900 hover:bg-stone-100 ${
+                      idx === 0 ? "bg-stone-100" : ""
+                    }`}
+                  >
+                    {item.en}
+                  </button>
+                </li>
+              ))}
             </ul>
           )}
         </div>
 
-        {/* What has been added so far */}
-        {ingredients.length > 0 && (
-          <ul className="flex flex-wrap gap-2" aria-label={zh ? "已加入食材" : "Added ingredients"}>
-            {ingredients.map((item) => (
-              <li
-                key={item}
-                className="inline-flex items-center gap-1 pl-3 pr-1 py-1 rounded-full bg-brand-500 text-white text-sm"
-              >
-                {item}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveIngredient(item)}
-                  className="p-1.5 rounded-full hover:bg-brand-600"
-                  aria-label={zh ? `移除${item}` : `Remove ${item}`}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Common ingredients for the chosen cuisine, one tap each */}
-        <div>
-          <p className="text-sm text-stone-500 mb-2">
-            {zh ? `${cuisineDisplayName}常用：` : `Common in ${cuisineDisplayName.toLowerCase()} cooking:`}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {popularChips.map((chip) => {
-              const label = zh ? chip.zh : chip.en;
-              if (ingredients.includes(label) || ingredients.includes(chip.en)) return null;
-              return (
-                <button
-                  key={chip.en}
-                  type="button"
-                  onClick={() => handleAddIngredient(label)}
-                  className="inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full border border-stone-200 bg-stone-50 text-sm text-stone-700 hover:border-brand-500 hover:text-brand-600 transition"
-                >
-                  <Plus className="w-3.5 h-3.5" aria-hidden />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-      </section>
-
-      {/* Who and what style, as one readable line */}
-      <section className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-stone-200 pt-4">
-        <div className="flex items-center gap-3">
-          <span className="text-stone-700">{zh ? "煮俾" : "Cooking for"}</span>
-          <div className={`${fieldClass} flex items-center`}>
-            <button
-              type="button"
-              onClick={() => setServings(Math.max(1, servings - 1))}
-              className="w-11 h-12 text-lg text-stone-600 hover:text-stone-900"
-              aria-label={zh ? "減少人數" : "Fewer people"}
-            >
-              −
-            </button>
-            <span className="min-w-[5.5rem] px-1 text-center font-medium font-mono whitespace-nowrap" aria-live="polite">
-              {servings} {t("people")}
-            </span>
-            <button
-              type="button"
-              onClick={() => setServings(Math.min(10, servings + 1))}
-              className="w-11 h-12 text-lg text-stone-600 hover:text-stone-900"
-              aria-label={zh ? "增加人數" : "More people"}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <label className="flex items-center gap-3">
-          <span className="text-stone-700">{zh ? "菜系" : "Style"}</span>
-          <select
-            value={cuisine}
-            onChange={(e) => setCuisine(e.target.value)}
-            className={`${fieldClass} h-12 pl-3 pr-8`}
-          >
-            {/* One language only, driven by the user's choice. Country-agnostic styles
-                ("Asian Food", "Western Food") are grouped apart as a deliberate choice. */}
-            <optgroup label={zh ? "不拘國家" : "No specific country"}>
-              {APP_CONFIG.cuisines
-                .filter((c) => c.broadStyle)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {zh ? c.labelZh : c.label}
-                  </option>
-                ))}
-            </optgroup>
-            <optgroup label={zh ? "特定菜系" : "Specific cuisine"}>
-              {APP_CONFIG.cuisines
-                .filter((c) => !c.broadStyle)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {zh ? c.labelZh : c.label}
-                  </option>
-                ))}
-            </optgroup>
-          </select>
-        </label>
-      </section>
-
-      {/* Less-used settings, folded away with their current values in the summary */}
-      <details className="group border-y border-stone-200">
-        <summary className="flex items-center justify-between gap-3 min-h-12 py-3 cursor-pointer list-none text-stone-700 hover:text-stone-900">
-          <span>
-            <span className="font-bold text-stone-900">{zh ? "廚房同時間" : "Kitchen and time"}</span>
-            <span className="block text-sm text-stone-500">
-              {[
-                timeLabel,
-                skillLabel,
-                ...APP_CONFIG.equipmentList
-                  .filter((eq) => equipment.includes(eq.id))
-                  .map((eq) => (zh ? eq.labelZh : eq.label)),
-              ].join(zh ? "、" : ", ")}
-            </span>
-          </span>
-          <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
-        </summary>
-
-        <div className="grid gap-5 pb-5 sm:grid-cols-3">
-          <label className="space-y-2">
-            <span className="block text-sm font-medium text-stone-900">{t("cookingTimeLabel")}</span>
-            <select
-              value={cookingTimeLimit}
-              onChange={(e) => setCookingTimeLimit(e.target.value)}
-              className={`${fieldClass} w-full h-12 px-3`}
-            >
-              <option value="any">{t("anyTime")}</option>
-              <option value="30 mins">{t("quickUnder30")}</option>
-              <option value="45 mins">{t("quickUnder45")}</option>
-              <option value="60 mins">{t("quickUnder60")}</option>
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="block text-sm font-medium text-stone-900">{t("skillLevelLabel")}</span>
-            <select
-              value={skillLevel}
-              onChange={(e) => setSkillLevel(e.target.value)}
-              className={`${fieldClass} w-full h-12 px-3`}
-            >
-              {APP_CONFIG.skillLevels.map((lvl) => (
-                <option key={lvl.id} value={lvl.id}>
-                  {zh ? lvl.labelZh : lvl.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-stone-900 mb-2">
-              {zh ? "廚房有乜用" : "What your kitchen has"}
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {APP_CONFIG.equipmentList.map((eq) => {
-                const on = equipment.includes(eq.id);
-                return (
-                  <button
-                    key={eq.id}
-                    type="button"
-                    onClick={() => handleToggleEquipment(eq.id)}
-                    aria-pressed={on}
-                    className={`inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full text-sm border transition ${
-                      on
-                        ? "bg-brand-500 border-brand-500 text-white"
-                        : "border-stone-200 bg-stone-50 text-stone-700 hover:border-brand-500"
-                    }`}
-                  >
-                    {on && <Check className="w-3.5 h-3.5" />}
-                    {zh ? eq.labelZh : eq.label}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        </div>
-      </details>
-
-      <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={isLoading || ingredients.length === 0}
-          className="inline-flex items-center justify-center gap-2 h-[52px] px-6 w-full sm:w-auto rounded-md bg-brand-500 hover:bg-brand-600 text-white font-bold transition disabled:bg-stone-200 disabled:text-stone-500 disabled:cursor-not-allowed"
+          disabled={!canSubmit}
+          className="inline-flex items-center justify-center gap-2 h-[52px] px-6 shrink-0 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold transition-colors disabled:bg-stone-200 disabled:text-stone-500 disabled:cursor-not-allowed"
         >
-          {isLoading && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />}
-          {isLoading ? t("aiThinking") : zh ? "建議三道菜" : "Suggest 3 dishes"}
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+          {isLoading ? "Finding dishes" : "Find dishes"}
         </button>
-        {ingredients.length === 0 && !isLoading && (
-          <span className="text-sm text-stone-500">
-            {zh ? "先加至少一樣食材。" : "Add at least one ingredient first."}
+      </div>
+
+      {/* What has been added so far */}
+      {ingredients.length > 0 && (
+        <ul className="flex flex-wrap gap-2" aria-label="Added ingredients">
+          {ingredients.map((item) => (
+            <li
+              key={item}
+              className="inline-flex items-center gap-1 pl-3.5 pr-1 min-h-10 rounded-full bg-stone-900 text-stone-50 text-[15px]"
+            >
+              {item}
+              <button
+                type="button"
+                onClick={() => handleRemoveIngredient(item)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-700"
+                aria-label={`Remove ${item}`}
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Quick add, one tap each */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Quick add">
+        {popularChips
+          .filter((chip) => !ingredients.some((i) => i.toLowerCase() === chip.en.toLowerCase()))
+          .map((chip) => (
+            <button
+              key={chip.en}
+              type="button"
+              onClick={() => handleAddIngredient(chip.en)}
+              aria-label={`Add ${chip.en}`}
+              className="inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full bg-stone-100 text-[15px] text-stone-700 hover:bg-stone-200 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+              {chip.en}
+            </button>
+          ))}
+      </div>
+
+      {/* Everything else, already set to sensible defaults */}
+      <div className="border-t border-stone-200">
+        <button
+          type="button"
+          onClick={() => setShowOptions((o) => !o)}
+          aria-expanded={showOptions}
+          aria-controls="quickstart-options"
+          className="w-full flex items-center justify-between gap-3 min-h-12 py-3 text-left"
+        >
+          <span className="min-w-0">
+            <span className="block font-bold text-stone-900">More options</span>
+            <span className="block text-sm text-stone-500 truncate">
+              {`For ${servings} ${peopleWord}, ${cuisineDisplayName.toLowerCase()}, ${timeLabel.toLowerCase()}`}
+            </span>
           </span>
+          <ChevronDown
+            className={`w-5 h-5 shrink-0 text-stone-500 transition-transform motion-reduce:transition-none ${
+              showOptions ? "rotate-180" : ""
+            }`}
+            aria-hidden="true"
+          />
+        </button>
+
+        {showOptions && (
+          <div id="quickstart-options" className="grid gap-5 pb-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <span id="servings-label" className="block text-[15px] font-bold text-stone-900">
+                Cooking for
+              </span>
+              <div className={`${fieldClass} inline-flex items-center`} role="group" aria-labelledby="servings-label">
+                <button
+                  type="button"
+                  onClick={() => setServings(Math.max(1, servings - 1))}
+                  className="w-12 h-12 flex items-center justify-center text-stone-700 hover:text-stone-900"
+                  aria-label="Fewer people"
+                >
+                  <Minus className="w-4 h-4" aria-hidden="true" />
+                </button>
+                <span className="min-w-[5.5rem] px-1 text-center font-mono whitespace-nowrap" aria-live="polite">
+                  {servings} {peopleWord}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setServings(Math.min(10, servings + 1))}
+                  className="w-12 h-12 flex items-center justify-center text-stone-700 hover:text-stone-900"
+                  aria-label="More people"
+                >
+                  <Plus className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <label className="space-y-2">
+              <span className="block text-[15px] font-bold text-stone-900">Style</span>
+              <select
+                value={cuisine}
+                onChange={(e) => setCuisine(e.target.value)}
+                className={`${fieldClass} w-full h-12 pl-3 pr-8`}
+              >
+                <optgroup label="No particular country">
+                  {APP_CONFIG.cuisines
+                    .filter((c) => c.broadStyle)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="A specific cuisine">
+                  {APP_CONFIG.cuisines
+                    .filter((c) => !c.broadStyle)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="block text-[15px] font-bold text-stone-900">{t("cookingTimeLabel")}</span>
+              <select
+                value={cookingTimeLimit}
+                onChange={(e) => setCookingTimeLimit(e.target.value)}
+                className={`${fieldClass} w-full h-12 px-3`}
+              >
+                <option value="any">{t("anyTime")}</option>
+                <option value="30 mins">{t("quickUnder30")}</option>
+                <option value="45 mins">{t("quickUnder45")}</option>
+                <option value="60 mins">{t("quickUnder60")}</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="block text-[15px] font-bold text-stone-900">{t("skillLevelLabel")}</span>
+              <select
+                value={skillLevel}
+                onChange={(e) => setSkillLevel(e.target.value)}
+                className={`${fieldClass} w-full h-12 px-3`}
+              >
+                {APP_CONFIG.skillLevels.map((lvl) => (
+                  <option key={lvl.id} value={lvl.id}>
+                    {lvl.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <fieldset className="sm:col-span-2">
+              <legend className="text-[15px] font-bold text-stone-900 mb-2">What your kitchen has</legend>
+              <div className="flex flex-wrap gap-2">
+                {APP_CONFIG.equipmentList.map((eq) => {
+                  const on = equipment.includes(eq.id);
+                  return (
+                    <button
+                      key={eq.id}
+                      type="button"
+                      onClick={() => handleToggleEquipment(eq.id)}
+                      aria-pressed={on}
+                      className={`inline-flex items-center gap-1 min-h-10 px-3.5 rounded-full text-[15px] transition-colors ${
+                        on ? "bg-stone-900 text-stone-50" : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                      }`}
+                    >
+                      {on && <Check className="w-3.5 h-3.5" aria-hidden="true" />}
+                      {eq.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </div>
         )}
       </div>
     </form>
