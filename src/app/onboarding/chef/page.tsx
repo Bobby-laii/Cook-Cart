@@ -332,9 +332,8 @@ function ChefOnboardingContent() {
                             setBubble(p.greeting);
                           }}
                           aria-pressed={active}
-                          className={`rounded-lg border p-4 text-left transition-colors ${
-                            active ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-200 hover:border-stone-500"
-                          }`}
+                          className={`rounded-lg border p-4 text-left transition-colors ${active ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-200 hover:border-stone-500"
+                            }`}
                         >
                           <span className="mb-1 flex items-center justify-between gap-2">
                             <span className="text-body font-bold text-stone-900">{p.label}</span>

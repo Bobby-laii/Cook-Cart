@@ -141,6 +141,41 @@ export function answerCookingQuestionLocally(rawPrompt: string): string {
 }
 
 /**
+ * Strip robotic Markdown (**bold**, # headings, - bullet lists) and replace
+ * redundant dish bullet lists with casual, natural kitchen talk when dish cards
+ * are already shown below the chat message.
+ */
+export function humanizeChefMessage(
+  rawText: string,
+  hasSuggestions: boolean,
+  ingredients?: string[]
+): string {
+  const trimmed = rawText.trim();
+  const hasBulletList = /(?:^|\n)\s*(?:[-*•]|\d+\.)\s+/m.test(trimmed);
+  const startsWithBoldTitle = /^\s*(?:\*\*|#{1,4}\s)/.test(trimmed);
+
+  if (hasSuggestions && (hasBulletList || startsWithBoldTitle)) {
+    const ingList =
+      ingredients && ingredients.length > 0
+        ? ingredients.slice(0, 3).join(", ").toLowerCase()
+        : "";
+    if (ingList) {
+      const capIng = ingList.charAt(0).toUpperCase() + ingList.slice(1);
+      return `${capIng} go really well together for a quick meal. Pick whichever dish below sounds good tonight and we can cook it step by step.`;
+    }
+    return "Here are a few good dishes we can make right now. Pick whichever one sounds best below and we'll cook it step by step.";
+  }
+
+  return trimmed
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/^\s*#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*•]\s+/gm, "")
+    .replace(/\n{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Extract <COOKCART_MENU> JSON block from LLM text response if present.
  */
 export function extractMenuFromLLMResponse(rawText: string): {
@@ -534,7 +569,7 @@ export function generateLocalMockCookingResponse(
     ],
   };
 
-  const message = `Here are 3 ideas using ${ingListStr}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`;
+  const message = `${ingListStr} make a great combination. Pick whichever dish below sounds good tonight and we can cook it step by step.`;
 
   return {
     message,
@@ -587,6 +622,11 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     const local = generateLocalMockCookingResponse(lastUserMessage, quickStartData);
     return attachDishImages(local.suggestions);
   }
+
+  const activeIngredients =
+    quickStartData?.ingredients && quickStartData.ingredients.length > 0
+      ? quickStartData.ingredients
+      : extractIngredientsFromUserText(lastUserMessage);
 
   // 2. Gemini first: the agreed provider, on Google's free tier. GEMINI_MODEL lets the
   // model be swapped in .env when Google retires one, without a code change.
@@ -644,7 +684,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
         const suggestions = await resolveStructuredSuggestions(menuDishes);
 
         return {
-          message: cleanMessage,
+          message: humanizeChefMessage(cleanMessage, Boolean(suggestions?.length), activeIngredients),
           structuredSuggestions: suggestions,
           tokensUsed: {
             prompt: promptTokens,
@@ -909,7 +949,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
           });
 
           return {
-            message: cleanMessage,
+            message: humanizeChefMessage(cleanMessage, Boolean(suggestions?.length), activeIngredients),
             structuredSuggestions: suggestions,
             tokensUsed: { prompt: 100, completion: 200, total: 300 },
             modelUsed: "pollinations-free-llm",

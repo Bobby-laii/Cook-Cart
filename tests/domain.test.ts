@@ -6,6 +6,7 @@ import {
   isMenuOrRecipeRequest,
   isCookingStepOrTechniqueQuestion,
   answerCookingQuestionLocally,
+  humanizeChefMessage,
 } from "../src/lib/ai/aiService";
 
 describe("Stage 11: Domain Logic & Business Rules Tests", () => {
@@ -85,5 +86,18 @@ describe("Stage 11: Domain Logic & Business Rules Tests", () => {
     const answer = answerCookingQuestionLocally(stepPrompt);
     expect(answer).toContain("190°C");
     expect(answer).toContain("375°F");
+  });
+
+  it("replaces robotic **bold** and - bullet dish lists with casual kitchen talk", () => {
+    const roboticReply = `**Quick 30-minute meals with rice, eggs, and garlic**
+
+- **Garlic Fried-Rice with Sunny-Side Eggs** – sautéed garlic, gently fried rice, topped with two sunny-side eggs.
+- **Garlic-Infused Egg-Rice Pilaf** – fluffy rice simmered with garlic, folded with scrambled eggs and herbs.
+- **Garlic Egg Curry over Steamed Rice** – spicy garlic sauce with boiled eggs, served over steaming rice.`;
+
+    const casual = humanizeChefMessage(roboticReply, true, ["Rice", "Eggs", "Garlic"]);
+    expect(casual).not.toContain("**");
+    expect(casual).not.toContain("- ");
+    expect(casual).toContain("Rice, eggs, garlic go really well together");
   });
 });
