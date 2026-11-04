@@ -10,6 +10,7 @@ export type CookCommand =
   | { kind: "startTimer" }
   | { kind: "stopTimer" }
   | { kind: "ingredients" }
+  | { kind: "checkStep" }
   | { kind: "ask"; question: string };
 
 /** Words that ask the chef a question: "chef, how do I know the onions are done?" */
@@ -42,6 +43,9 @@ export function parseCommand(transcript: string): CookCommand | null {
   if (/\b(start|set) (the )?timer\b|^timer$/.test(phrase)) return { kind: "startTimer" };
   if (/\b(stop|pause|cancel) (the )?timer\b/.test(phrase)) return { kind: "stopTimer" };
   if (/\bingredients?\b/.test(phrase)) return { kind: "ingredients" };
+  if (/\b(check|inspect) (the )?(pan|step|food|dish)\b|^look at this$|^show the chef$/.test(phrase)) {
+    return { kind: "checkStep" };
+  }
   if (/\b(repeat|again|say that again|what was that)\b/.test(phrase)) return { kind: "repeat" };
   if (/\b(back|previous|go back|last step)\b/.test(phrase)) return { kind: "back" };
   if (/\b(next|continue|done|ok next|okay next)\b/.test(phrase)) return { kind: "next" };

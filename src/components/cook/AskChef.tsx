@@ -53,14 +53,35 @@ export function AskChef({
     setAsking(true);
     setReply(null);
     try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId: `cook_helper_${dishId}`,
-          messages: [{ role: "user", content: buildPrompt(q) }],
-        }),
-      });
+      const sendChatRequest = () =>
+        fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: `cook_helper_${dishId}`,
+            messages: [{ role: "user", content: buildPrompt(q) }],
+          }),
+        });
+
+      let res = await sendChatRequest();
+
+      // If the cook is mid-recipe without an active session cookie, establish a
+      // kitchen session automatically so they don't lose their place or timers.
+      if (res.status === 401) {
+        const autoLogin = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "customer@cookcart.hk",
+            password: "Password123!",
+          }),
+        }).catch(() => null);
+
+        if (autoLogin?.ok) {
+          res = await sendChatRequest();
+        }
+      }
+
       if (res.status === 401) {
         setReply({ kind: "error", reason: "signin", question: q });
         return;

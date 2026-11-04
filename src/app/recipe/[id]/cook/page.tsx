@@ -16,7 +16,8 @@ import { BottomSheet } from "@/components/cook/BottomSheet";
 import { AskChef } from "@/components/cook/AskChef";
 import { FarView } from "@/components/handsfree/FarView";
 import { HandsFreeControls } from "@/components/handsfree/HandsFreeControls";
-import { useWaveGesture } from "@/lib/handsfree/useWaveGesture";
+import { LiveCameraStepFeed } from "@/components/handsfree/LiveCameraStepFeed";
+import { useLiveCameraStep } from "@/lib/handsfree/useWaveGesture";
 import { speak, useVoiceCommands } from "@/lib/handsfree/useVoiceCommands";
 import type { CookCommand } from "@/lib/handsfree/commands";
 import {
@@ -155,6 +156,7 @@ function CookSession({
   const [voice, setVoice] = useState(false);
   const [farView, setFarView] = useState(false);
   const [voiceQuestion, setVoiceQuestion] = useState<{ id: number; text: string } | null>(null);
+  const [triggerCameraCheckId, setTriggerCameraCheckId] = useState<number | null>(null);
 
   useEffect(() => {
     if (fromChat) return;
@@ -260,7 +262,15 @@ function CookSession({
     document.title = `Cooking ${dish.title} – Bon Taste`;
   }, [dish.title]);
 
-  const camera = useWaveGesture(wave && !finished, (swipe) => {
+  const {
+    state: camera,
+    videoRef,
+    motionLevel,
+    lastSwipe,
+    facingMode,
+    setFacingMode,
+    captureFrame,
+  } = useLiveCameraStep(wave && !finished, (swipe) => {
     if (swipe === "next") goNext();
     else if (stepIdx > 0) goBack();
   });
@@ -429,6 +439,11 @@ function CookSession({
         setFarView(false);
         setSheet("ingredients");
         break;
+      case "checkStep":
+        setFarView(false);
+        if (!wave) setWave(true);
+        setTriggerCameraCheckId(Date.now());
+        break;
       case "ask":
         setFarView(false);
         setSheet("chef");
@@ -546,9 +561,34 @@ function CookSession({
             onToggleVoice={() => setVoice((v) => !v)}
             onFarView={() => setFarView(true)}
           />
+
+          {wave && (
+            <LiveCameraStepFeed
+              cameraState={camera}
+              videoRef={videoRef}
+              motionLevel={motionLevel}
+              lastSwipe={lastSwipe}
+              facingMode={facingMode}
+              onToggleFacingMode={() =>
+                setFacingMode((prev) => (prev === "user" ? "environment" : "user"))
+              }
+              captureFrame={captureFrame}
+              dishTitle={dish.title}
+              stepNumber={stepIdx + 1}
+              totalSteps={stepCount}
+              stepTitle={stepTitle}
+              stepText={stepText}
+              speakFeedback={voice}
+              triggerCheckId={triggerCameraCheckId}
+              onNextStep={goNext}
+            />
+          )}
+
           {voice && mic === "listening" && (
             <p className="text-sm text-stone-500" aria-live="polite">
-              {heard ? `Heard “${heard}”.` : "Listening. Say “next”, “back”, “repeat”, “start timer”, or “chef” and your question."}
+              {heard
+                ? `Heard “${heard}”.`
+                : "Listening. Say “next”, “back”, “repeat”, “check pan”, “start timer”, or “chef” and your question."}
             </p>
           )}
         </main>

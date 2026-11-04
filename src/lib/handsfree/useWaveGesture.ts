@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { detectSwipe, frameMotion, MIN_MOTION, type MotionSample, type Swipe } from "@/lib/handsfree/commands";
+import {
+  captureCameraFrameBase64,
+  isCameraSupported,
+  openCameraStream,
+  postNativeCameraEvent,
+  type CameraFacingMode,
+} from "@/lib/handsfree/cameraPlatform";
 
 export type CameraState = "off" | "starting" | "on" | "blocked" | "unsupported";
 
@@ -12,34 +19,59 @@ const SAMPLE_MS = 70;
 /** After a wave, ignore movement for a moment so one wave turns one page. */
 const COOLDOWN_MS = 1200;
 
+export interface LiveCameraStepController {
+  state: CameraState;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  motionLevel: number;
+  lastSwipe: { direction: Swipe; at: number } | null;
+  facingMode: CameraFacingMode;
+  setFacingMode: React.Dispatch<React.SetStateAction<CameraFacingMode>>;
+  captureFrame: () => Promise<string | null>;
+}
+
 /**
- * Watches the front camera for a wave and calls `onSwipe("next" | "back")`.
- *
- * Everything runs on the phone: frames are shrunk to 48×36 greyscale, compared with
- * the previous frame, and thrown away. Nothing is recorded or sent anywhere. The
- * camera stops when `enabled` turns off, the page is hidden, or the component unmounts.
+ * Full live camera controller for step-by-step cooking:
+ * - Tracks wave gestures in real time (48x36 greyscale diff on device)
+ * - Binds the active stream to an optional `<video ref={videoRef}>` preview element
+ * - Supports flipping between front camera ("user", for hand waves) and rear camera
+ *   ("environment", for showing the pan/ingredients to the chef)
+ * - Supports React Native / Capacitor phone app camera bridges via `cameraPlatform.ts`
  */
-export function useWaveGesture(enabled: boolean, onSwipe: (swipe: Swipe) => void) {
+export function useLiveCameraStep(
+  enabled: boolean,
+  onSwipe: (swipe: Swipe) => void,
+  initialFacingMode: CameraFacingMode = "user"
+): LiveCameraStepController {
   const [state, setState] = useState<CameraState>("off");
+  const [facingMode, setFacingMode] = useState<CameraFacingMode>(initialFacingMode);
+  const [motionLevel, setMotionLevel] = useState(0);
+  const [lastSwipe, setLastSwipe] = useState<{ direction: Swipe; at: number } | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const internalVideoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const onSwipeRef = useRef(onSwipe);
   onSwipeRef.current = onSwipe;
 
   useEffect(() => {
     if (!enabled) {
       setState("off");
+      setMotionLevel(0);
       return;
     }
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+
+    if (!isCameraSupported()) {
       setState("unsupported");
       return;
     }
 
     let cancelled = false;
-    let stream: MediaStream | null = null;
     let timer: number | undefined;
     const video = document.createElement("video");
     video.muted = true;
     video.playsInline = true;
+    internalVideoRef.current = video;
+
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
@@ -48,8 +80,21 @@ export function useWaveGesture(enabled: boolean, onSwipe: (swipe: Swipe) => void
     let samples: MotionSample[] = [];
     let quietUntil = 0;
 
+    // Listen to native phone app gesture bridge if running inside React Native / Capacitor
+    const unbindNativeGesture =
+      typeof window !== "undefined" && window.CookCartNativeCamera?.onGestureEvent
+        ? window.CookCartNativeCamera.onGestureEvent((dir) => {
+            if (!cancelled) {
+              setLastSwipe({ direction: dir, at: Date.now() });
+              onSwipeRef.current(dir);
+            }
+          })
+        : undefined;
+
     const grey = () => {
-      ctx!.drawImage(video, 0, 0, W, H);
+      const sourceVideo =
+        videoRef.current && videoRef.current.readyState >= 2 ? videoRef.current : video;
+      ctx!.drawImage(sourceVideo, 0, 0, W, H);
       const rgba = ctx!.getImageData(0, 0, W, H).data;
       const out = new Uint8ClampedArray(W * H);
       for (let i = 0, j = 0; i < rgba.length; i += 4, j++) {
@@ -59,39 +104,61 @@ export function useWaveGesture(enabled: boolean, onSwipe: (swipe: Swipe) => void
     };
 
     const tick = () => {
-      if (cancelled || !ctx || video.readyState < 2) return;
+      const activeVideo =
+        videoRef.current && videoRef.current.readyState >= 2 ? videoRef.current : video;
+      if (cancelled || !ctx || activeVideo.readyState < 2) return;
       const now = performance.now();
       const frame = grey();
       if (prev && now >= quietUntil) {
         const m = frameMotion(prev, frame, W);
+        // Smooth motion level indicator (0..1) for live HUD feedback
+        const normalizedMotion = Math.min(1, m.amount / 0.18);
+        setMotionLevel((prevLevel) =>
+          Math.abs(prevLevel - normalizedMotion) > 0.04 ? normalizedMotion : prevLevel
+        );
+
         samples.push({ t: now, amount: m.amount, x: m.x });
         samples = samples.filter((s) => now - s.t < 1000);
-        // Judge the sweep once the hand has left the frame (motion stopped).
         const last = samples[samples.length - 1];
         if (last.amount < MIN_MOTION && samples.length > 3) {
-          const swipe = detectSwipe(samples);
-          if (swipe) {
+          const rawSwipe = detectSwipe(samples);
+          if (rawSwipe) {
+            // Rear camera is not mirrored, so flip horizontal swipe interpretation
+            const swipe: Swipe =
+              facingMode === "environment"
+                ? rawSwipe === "next"
+                  ? "back"
+                  : "next"
+                : rawSwipe;
             quietUntil = now + COOLDOWN_MS;
+            setLastSwipe({ direction: swipe, at: Date.now() });
+            postNativeCameraEvent("wave-gesture", { direction: swipe });
             onSwipeRef.current(swipe);
           }
-          if (swipe || samples.every((s) => s.amount < MIN_MOTION)) samples = [];
+          if (rawSwipe || samples.every((s) => s.amount < MIN_MOTION)) samples = [];
         }
       }
       prev = frame;
     };
 
     setState("starting");
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: "user", width: { ideal: 160 }, height: { ideal: 120 } }, audio: false })
+    openCameraStream(facingMode, 320, 240)
       .then(async (s) => {
         if (cancelled) {
           s.getTracks().forEach((t) => t.stop());
           return;
         }
-        stream = s;
+        streamRef.current = s;
         video.srcObject = s;
         await video.play().catch(() => {});
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          await videoRef.current.play().catch(() => {});
+        }
+
         setState("on");
+        postNativeCameraEvent("camera-started", { facingMode });
         timer = window.setInterval(tick, SAMPLE_MS);
       })
       .catch(() => {
@@ -100,11 +167,52 @@ export function useWaveGesture(enabled: boolean, onSwipe: (swipe: Swipe) => void
 
     return () => {
       cancelled = true;
+      unbindNativeGesture?.();
       if (timer) window.clearInterval(timer);
-      stream?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
       video.srcObject = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     };
-  }, [enabled]);
+  }, [enabled, facingMode]);
 
+  // Keep the visible `<video ref={videoRef}>` element synced if it mounts after stream starts
+  useEffect(() => {
+    if (state === "on" && streamRef.current && videoRef.current && videoRef.current.srcObject !== streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  });
+
+  const captureFrame = useCallback(async (): Promise<string | null> => {
+    const activeVideo =
+      videoRef.current && videoRef.current.readyState >= 2
+        ? videoRef.current
+        : internalVideoRef.current;
+    return captureCameraFrameBase64(activeVideo, facingMode);
+  }, [facingMode]);
+
+  return {
+    state,
+    videoRef,
+    motionLevel,
+    lastSwipe,
+    facingMode,
+    setFacingMode,
+    captureFrame,
+  };
+}
+
+/**
+ * Watches the front camera for a wave and calls `onSwipe("next" | "back")`.
+ *
+ * Everything runs on the phone: frames are shrunk to 48×36 greyscale, compared with
+ * the previous frame, and thrown away. Nothing is recorded or sent anywhere. The
+ * camera stops when `enabled` turns off, the page is hidden, or the component unmounts.
+ */
+export function useWaveGesture(enabled: boolean, onSwipe: (swipe: Swipe) => void): CameraState {
+  const { state } = useLiveCameraStep(enabled, onSwipe, "user");
   return state;
 }

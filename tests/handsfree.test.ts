@@ -10,6 +10,9 @@ describe("parseCommand", () => {
     expect(parseCommand("start the timer")).toEqual({ kind: "startTimer" });
     expect(parseCommand("stop timer")).toEqual({ kind: "stopTimer" });
     expect(parseCommand("show ingredients")).toEqual({ kind: "ingredients" });
+    expect(parseCommand("check pan")).toEqual({ kind: "checkStep" });
+    expect(parseCommand("show the chef")).toEqual({ kind: "checkStep" });
+    expect(parseCommand("look at this")).toEqual({ kind: "checkStep" });
   });
 
   it("ignores long phrases, so a step read aloud can't change the page", () => {

@@ -4,6 +4,8 @@ import {
   isOffTopic,
   extractMenuFromLLMResponse,
   isMenuOrRecipeRequest,
+  isCookingStepOrTechniqueQuestion,
+  answerCookingQuestionLocally,
 } from "../src/lib/ai/aiService";
 
 describe("Stage 11: Domain Logic & Business Rules Tests", () => {
@@ -19,7 +21,6 @@ describe("Stage 11: Domain Logic & Business Rules Tests", () => {
     expect(response.suggestions).toHaveLength(3);
 
     response.suggestions.forEach((suggestion) => {
-      // Every user ingredient must be in usedUserIngredients or explained in omitted
       userIngredients.forEach((ing) => {
         const isUsed = suggestion.usedUserIngredients.includes(ing);
         const isOmittedWithReason = suggestion.omittedUserIngredients?.some(
@@ -34,9 +35,9 @@ describe("Stage 11: Domain Logic & Business Rules Tests", () => {
   it("should accurately scale ingredient quantities by portion count", () => {
     const baseServings = 2;
     const targetServings = 6;
-    const multiplier = targetServings / baseServings; // 3x
+    const multiplier = targetServings / baseServings;
 
-    const baseAmount = 250; // 250g
+    const baseAmount = 250;
     const scaledAmount = Math.round(baseAmount * multiplier * 10) / 10;
 
     expect(scaledAmount).toBe(750);
@@ -73,5 +74,16 @@ describe("Stage 11: Domain Logic & Business Rules Tests", () => {
     expect(isMenuOrRecipeRequest("Can you give me a dinner menu?")).toBe(true);
     expect(isMenuOrRecipeRequest("What should I cook for lunch?")).toBe(true);
     expect(isMenuOrRecipeRequest("How was your day?")).toBe(false);
+  });
+
+  it("distinguishes mid-recipe step questions from menu requests and answers them directly", () => {
+    const stepPrompt =
+      'I am on step 3 of 5 while cooking "Teriyaki Chicken" for 2. High-Heat Sear: Heat 1 tbsp oil in your pan. Quick question: How hot should the pan be? (Please answer in 2 or 3 practical sentences.)';
+    expect(isCookingStepOrTechniqueQuestion(stepPrompt)).toBe(true);
+    expect(isMenuOrRecipeRequest(stepPrompt)).toBe(false);
+
+    const answer = answerCookingQuestionLocally(stepPrompt);
+    expect(answer).toContain("190°C");
+    expect(answer).toContain("375°F");
   });
 });

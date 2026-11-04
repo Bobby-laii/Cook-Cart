@@ -63,12 +63,81 @@ export function isOffTopic(_text: string): boolean {
 }
 
 /**
+ * Detect whether the message is a mid-recipe step question or culinary technique question
+ * (rather than a request for 3 dish suggestions).
+ */
+export function isCookingStepOrTechniqueQuestion(text: string): boolean {
+  if (/^I am on step \d+ of \d+ while cooking/i.test(text.trim()) || /Quick question:/i.test(text)) {
+    return true;
+  }
+  if (
+    /\b(how hot|what temperature|substitute|instead of|replace|is it done|how do i know|burnt|burning|too salty|too sour|too spicy|too thick|too thin|watery|sticking|can i use|how long should i|why is my)\b/i.test(
+      text
+    ) &&
+    !/\b(give me a .*menu|suggest .*dishes|what should i cook)\b/i.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Detect whether a free-text chat message is asking for a menu, recipe, or how to cook a dish.
  */
 export function isMenuOrRecipeRequest(text: string): boolean {
+  if (isCookingStepOrTechniqueQuestion(text)) {
+    return false;
+  }
   return /\b(menu|recipe|recipes|cook|cooking|make|dish|dishes|dinner|lunch|breakfast|meal|eat|prepare|stir[- ]?fry|braise|steam|bake|roast|pasta|noodle|chicken|beef|pork|salmon|tofu|egg|soup|curry)\b/i.test(
     text
   );
+}
+
+/**
+ * Answer a specific mid-recipe or technique question locally when cloud LLMs are unreachable.
+ * Follows the chef persona rules in `src/config/systemPrompt.ts` (2-3 plain sentences,
+ * both metric and US units, no exclamation marks or emoji).
+ */
+export function answerCookingQuestionLocally(rawPrompt: string): string {
+  const questionMatch = rawPrompt.match(/Quick question:\s*(.+?)(?:\s*\(Please answer.*)?$/i);
+  const question = (questionMatch ? questionMatch[1] : rawPrompt).trim();
+  const q = question.toLowerCase();
+
+  if (/\b(how hot|heat|smoke|smoking|shimmer|pan|wok|temperature)\b/.test(q)) {
+    return "Heat the pan over medium-high until a drop of water skitters across the surface, around 190°C (375°F). Add 1 tbsp (15 ml) of oil and wait 10 seconds until it shimmers before adding your food.";
+  }
+  if (/\b(substitute|instead|replace|don't have|dont have|out of)\b/.test(q)) {
+    if (/\b(shaoxing|wine|sherry)\b/.test(q)) {
+      return "Use dry sherry, mirin, or plain stock with 1/2 tsp (2.5 ml) of rice vinegar per tablespoon. Add it around the rim of the hot pan so the aroma still lifts the dish.";
+    }
+    if (/\b(butter)\b/.test(q)) {
+      return "Use an equal amount of olive oil or neutral cooking oil, about 1 tbsp (15 ml) per tablespoon of butter. Add a tiny pinch of salt at the end to replace the saltiness in butter.";
+    }
+    if (/\b(cornstarch|cornflour|starch)\b/.test(q)) {
+      return "Mix 1 tsp (5 g) of potato starch or arrowroot with 2 tsp (10 ml) of cold water, or use 2 tsp (10 g) of plain flour. Stir it in at the end and simmer for 30 seconds until glossy.";
+    }
+    if (/\b(soy sauce|oyster sauce)\b/.test(q)) {
+      return "Use tamari, coconut aminos, or 1/2 tsp (3 g) of salt dissolved in 1 tbsp (15 ml) of warm stock with a tiny pinch of sugar. Taste before serving and adjust gradually.";
+    }
+    return "You can swap it one-for-one with the closest mild pantry ingredient you have on hand, or leave it out and balance the dish at the end with a pinch of salt and a few drops of lemon juice or vinegar.";
+  }
+  if (/\b(done|cooked|ready|tender|colour|color|look like|check)\b/.test(q)) {
+    return "Look for golden edges, a fragrant aroma, and no raw pinkness in the thickest part, which should reach 74°C (165°F) for poultry or flake easily for fish. If it yields gently when pressed with your spoon, it is ready for the next step.";
+  }
+  if (/\b(burnt|burning|scorched|sticking|stuck|dry)\b/.test(q)) {
+    return "Lower the heat right away and splash in 2 tbsp (30 ml) of water or stock to stop the scorching. If the bottom is dark and bitter, transfer the top layer of food to a clean pan without scraping the burnt bits.";
+  }
+  if (/\b(salty|too much salt|oversalted)\b/.test(q)) {
+    return "Add a splash of unsalted water or stock, about 60 ml (1/4 cup), or toss in extra greens or steamed rice to absorb the salt. A few drops of lemon juice or rice vinegar and a pinch of sugar will also round out the sharp edge.";
+  }
+  if (/\b(thick|thin|watery|runny|sauce)\b/.test(q)) {
+    return "If the sauce is too thin, simmer uncovered over medium-high heat for 2 minutes or stir in 1 tsp (5 g) of cornstarch mixed with 1 tbsp (15 ml) of cold water. If it is too thick, loosen it with 1 to 2 tbsp (15 to 30 ml) of warm water.";
+  }
+  if (/\b(garlic|onion|ginger)\b/.test(q)) {
+    return "Cook the aromatics over medium heat for 30 to 45 seconds until fragrant and lightly translucent. Move to the next step before the garlic turns dark brown so it stays sweet rather than bitter.";
+  }
+
+  return "Keep the heat at medium so the ingredients cook evenly without rushing, and stir every 20 to 30 seconds. Trust the smell and colour in the pan: once it smells fragrant and the edges turn lightly golden, you are ready for the next step.";
 }
 
 /**
@@ -184,7 +253,7 @@ function buildDefaultStepsForDish(title: string, ingredients: string[]): RecipeS
     {
       step: 5,
       title: "Garnish & Serve Hot",
-      text: `Transfer to a warmed plate, garnish with fresh herbs or spring onions, and serve immediately!`,
+      text: `Transfer to a warmed plate, garnish with fresh herbs or spring onions, and serve immediately.`,
     },
   ];
 }
@@ -194,7 +263,6 @@ function buildDefaultStepsForDish(title: string, ingredients: string[]): RecipeS
  */
 export async function checkAILimits(userId?: string): Promise<{ allowed: boolean; reason?: string }> {
   try {
-    // 1. Check monthly spending cap from AppSettings
     const capSetting = await prisma.appSetting.findUnique({
       where: { key: "ai_monthly_spending_cap" },
     });
@@ -219,7 +287,6 @@ export async function checkAILimits(userId?: string): Promise<{ allowed: boolean
       };
     }
 
-    // 2. Check per-user daily request count
     if (userId) {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -234,7 +301,7 @@ export async function checkAILimits(userId?: string): Promise<{ allowed: boolean
       if (dailyCount >= APP_CONFIG.ai.dailyUserRequestLimit) {
         return {
           allowed: false,
-          reason: `You have reached your daily limit of ${APP_CONFIG.ai.dailyUserRequestLimit} AI cooking consultations. It resets at midnight!`,
+          reason: `You have reached your daily limit of ${APP_CONFIG.ai.dailyUserRequestLimit} AI cooking consultations. It resets at midnight.`,
         };
       }
     }
@@ -242,7 +309,7 @@ export async function checkAILimits(userId?: string): Promise<{ allowed: boolean
     return { allowed: true };
   } catch (err) {
     console.error("AI Limit check error:", err);
-    return { allowed: true }; // Fail-open for MVP resilience
+    return { allowed: true };
   }
 }
 
@@ -326,7 +393,6 @@ export function generateLocalMockCookingResponse(
   const servings = quickStart?.servings || 2;
   const ingListStr = ingredients.join(", ");
 
-  // Dish 1: Stir-fry / Wok style using all ingredients + full 5-step guide
   const dish1: DishSuggestion = {
     id: "sugg_" + Math.random().toString(36).substring(2, 9),
     title: `${cuisine === "Home-style" ? "" : `${cuisineFlavor} `}Wok Sauté of ${ingredients.slice(0, 2).join(" & ")}`,
@@ -378,7 +444,6 @@ export function generateLocalMockCookingResponse(
     ],
   };
 
-  // Dish 2: Comforting Braise / Stew / Claypot
   const dish2: DishSuggestion = {
     id: "sugg_" + Math.random().toString(36).substring(2, 9),
     title: `Savory Claypot-Style Braised ${ingredients[0] || "Main"} with ${ingredients[1] || "Greens"}`,
@@ -425,7 +490,6 @@ export function generateLocalMockCookingResponse(
     ],
   };
 
-  // Dish 3: Nourishing Soup / Quick Noodle Bowl
   const dish3: DishSuggestion = {
     id: "sugg_" + Math.random().toString(36).substring(2, 9),
     title: `Ginger Noodle Soup with ${ingListStr}`,
@@ -513,7 +577,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     if (hasSpoonacularKey() && hasQuickStart && quickStartData?.ingredients) {
       const live = await fetchLiveRecipes(
         quickStartData.ingredients,
-        (quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""),
+        quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : "",
         3,
         quickStartData.servings || 2
       );
@@ -534,7 +598,6 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
         ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
         : lastUserMessage;
 
-      // Recent turns so the chef remembers the conversation; Gemini calls the assistant "model".
       const contents = messages
         .filter((m) => m.role !== "system")
         .slice(-8)
@@ -542,14 +605,12 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
           role: m.role === "assistant" ? "model" : "user",
           parts: [{ text: idx === arr.length - 1 && m.role === "user" ? userContent : m.content }],
         }));
-      // Gemini refuses a conversation that opens with a model turn, which slice() can produce.
       while (contents.length > 0 && contents[0].role === "model") contents.shift();
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
         {
           method: "POST",
-          // Header rather than ?key= so the key never lands in proxy or server URL logs.
           headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -557,8 +618,6 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 1200,
-              // 2.5 models "think" by default, which spends the output budget and adds
-              // seconds; short kitchen replies do not need it.
               thinkingConfig: { thinkingBudget: 0 },
             },
           }),
@@ -603,71 +662,78 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   // 3. OpenRouter, when configured
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
   if (openRouterApiKey) {
-    try {
-      const userContent = quickStartData?.ingredients?.length
-        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
-        : lastUserMessage;
+    const candidateModels = [
+      process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-exp:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "openai/gpt-4o-mini",
+    ];
+    for (const orModel of candidateModels) {
+      try {
+        const userContent = quickStartData?.ingredients?.length
+          ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
+          : lastUserMessage;
 
-      const historyMessages = messages.slice(-5).map((m, idx, arr) => ({
-        role: m.role,
-        content: idx === arr.length - 1 && m.role === "user" ? userContent : m.content,
-      }));
+        const historyMessages = messages.slice(-5).map((m, idx, arr) => ({
+          role: m.role,
+          content: idx === arr.length - 1 && m.role === "user" ? userContent : m.content,
+        }));
 
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${openRouterApiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "Bon Taste",
-        },
-        body: JSON.stringify({
-          model: "nvidia/nemotron-3-ultra-550b-a55b:free",
-          include_reasoning: false,
-          temperature: 0.7,
-          max_tokens: 350,
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt,
-            },
-            ...historyMessages,
-          ],
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawText = data.choices?.[0]?.message?.content || "";
-        const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
-        const promptTokens = data.usage?.prompt_tokens || 100;
-        const completionTokens = data.usage?.completion_tokens || 200;
-
-        await logAIUsage({
-          userId,
-          conversationId,
-          modelName: "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
-          tokensPrompt: promptTokens,
-          tokensCompletion: completionTokens,
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openRouterApiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://cook-cart.vercel.app",
+            "X-Title": "Bon Taste",
+          },
+          body: JSON.stringify({
+            model: orModel,
+            include_reasoning: false,
+            temperature: 0.7,
+            max_tokens: 1000,
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt,
+              },
+              ...historyMessages,
+            ],
+          }),
         });
 
-        const suggestions = await resolveStructuredSuggestions(menuDishes);
+        if (response.ok) {
+          const data = await response.json();
+          const rawText = data.choices?.[0]?.message?.content || "";
+          if (rawText.trim()) {
+            const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
+            const promptTokens = data.usage?.prompt_tokens || 100;
+            const completionTokens = data.usage?.completion_tokens || 200;
 
-        return {
-          message: cleanMessage,
-          structuredSuggestions: suggestions,
-          tokensUsed: {
-            prompt: promptTokens,
-            completion: completionTokens,
-            total: promptTokens + completionTokens,
-          },
-          modelUsed: "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
-        };
-      } else {
-        console.warn("OpenRouter API returned error:", await response.text());
+            await logAIUsage({
+              userId,
+              conversationId,
+              modelName: `openrouter/${orModel}`,
+              tokensPrompt: promptTokens,
+              tokensCompletion: completionTokens,
+            });
+
+            const suggestions = await resolveStructuredSuggestions(menuDishes);
+
+            return {
+              message: cleanMessage,
+              structuredSuggestions: suggestions,
+              tokensUsed: {
+                prompt: promptTokens,
+                completion: completionTokens,
+                total: promptTokens + completionTokens,
+              },
+              modelUsed: `openrouter/${orModel}`,
+            };
+          }
+        }
+      } catch (orError) {
+        console.warn(`OpenRouter (${orModel}) failed, trying next:`, orError);
       }
-    } catch (orError) {
-      console.warn("OpenRouter API call failed, trying next provider:", orError);
     }
   }
 
@@ -775,7 +841,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   if (hasSpoonacularKey() && quickStartData?.ingredients?.length) {
     const liveSuggestions = await fetchLiveRecipes(
       quickStartData.ingredients,
-      (quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""),
+      quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : "",
       3,
       quickStartData.servings || 2
     );
@@ -792,7 +858,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
 
       const ingredientList = quickStartData.ingredients.join(", ");
       return {
-        message: `Here are ${liveSuggestions.length} real ${(quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : "")} recipes built around ${ingredientList}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`,
+        message: `Here are ${liveSuggestions.length} real ${quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""} recipes built around ${ingredientList}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`,
         structuredSuggestions: liveSuggestions,
         tokensUsed: liveTokens,
         modelUsed: "spoonacular-live-recipes",
@@ -800,57 +866,59 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     }
   }
 
-  // 7. Free Cloud AI LLM fallback (Pollinations text endpoint)
-  try {
-    const userContent = quickStartData?.ingredients?.length
-      ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use: ${quickStartData.ingredients.join(", ")}\nUser request: ${lastUserMessage}`
-      : lastUserMessage;
+  // 7. Free Cloud AI LLM fallback (Pollinations OpenAI-compatible endpoint)
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const userContent = quickStartData?.ingredients?.length
+        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use: ${quickStartData.ingredients.join(", ")}\nUser request: ${lastUserMessage}`
+        : lastUserMessage;
 
-    const historyMessages = messages.slice(-5).map((m, idx, arr) => ({
-      role: m.role,
-      content: idx === arr.length - 1 && m.role === "user" ? userContent : m.content,
-    }));
+      const historyMessages = messages.slice(-5).map((m, idx, arr) => ({
+        role: m.role,
+        content: idx === arr.length - 1 && m.role === "user" ? userContent : m.content,
+      }));
 
-    const polliRes = await fetch("https://text.pollinations.ai/openai/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "openai",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          ...historyMessages,
-        ],
-      }),
-    });
+      const polliRes = await fetch("https://text.pollinations.ai/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "openai",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            ...historyMessages,
+          ],
+        }),
+      });
 
-    if (polliRes.ok) {
-      const polliData = await polliRes.json();
-      const aiReply = polliData.choices?.[0]?.message?.content;
-      if (aiReply) {
-        const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(aiReply);
-        const suggestions = await resolveStructuredSuggestions(menuDishes);
+      if (polliRes.ok) {
+        const polliData = await polliRes.json();
+        const aiReply = polliData.choices?.[0]?.message?.content;
+        if (aiReply) {
+          const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(aiReply);
+          const suggestions = await resolveStructuredSuggestions(menuDishes);
 
-        await logAIUsage({
-          userId,
-          conversationId,
-          modelName: "pollinations-free-llm",
-          tokensPrompt: 100,
-          tokensCompletion: 200,
-        });
+          await logAIUsage({
+            userId,
+            conversationId,
+            modelName: "pollinations-free-llm",
+            tokensPrompt: 100,
+            tokensCompletion: 200,
+          });
 
-        return {
-          message: cleanMessage,
-          structuredSuggestions: suggestions,
-          tokensUsed: { prompt: 100, completion: 200, total: 300 },
-          modelUsed: "pollinations-free-llm",
-        };
+          return {
+            message: cleanMessage,
+            structuredSuggestions: suggestions,
+            tokensUsed: { prompt: 100, completion: 200, total: 300 },
+            modelUsed: "pollinations-free-llm",
+          };
+        }
       }
+    } catch (err) {
+      console.warn("Pollinations free LLM failed, using local culinary engine:", err);
     }
-  } catch (err) {
-    console.warn("Pollinations free LLM failed, using local template engine:", err);
   }
 
   // 8. Default / Fallback: Intelligent Local Culinary Engine
@@ -863,6 +931,24 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       message:
         "Hello, I'm your chef. What would you like to cook, or what do you have in the fridge today?",
       tokensUsed: { prompt: 20, completion: 40, total: 60 },
+      modelUsed: "cookcart-local-engine",
+    };
+  }
+
+  // Mid-recipe step question or technique question -> concise, accurate 2-3 sentence chef answer
+  if (isCookingStepOrTechniqueQuestion(lastUserMessage) && !quickStartData?.ingredients?.length) {
+    const stepAnswer = answerCookingQuestionLocally(lastUserMessage);
+    const stepTokens = { prompt: 80, completion: 70, total: 150 };
+    await logAIUsage({
+      userId,
+      conversationId,
+      modelName: "cookcart-local-engine",
+      tokensPrompt: stepTokens.prompt,
+      tokensCompletion: stepTokens.completion,
+    });
+    return {
+      message: stepAnswer,
+      tokensUsed: stepTokens,
       modelUsed: "cookcart-local-engine",
     };
   }
