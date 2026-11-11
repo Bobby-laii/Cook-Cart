@@ -91,7 +91,7 @@ export function DishShelf({
           >
             {title}
           </h2>
-          {subtitle && <p className="mt-1 text-small text-stone-500">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-small text-stone-600">{subtitle}</p>}
         </div>
         <div className="hidden md:flex items-center gap-1 shrink-0 -mr-2">
           <button
@@ -157,12 +157,12 @@ export function DishShelf({
                 {dish.title}
               </span>
               {variant === "landscape" && dish.description && (
-                <span className="mt-1 block text-small leading-snug text-stone-600 line-clamp-1">
+                <span className="mt-1 block text-small leading-snug text-stone-700 line-clamp-1">
                   {dish.description}
                 </span>
               )}
               {variant !== "compact" && (
-                <span className="mt-0.5 block text-sm text-stone-500">
+                <span className="mt-0.5 block text-sm text-stone-600">
                   {opening === dish.id ? "Opening the recipe" : cuisineLabel(dish.cuisine)}
                 </span>
               )}

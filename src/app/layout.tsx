@@ -43,8 +43,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Matches the page in each mode (stone-50 light / dark in globals.css).
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#171614" },
+    { media: "(prefers-color-scheme: light)", color: "#FCFBF8" },
+    { media: "(prefers-color-scheme: dark)", color: "#191B22" },
   ],
   width: "device-width",
   initialScale: 1,

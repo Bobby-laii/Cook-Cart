@@ -386,7 +386,7 @@ export function CookingVoiceAssistant({
             className={`min-h-[48px] px-4 rounded-xl flex items-center gap-2.5 font-bold text-sm md:text-base transition-all select-none ${
               isListening
                 ? "bg-[#2A4FBF] text-white ring-4 ring-[#F5C842]/40 shadow-sm"
-                : "bg-white border-2 border-stone-300 text-stone-800 hover:border-[#2A4FBF]"
+                : "bg-stone-100 border-2 border-stone-300 text-stone-900 hover:border-[#2A4FBF]"
             }`}
           >
             <div className="relative">
@@ -411,7 +411,7 @@ export function CookingVoiceAssistant({
           </button>
 
           {/* Spoken language selector */}
-          <div className="flex items-center gap-1.5 bg-white border border-stone-300 rounded-xl px-2.5 h-[48px] text-xs md:text-sm text-stone-700">
+          <div className="flex items-center gap-1.5 bg-stone-100 border border-stone-300 rounded-xl px-2.5 h-[48px] text-xs md:text-sm text-stone-800">
             <Globe className="w-4 h-4 text-stone-500 shrink-0" />
             <select
               value={selectedLang}
@@ -422,11 +422,11 @@ export function CookingVoiceAssistant({
                   setTimeout(() => startListening(), 200);
                 }
               }}
-              className="bg-transparent border-none text-stone-800 font-medium focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent border-none text-stone-900 font-medium focus:outline-none cursor-pointer pr-1"
               title={isZh ? "選擇語音識別語言" : "Select spoken language"}
             >
               {SUPPORTED_VOICE_LANGS.map((lang) => (
-                <option key={lang.code} value={lang.code}>
+                <option key={lang.code} value={lang.code} className="bg-stone-50 text-stone-900">
                   {lang.label}
                 </option>
               ))}
@@ -439,7 +439,7 @@ export function CookingVoiceAssistant({
           <button
             type="button"
             onClick={() => setShowHelp(!showHelp)}
-            className="min-h-[48px] px-3 rounded-xl border border-stone-200 bg-white hover:border-stone-400 text-stone-600 flex items-center gap-1.5 text-xs md:text-sm font-medium"
+            className="min-h-[48px] px-3 rounded-xl border border-stone-200 bg-stone-100 hover:border-stone-400 text-stone-700 flex items-center gap-1.5 text-xs md:text-sm font-medium"
             title={isZh ? "查看支援的語音指令" : "View supported voice commands"}
           >
             <HelpCircle className="w-4 h-4 text-stone-500" />
@@ -461,8 +461,8 @@ export function CookingVoiceAssistant({
         <div className="mt-3 pt-3 border-t border-stone-200/80 space-y-2 text-sm">
           {/* Transcript bubble */}
           {lastTranscript && (
-            <div className="flex items-start gap-2 text-stone-700 bg-white/80 p-2.5 rounded-xl border border-stone-200/60">
-              <span className="text-xs font-bold text-stone-400 shrink-0 uppercase tracking-wide mt-0.5">
+            <div className="flex items-start gap-2 text-stone-700 bg-stone-100 p-2.5 rounded-xl border border-stone-200">
+              <span className="text-xs font-bold text-stone-500 shrink-0 uppercase tracking-wide mt-0.5">
                 {isZh ? "你說：" : "Heard:"}
               </span>
               <span className="font-medium text-stone-900">“{lastTranscript}”</span>
@@ -476,14 +476,14 @@ export function CookingVoiceAssistant({
 
           {/* AI Chef Thought / Response Bubble */}
           {isThinking && (
-            <div className="flex items-center gap-2 text-xs font-medium text-stone-600 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-              <Sparkles className="w-4 h-4 text-amber-500 animate-spin" />
+            <div className="flex items-center gap-2 text-xs font-medium text-stone-700 bg-stone-100 p-2.5 rounded-xl border border-stone-200">
+              <Sparkles className="w-4 h-4 text-brand-500 animate-spin" />
               <span>{isZh ? "廚師正在組織答覆…" : "Chef is formulating answer…"}</span>
             </div>
           )}
 
           {chefResponse && (
-            <div className="flex items-start gap-2 text-stone-900 bg-white p-3 rounded-xl border-2 border-[#2A4FBF]/30">
+            <div className="flex items-start gap-2 text-stone-900 bg-stone-100 p-3 rounded-xl border-2 border-[#2A4FBF]/40">
               <div className="w-6 h-6 rounded-full bg-[#2A4FBF] text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
                 🧑‍🍳
               </div>
@@ -503,15 +503,15 @@ export function CookingVoiceAssistant({
 
       {/* Voice Cheat Sheet Drawer */}
       {showHelp && (
-        <div className="mt-3 pt-3 border-t border-stone-200 text-xs text-stone-600 space-y-2 bg-white p-3.5 rounded-xl border border-stone-200">
-          <div className="flex items-center justify-between pb-1 border-b border-stone-100">
+        <div className="mt-3 pt-3 border-t border-stone-200 text-xs text-stone-700 space-y-2 bg-stone-100 p-3.5 rounded-xl border border-stone-200">
+          <div className="flex items-center justify-between pb-1 border-b border-stone-200">
             <span className="font-bold text-stone-900 text-sm">
               {isZh ? "免提語音指令指南" : "Hands-Free Voice Commands Guide"}
             </span>
             <button
               type="button"
               onClick={() => setShowHelp(false)}
-              className="p-1 text-stone-400 hover:text-stone-700"
+              className="p-1 text-stone-500 hover:text-stone-900"
             >
               <X className="w-4 h-4" />
             </button>

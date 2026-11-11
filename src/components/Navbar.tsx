@@ -107,7 +107,7 @@ export function Navbar() {
                   href={link.href}
                   aria-current={active ? "page" : undefined}
                   className={`flex-1 flex flex-col items-center justify-center gap-1 min-h-12 text-[0.8125rem] leading-none rounded-lg -outline-offset-4 transition-colors ${
-                    active ? "text-stone-900 font-bold" : "text-stone-500 active:text-stone-900"
+                    active ? "text-stone-900 font-bold" : "text-stone-600 font-medium active:text-stone-900"
                   }`}
                 >
                   <Icon className="w-6 h-6" strokeWidth={active ? 2.2 : 1.6} aria-hidden="true" />
@@ -187,7 +187,7 @@ function DesktopHeader({
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex items-center h-12 px-3 rounded-lg transition-colors ${
-                  active ? "text-stone-900 font-bold" : "text-stone-500 hover:text-stone-900"
+                  active ? "text-stone-900 font-bold" : "text-stone-600 font-medium hover:text-stone-900"
                 }`}
               >
                 {link.label}

@@ -68,12 +68,16 @@ export function TonightPicks({
           )}
         </div>
         {picks && picks.length > 1 && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {!quiz && onOpenQuiz && (
               <button
                 type="button"
                 onClick={onOpenQuiz}
-                className={button("ghost", "sm", "px-2.5 font-normal text-stone-500 hover:text-stone-900")}
+                className={button(
+                  "ghost",
+                  "sm",
+                  "px-3 font-medium text-stone-700 bg-stone-100/80 hover:bg-stone-200/80 hover:text-stone-900"
+                )}
               >
                 <Sparkles className="w-4 h-4 text-brand-600" aria-hidden="true" />
                 Help me pick
@@ -82,7 +86,11 @@ export function TonightPicks({
             <button
               type="button"
               onClick={onShuffle}
-              className={button("ghost", "sm", "-mr-2 px-2.5 font-normal text-stone-500 hover:text-stone-900")}
+              className={button(
+                "ghost",
+                "sm",
+                "px-3 font-medium text-stone-700 bg-stone-100/80 hover:bg-stone-200/80 hover:text-stone-900"
+              )}
             >
               <RefreshCw className="w-4 h-4" aria-hidden="true" />
               Show me others
@@ -131,7 +139,7 @@ export function TonightPicks({
               {lead.title}
             </h2>
             {lead.description && <p className="mt-2 text-stone-700 max-w-xl">{lead.description}</p>}
-            <p className="mt-1 text-stone-500">{dishLine(lead)}</p>
+            <p className="mt-1 text-stone-600">{dishLine(lead)}</p>
             <button
               type="button"
               onClick={() => onOpen(lead)}
@@ -173,7 +181,7 @@ export function TonightPicks({
                     <span className="mt-2.5 block font-display font-medium text-[18px] md:text-[20px] leading-[1.25] text-stone-900 group-hover:underline underline-offset-4 decoration-stone-300">
                       {dish.title}
                     </span>
-                    <span className="mt-0.5 block text-sm text-stone-500">
+                    <span className="mt-0.5 block text-sm text-stone-600">
                       {opening === dish.id ? "Opening the recipe" : dishLine(dish)}
                     </span>
                   </button>

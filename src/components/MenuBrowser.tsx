@@ -239,7 +239,7 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
             )}
           </label>
 
-          <p className="text-small text-stone-500 shrink-0">
+          <p className="text-small text-stone-600 shrink-0">
             Have ingredients?{" "}
             <Link
               href="/chat"
@@ -410,11 +410,11 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
                       {dish.title}
                     </span>
                     {dish.description && (
-                      <span className="mt-1 text-small leading-snug text-stone-600 line-clamp-2">
+                      <span className="mt-1 text-small leading-snug text-stone-700 line-clamp-2">
                         {dish.description}
                       </span>
                     )}
-                    <span className="mt-1 block text-sm text-stone-500">
+                    <span className="mt-1 block text-sm text-stone-600">
                       {opening === dish.id ? "Opening the recipe" : cuisineLabel(dish.cuisine)}
                     </span>
                   </button>
