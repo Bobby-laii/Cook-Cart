@@ -9,8 +9,10 @@ import { CUISINE_GUIDE } from "@/lib/recipes/cuisineGuide";
 import type { MenuDish } from "@/lib/recipes/mealdb";
 import { Search, X } from "lucide-react";
 import { TonightPicks } from "@/components/home/TonightPicks";
+import { DishShelf } from "@/components/home/DishShelf";
 import { CravingQuizModal } from "@/components/home/CravingQuizModal";
 import {
+  buildHomeShelves,
   localDayKey,
   pickTonight,
   scoreDishForQuiz,
@@ -95,6 +97,22 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
   const picks = useMemo(
     () => (day === null ? null : pickTonight(dishes, { day, round, noOven, quiz })),
     [dishes, day, round, noOven, quiz]
+  );
+
+  // Swipeable shelves below Tonight: different cuisines and card shapes on every visit,
+  // never repeating a dish already shown in Tonight.
+  const shelves = useMemo(
+    () =>
+      visitSeed === null
+        ? []
+        : buildHomeShelves(dishes, {
+            seed: visitSeed,
+            noOven,
+            exclude: (picks ?? []).map((d) => d.id),
+          }),
+    // Shelves stay put while "Show me others" reshuffles Tonight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dishes, visitSeed, noOven]
   );
 
   // Randomize the menu dish order on each visit, and rank by quiz score if quiz is active.
@@ -258,13 +276,27 @@ export function MenuBrowser({ dishes }: { dishes: MenuDish[] }) {
         </p>
       )}
 
+      {!isSearching &&
+        shelves.map((shelf) => (
+          <DishShelf
+            key={shelf.id}
+            id={shelf.id}
+            title={shelf.title}
+            subtitle={shelf.subtitle}
+            variant={shelf.variant}
+            dishes={shelf.dishes}
+            onOpen={openDish}
+            opening={opening}
+          />
+        ))}
+
       <section
         aria-labelledby="menu-title"
         className={isSearching ? "pt-2" : "mt-14 md:mt-20 pt-8 md:pt-10 border-t border-stone-200"}
       >
         <div className="flex items-end justify-between gap-4">
           <h2 id="menu-title" className="font-display font-medium text-[28px] md:text-[32px] leading-[1.15] text-stone-900">
-            {isSearching ? `Results for "${query.trim()}"` : "The menu"}
+            {isSearching ? `Results for "${query.trim()}"` : "Everything on the menu"}
           </h2>
           {isSearching && (
             <span className="text-small text-stone-500">

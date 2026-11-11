@@ -159,7 +159,7 @@ export function pickTonight(
 }
 
 /** Shuffle a full list of dishes deterministically from a seed so the menu grid varies on each visit. */
-export function shuffleDishes(dishes: MenuDish[], seed: string): MenuDish[] {
+export function shuffleDishes<T>(dishes: T[], seed: string): T[] {
   const rand = mulberry32(hash(seed));
   const copy = dishes.slice();
   for (let i = copy.length - 1; i > 0; i--) {
@@ -167,6 +167,97 @@ export function shuffleDishes(dishes: MenuDish[], seed: string): MenuDish[] {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
+}
+
+export interface HomeShelf {
+  id: string;
+  title: string;
+  subtitle?: string;
+  variant: "portrait" | "landscape" | "compact";
+  dishes: MenuDish[];
+}
+
+const WARM_PATTERN = /\b(soup|stew|curry|brais|broth|ramen|laksa|tagine|chili|congee|chowder|goulash|casserole|hotpot|pho)\b/i;
+const QUICK_PATTERN = /\b(stir[- ]?fry|omelette|egg|pasta|noodle|prawn|shrimp|taco|wrap|salad|toast|sandwich|fried rice|quesadilla)\b/i;
+
+/**
+ * Swipeable home shelves below "Tonight". Each visit seed reshuffles which cuisines and
+ * dishes appear, a dish never shows twice on the page, and the card template rotates
+ * (portrait, landscape, compact) so scrolling down doesn't feel like one long grid.
+ */
+export function buildHomeShelves(
+  dishes: MenuDish[],
+  {
+    seed,
+    noOven = false,
+    exclude = [],
+    perShelf = 10,
+  }: { seed: string; noOven?: boolean; exclude?: string[]; perShelf?: number }
+): HomeShelf[] {
+  const used = new Set(exclude);
+  const pool = shuffleDishes(
+    dishes.filter((d) => !noOven || !d.needsOven),
+    `${seed}#shelves`
+  );
+  const text = (d: MenuDish) => `${d.title} ${d.description || ""}`;
+
+  const take = (match: (d: MenuDish) => boolean) => {
+    const out: MenuDish[] = [];
+    for (const d of pool) {
+      if (out.length === perShelf) break;
+      if (used.has(d.id) || !match(d)) continue;
+      out.push(d);
+    }
+    if (out.length >= 4) out.forEach((d) => used.add(d.id));
+    return out.length >= 4 ? out : [];
+  };
+
+  const shelves: HomeShelf[] = [];
+
+  shelves.push({
+    id: "no-oven",
+    title: "No oven, no fuss",
+    subtitle: "Everything here cooks on the hob",
+    variant: "portrait",
+    dishes: take((d) => !d.needsOven),
+  });
+
+  // Three cuisines with enough dishes, different on every visit.
+  const counts = new Map<string, number>();
+  for (const d of pool) counts.set(d.cuisine, (counts.get(d.cuisine) || 0) + 1);
+  const cuisines = shuffleDishes(
+    [...counts.entries()].filter(([, n]) => n >= 6).map(([area]) => area),
+    `${seed}#cuisines`
+  ).slice(0, 3);
+
+  const cuisineVariants: HomeShelf["variant"][] = ["landscape", "compact", "portrait"];
+  cuisines.forEach((area, i) => {
+    if (i === 1) {
+      shelves.push({
+        id: "warm",
+        title: "Something warm in a bowl",
+        subtitle: "Soups, stews and curries",
+        variant: "landscape",
+        dishes: take((d) => WARM_PATTERN.test(text(d))),
+      });
+    }
+    shelves.push({
+      id: `cuisine-${area}`,
+      title: `From the ${cuisineLabel(area)} kitchen`,
+      variant: cuisineVariants[i % cuisineVariants.length],
+      dishes: take((d) => d.cuisine === area),
+    });
+  });
+
+  shelves.push({
+    id: "quick",
+    title: "Quick weeknight plates",
+    subtitle: "Eggs, noodles, pasta and other fast fixes",
+    variant: "compact",
+    dishes: take((d) => QUICK_PATTERN.test(text(d))),
+  });
+
+  return shelves.filter((s) => s.dishes.length > 0);
 }
 
 /** A short, honest line about a dish from what the menu knows: its cuisine and the oven. */

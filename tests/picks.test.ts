@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildHomeShelves,
   pickTonight,
   scoreDishForQuiz,
   formatQuizSummary,
@@ -135,5 +136,34 @@ describe("pickTonight & randomization", () => {
     const shuffled2 = shuffleDishes(SAMPLE_DISHES, "seed-456");
     expect(shuffled1).toHaveLength(SAMPLE_DISHES.length);
     expect(shuffled1.map((d) => d.id)).not.toEqual(shuffled2.map((d) => d.id));
+  });
+});
+
+describe("buildHomeShelves", () => {
+  const cuisines = ["Italian", "Thai", "Mexican", "Japanese"];
+  const titles = ["Chicken curry", "Beef stew", "Egg fried rice", "Prawn noodle soup", "Tomato pasta", "Pork tacos", "Baked pie", "Lentil soup"];
+  const MANY: MenuDish[] = cuisines.flatMap((cuisine, ci) =>
+    titles.map((t, ti) => ({
+      id: `mealdb-${ci}-${ti}`,
+      title: `${cuisine} ${t}`,
+      imageUrl: "https://www.themealdb.com/images/media/meals/x.jpg",
+      cuisine,
+      needsOven: t.startsWith("Baked"),
+      description: "",
+    }))
+  );
+
+  it("never repeats a dish across shelves or Tonight, and mixes card templates", () => {
+    const shelves = buildHomeShelves(MANY, { seed: "abc", exclude: ["mealdb-0-0"] });
+    const ids = shelves.flatMap((s) => s.dishes.map((d) => d.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).not.toContain("mealdb-0-0");
+    expect(new Set(shelves.map((s) => s.variant)).size).toBeGreaterThanOrEqual(2);
+    expect(shelves.every((s) => s.dishes.length >= 4)).toBe(true);
+  });
+
+  it("respects the no-oven kitchen", () => {
+    const shelves = buildHomeShelves(MANY, { seed: "xyz", noOven: true });
+    expect(shelves.flatMap((s) => s.dishes).every((d) => !d.needsOven)).toBe(true);
   });
 });
