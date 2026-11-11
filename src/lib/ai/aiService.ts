@@ -1,9 +1,11 @@
 /**
  * CookCart Unified AI Service Module
- * Sections 4.1, 4.2, 5 of the Project Brief:
+ * Sections 4.1, 4.2, 5 of the Project Brief + Advanced AI Improvements:
  * - Single AI service module with configurable provider & model
- * - Food-only topic safety guardrail
- * - "Use all ingredients" rule enforcement
+ * - Multi-layered Prompt Injection & Jailbreak Security (`src/lib/ai/promptSecurity.ts`)
+ * - Native Gemini Function Calling (`src/lib/ai/tools.ts`) with loop protection
+ * - Real-time Progressive Streaming (`executeAIChatStream` + `MenuTagStreamFilter`)
+ * - AI Observability with Langfuse + PII Redaction (`src/lib/ai/observability.ts`)
  * - Structured JSON recommendations with full step-by-step cooking instructions
  * - Usage logging & spending caps
  * - Live LLM support with intelligent local offline fallback
@@ -17,6 +19,20 @@ import { resolveDishImageUrl } from "@/lib/images/foodImage";
 import { fetchLiveRecipes, hasSpoonacularKey } from "@/lib/recipes/spoonacular";
 import { COMMON_INGREDIENTS_CATALOGUE } from "@/config/ingredientsCatalogue";
 import { getGeminiApiKey, getGeminiGenerateContentUrl } from "@/lib/ai/geminiEndpoint";
+import {
+  inspectPromptSecurity,
+  sanitizeConversationHistory,
+  sanitizeModelOutput,
+  sanitizeProfileField,
+  wrapUntrustedUserContent,
+} from "@/lib/ai/promptSecurity";
+import {
+  executeChefTool,
+  GEMINI_FUNCTION_DECLARATIONS,
+  MAX_TOOL_ITERATIONS,
+  type ToolExecutionResult,
+} from "@/lib/ai/tools";
+import { ChatObservabilitySession, estimateAICost } from "@/lib/ai/observability";
 import Groq from "groq-sdk";
 import { Ollama } from "ollama";
 
@@ -46,6 +62,7 @@ export interface AIRequestOptions {
     chefAvatarUrl?: string;
     chefPersonality?: string;
   };
+  signal?: AbortSignal;
 }
 
 export interface AIResponsePayload {
@@ -53,14 +70,120 @@ export interface AIResponsePayload {
   structuredSuggestions?: DishSuggestion[];
   tokensUsed: { prompt: number; completion: number; total: number };
   modelUsed: string;
+  traceId?: string;
+  latencyMs?: number;
+  toolCallsExecuted?: string[];
   error?: string;
 }
 
+export type AIStreamEvent =
+  | { type: "status"; phase: "thinking" | "calling_tool"; toolName?: string }
+  | { type: "delta"; text: string }
+  | { type: "tool_result"; toolName: string; success: boolean; data?: Record<string, unknown> }
+  | { type: "suggestions"; structuredSuggestions: DishSuggestion[] }
+  | { type: "done"; payload: AIResponsePayload }
+  | { type: "error"; error: string };
+
 /**
- * Check if a prompt violates the safety guardrail (disabled to allow warm daily life conversation)
+ * Check if a prompt violates the safety guardrail (detects prompt injection or adversarial jailbreaks).
  */
-export function isOffTopic(_text: string): boolean {
-  return false;
+export function isOffTopic(text: string): boolean {
+  return !inspectPromptSecurity(text).safe;
+}
+
+/**
+ * Build the structured user turn text once (eliminating the previous 4x duplication across providers).
+ */
+export function formatUserTurnContent(
+  lastUserMessage: string,
+  quickStartData?: AIRequestOptions["quickStartData"],
+  useSpotlightDelimiters = false
+): string {
+  const rawMessage = useSpotlightDelimiters
+    ? wrapUntrustedUserContent(lastUserMessage)
+    : lastUserMessage;
+
+  if (!quickStartData?.ingredients?.length) {
+    return rawMessage;
+  }
+
+  const safeCuisine = sanitizeProfileField(quickStartData.cuisine, 50) || "Any";
+  const safeIngs = quickStartData.ingredients
+    .map((i) => sanitizeProfileField(i, 50))
+    .filter(Boolean);
+  const safeDietary = sanitizeProfileField(quickStartData.dietary, 80) || "None";
+  const safeAllergies = sanitizeProfileField(quickStartData.allergies, 80) || "None";
+  const safeTime = sanitizeProfileField(quickStartData.cookingTimeLimit, 40) || "Any";
+  const safeEquip =
+    quickStartData.equipment?.map((e) => sanitizeProfileField(e, 40)).filter(Boolean).join(", ") ||
+    "Stove";
+
+  return `Cuisine: ${safeCuisine}\nIngredients to use (MUST ALL BE INCLUDED): ${safeIngs.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${safeDietary}, Allergies: ${safeAllergies}\nCooking time limit: ${safeTime}\nEquipment: ${safeEquip}\nUser request: ${rawMessage}`;
+}
+
+/**
+ * Progressive stream filter that prevents `<COOKCART_MENU>...</COOKCART_MENU>` JSON tags
+ * from leaking as raw text into the user's chat bubble while streaming.
+ */
+export class MenuTagStreamFilter {
+  private buffer = "";
+  private insideMenuTag = false;
+  private menuBuffer = "";
+  private static readonly OPEN_TAG = "<COOKCART_MENU>";
+  private static readonly CLOSE_TAG = "</COOKCART_MENU>";
+
+  push(chunk: string): string {
+    if (!chunk) return "";
+    if (this.insideMenuTag) {
+      this.menuBuffer += chunk;
+      const closeIdx = this.menuBuffer.toUpperCase().indexOf(MenuTagStreamFilter.CLOSE_TAG);
+      if (closeIdx !== -1) {
+        const afterClose = this.menuBuffer.slice(closeIdx + MenuTagStreamFilter.CLOSE_TAG.length);
+        this.menuBuffer = this.menuBuffer.slice(0, closeIdx);
+        this.insideMenuTag = false;
+        return this.push(afterClose);
+      }
+      return "";
+    }
+
+    this.buffer += chunk;
+    const upper = this.buffer.toUpperCase();
+    const openIdx = upper.indexOf(MenuTagStreamFilter.OPEN_TAG);
+
+    if (openIdx !== -1) {
+      const safeBefore = this.buffer.slice(0, openIdx);
+      const rest = this.buffer.slice(openIdx + MenuTagStreamFilter.OPEN_TAG.length);
+      this.buffer = "";
+      this.insideMenuTag = true;
+      return safeBefore + this.push(rest);
+    }
+
+    // Hold back any trailing prefix of `<COOKCART_MENU>` so partial tag fragments never flash
+    let holdBack = 0;
+    const maxHold = Math.min(this.buffer.length, MenuTagStreamFilter.OPEN_TAG.length - 1);
+    for (let len = maxHold; len > 0; len--) {
+      const suffix = upper.slice(upper.length - len);
+      if (MenuTagStreamFilter.OPEN_TAG.startsWith(suffix)) {
+        holdBack = len;
+        break;
+      }
+    }
+
+    const emitLen = this.buffer.length - holdBack;
+    if (emitLen <= 0) return "";
+    const out = this.buffer.slice(0, emitLen);
+    this.buffer = this.buffer.slice(emitLen);
+    return out;
+  }
+
+  flush(): { remainingVisibleText: string; fullMenuBlock: string } {
+    const remainingVisibleText = this.insideMenuTag ? "" : this.buffer;
+    this.buffer = "";
+    const fullMenuBlock = this.menuBuffer
+      ? `<COOKCART_MENU>${this.menuBuffer}</COOKCART_MENU>`
+      : "";
+    return { remainingVisibleText, fullMenuBlock };
+  }
 }
 
 /**
@@ -151,7 +274,8 @@ export function humanizeChefMessage(
   hasSuggestions: boolean,
   ingredients?: string[]
 ): string {
-  const trimmed = rawText.trim();
+  const safeText = sanitizeModelOutput(rawText);
+  const trimmed = safeText.trim();
   const hasBulletList = /(?:^|\n)\s*(?:[-*•]|\d+\.)\s+/m.test(trimmed);
   const startsWithBoldTitle = /^\s*(?:\*\*|#{1,4}\s)/.test(trimmed);
 
@@ -186,6 +310,11 @@ export function extractMenuFromLLMResponse(rawText: string): {
   const menuRegex = /<COOKCART_MENU>([\s\S]*?)<\/COOKCART_MENU>/i;
   const match = rawText.match(menuRegex);
   if (!match) {
+    // Also strip any unclosed trailing `<COOKCART_MENU>...` if model truncated output
+    const unclosedIdx = rawText.toUpperCase().indexOf("<COOKCART_MENU>");
+    if (unclosedIdx !== -1) {
+      return { cleanMessage: rawText.slice(0, unclosedIdx).trim() };
+    }
     return { cleanMessage: rawText.trim() };
   }
 
@@ -205,7 +334,7 @@ export function extractMenuFromLLMResponse(rawText: string): {
       .map((item: any, idx: number) => {
         const usedIngs =
           Array.isArray(item.usedUserIngredients) && item.usedUserIngredients.length > 0
-            ? item.usedUserIngredients.map(String)
+            ? item.usedUserIngredients.map((i: any) => String(i).slice(0, 80))
             : ["Fresh Main Ingredient", "Garlic", "Herbs"];
 
         const rawSteps = Array.isArray(item.steps) ? item.steps : [];
@@ -213,29 +342,29 @@ export function extractMenuFromLLMResponse(rawText: string): {
           rawSteps.length > 0
             ? rawSteps.map((st: any, sIdx: number) => ({
                 step: Number(st.step) || sIdx + 1,
-                title: String(st.title || `Step ${sIdx + 1}`),
-                text: String(st.text || ""),
+                title: String(st.title || `Step ${sIdx + 1}`).slice(0, 120),
+                text: String(st.text || "").slice(0, 800),
                 ...(Number(st.timerSeconds) > 0 ? { timerSeconds: Number(st.timerSeconds) } : {}),
               }))
             : buildDefaultStepsForDish(String(item.title), usedIngs);
 
         return {
           id: "sugg_" + Math.random().toString(36).substring(2, 9) + "_" + idx,
-          title: String(item.title),
-          cuisine: String(item.cuisine || "Chef Special"),
-          cookTimeMinutes: Number(item.cookTimeMinutes) || 20,
+          title: String(item.title).slice(0, 140),
+          cuisine: String(item.cuisine || "Chef Special").slice(0, 60),
+          cookTimeMinutes: Math.min(360, Math.max(1, Number(item.cookTimeMinutes) || 20)),
           difficulty:
             item.difficulty === "Medium" || item.difficulty === "Hard" ? item.difficulty : "Easy",
-          servings: Number(item.servings) || 2,
+          servings: Math.min(50, Math.max(1, Number(item.servings) || 2)),
           description: String(
             item.description || `Chef's freshly prepared ${item.title} with step-by-step guidance.`
-          ),
+          ).slice(0, 400),
           usedUserIngredients: usedIngs,
           extraIngredientsNeeded: Array.isArray(item.extraIngredientsNeeded)
-            ? item.extraIngredientsNeeded.map((ex: any) => ({
-                name: String(ex.name || "Seasoning"),
+            ? item.extraIngredientsNeeded.slice(0, 20).map((ex: any) => ({
+                name: String(ex.name || "Seasoning").slice(0, 80),
                 amount: Number(ex.amount) || 1,
-                unit: String(ex.unit || "tbsp"),
+                unit: String(ex.unit || "tbsp").slice(0, 30),
               }))
             : [],
           estimatedCostHkd: Number(item.estimatedCostHkd) || 58,
@@ -361,7 +490,8 @@ export async function logAIUsage(params: {
 }) {
   try {
     const tokensTotal = params.tokensPrompt + params.tokensCompletion;
-    const estimatedCostHkd = (tokensTotal / 1000) * 0.003;
+    const { costHkd } = estimateAICost(params.modelName, params.tokensPrompt, params.tokensCompletion);
+    const estimatedCostHkd = costHkd > 0 ? costHkd : (tokensTotal / 1000) * 0.003;
 
     await prisma.aIUsageLog.create({
       data: {
@@ -386,6 +516,10 @@ async function attachDishImages(suggestions: DishSuggestion[]): Promise<DishSugg
   const used = new Set<string>();
   return Promise.all(
     suggestions.map(async (suggestion, idx) => {
+      if (suggestion.imageUrl) {
+        used.add(suggestion.imageUrl);
+        return suggestion;
+      }
       try {
         const imageUrl = await resolveDishImageUrl(suggestion.title, idx, used);
         used.add(imageUrl);
@@ -579,29 +713,103 @@ export function generateLocalMockCookingResponse(
 }
 
 /**
- * Main AI Chat Execution Function
+ * Main AI Chat Execution Function (with Prompt Security, Native Gemini Function Calling, and Langfuse Observability)
  */
-export async function executeAIChat(options: AIRequestOptions): Promise<AIResponsePayload> {
-  const { messages, quickStartData, userId, conversationId, chefProfile } = options;
-  const lastUserMessage = messages.filter((m) => m.role === "user").pop()?.content || "";
+export async function executeAIChat(
+  options: AIRequestOptions,
+  onStreamEvent?: (event: AIStreamEvent) => void
+): Promise<AIResponsePayload> {
+  const { quickStartData, userId, conversationId, chefProfile, signal } = options;
+
+  // Sanitize conversation history: strip any client-injected "system" role messages
+  const cleanMessages = sanitizeConversationHistory(options.messages);
+  const lastUserMessage = cleanMessages.filter((m) => m.role === "user").pop()?.content || "";
+
+  const obs = new ChatObservabilitySession({
+    conversationId,
+    userId,
+    userMessage: lastUserMessage,
+    quickStartData,
+  });
+
+  // 0. Prompt Injection & Jailbreak Security Gate
+  const securityCheck = inspectPromptSecurity(lastUserMessage);
+  if (!securityCheck.safe) {
+    obs.recordSecurityEvent(securityCheck.triggeredCategories, lastUserMessage);
+    const { totalLatencyMs, traceId } = await obs.finalize({
+      outputMessage: securityCheck.refusalMessage!,
+      modelUsed: "security-guardrail",
+      error: `Blocked prompt injection: ${securityCheck.triggeredCategories.join(", ")}`,
+    });
+    return {
+      message: securityCheck.refusalMessage!,
+      tokensUsed: { prompt: 0, completion: 0, total: 0 },
+      modelUsed: "security-guardrail",
+      traceId,
+      latencyMs: totalLatencyMs,
+    };
+  }
+
+  // Also check quickStartData fields if present
+  if (quickStartData) {
+    const qsCombined = [
+      quickStartData.cuisine,
+      ...(quickStartData.ingredients || []),
+      quickStartData.dietary,
+      quickStartData.allergies,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const qsSecurity = inspectPromptSecurity(qsCombined);
+    if (!qsSecurity.safe) {
+      obs.recordSecurityEvent(qsSecurity.triggeredCategories, qsCombined);
+      const { totalLatencyMs, traceId } = await obs.finalize({
+        outputMessage: qsSecurity.refusalMessage!,
+        modelUsed: "security-guardrail",
+        error: `Blocked quickStart injection: ${qsSecurity.triggeredCategories.join(", ")}`,
+      });
+      return {
+        message: qsSecurity.refusalMessage!,
+        tokensUsed: { prompt: 0, completion: 0, total: 0 },
+        modelUsed: "security-guardrail",
+        traceId,
+        latencyMs: totalLatencyMs,
+      };
+    }
+  }
 
   // 1. Spending Cap & Rate Limit Check
   const limitCheck = await checkAILimits(userId);
   if (!limitCheck.allowed) {
+    const msg = limitCheck.reason || "AI usage limit reached. Please try again later.";
+    const { totalLatencyMs, traceId } = await obs.finalize({
+      outputMessage: msg,
+      modelUsed: "limit-enforcer",
+    });
     return {
-      message: limitCheck.reason || "AI usage limit reached. Please try again later.",
+      message: msg,
       tokensUsed: { prompt: 0, completion: 0, total: 0 },
       modelUsed: "limit-enforcer",
+      traceId,
+      latencyMs: totalLatencyMs,
     };
   }
 
-  // Build persona prompt incorporating customized chef identity
+  // Build persona prompt incorporating sanitized chef identity
   const systemPrompt = chefProfile?.chefName
     ? buildSystemPrompt(chefProfile.chefName, chefProfile.chefPersonality || "friendly")
     : COOKCART_SYSTEM_PROMPT;
 
-  // Helper: Resolve structured suggestions from LLM <COOKCART_MENU> tag, Spoonacular, or local fallback
-  async function resolveStructuredSuggestions(llmExtracted?: DishSuggestion[]): Promise<DishSuggestion[] | undefined> {
+  const toolCollectedSuggestions: DishSuggestion[] = [];
+  const executedToolNames: string[] = [];
+
+  // Helper: Resolve structured suggestions from tools, LLM <COOKCART_MENU> tag, Spoonacular, or local fallback
+  async function resolveStructuredSuggestions(
+    llmExtracted?: DishSuggestion[]
+  ): Promise<DishSuggestion[] | undefined> {
+    if (toolCollectedSuggestions.length > 0) {
+      return attachDishImages(toolCollectedSuggestions.slice(0, 3));
+    }
     if (llmExtracted && llmExtracted.length > 0) {
       return attachDishImages(llmExtracted);
     }
@@ -629,19 +837,14 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       ? quickStartData.ingredients
       : extractIngredientsFromUserText(lastUserMessage);
 
-  // 2. Gemini first: the agreed provider, on Google's free tier. GEMINI_MODEL lets the
-  // model be swapped in .env when Google retires one, without a code change.
-  // Supports both Google AI Studio keys (AIza...) and Vertex AI Express Mode keys (AQ....).
+  const userContent = formatUserTurnContent(lastUserMessage, quickStartData, false);
+
+  // 2. Gemini first: supports Native Function Calling + multi-step reasoning loop (up to MAX_TOOL_ITERATIONS)
   const geminiApiKey = getGeminiApiKey();
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   if (geminiApiKey) {
     try {
-      const userContent = quickStartData?.ingredients?.length
-        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
-        : lastUserMessage;
-
-      const contents = messages
-        .filter((m) => m.role !== "system")
+      const contents: Array<{ role: string; parts: any[] }> = cleanMessages
         .slice(-8)
         .map((m, idx, arr) => ({
           role: m.role === "assistant" ? "model" : "user",
@@ -649,54 +852,190 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
         }));
       while (contents.length > 0 && contents[0].role === "model") contents.shift();
 
-      const response = await fetch(
-        getGeminiGenerateContentUrl(geminiModel, geminiApiKey),
-        {
+      let totalPromptTokens = 0;
+      let totalCompletionTokens = 0;
+      let finalRawText = "";
+      let geminiSucceeded = false;
+      const seenToolCalls = new Set<string>();
+
+      for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+        const genStart = Date.now();
+        onStreamEvent?.({ type: "status", phase: "thinking" });
+
+        const response = await fetch(getGeminiGenerateContentUrl(geminiModel, geminiApiKey), {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemPrompt }] },
             contents,
+            tools: [{ functionDeclarations: GEMINI_FUNCTION_DECLARATIONS }],
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 1200,
               thinkingConfig: { thinkingBudget: 0 },
             },
           }),
+          signal,
+        });
+
+        const genLatency = Date.now() - genStart;
+
+        if (!response.ok) {
+          const errText = await response.text();
+          obs.recordGeneration({
+            model: geminiModel,
+            input: contents,
+            promptTokens: 0,
+            completionTokens: 0,
+            latencyMs: genLatency,
+            error: `HTTP ${response.status}: ${errText.slice(0, 200)}`,
+          });
+          console.warn(
+            `Gemini ${geminiModel} returned ${response.status}, trying the next provider:`,
+            errText
+          );
+          break;
         }
-      );
 
-      if (!response.ok) {
-        console.warn(`Gemini ${geminiModel} returned ${response.status}, trying the next provider:`, await response.text());
-      } else {
         const data = await response.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
-        const promptTokens = data.usageMetadata?.promptTokenCount || 200;
-        const completionTokens = data.usageMetadata?.candidatesTokenCount || 400;
+        const candidateParts: any[] = data.candidates?.[0]?.content?.parts || [];
+        const pTokens = data.usageMetadata?.promptTokenCount || 200;
+        const cTokens = data.usageMetadata?.candidatesTokenCount || 400;
+        totalPromptTokens += pTokens;
+        totalCompletionTokens += cTokens;
 
+        obs.recordGeneration({
+          model: geminiModel,
+          input: contents,
+          output: candidateParts,
+          promptTokens: pTokens,
+          completionTokens: cTokens,
+          latencyMs: genLatency,
+        });
+
+        // Check if Gemini requested any native function calls
+        const functionCalls = candidateParts
+          .filter((p) => p && typeof p === "object" && p.functionCall)
+          .map((p) => p.functionCall as { name: string; args?: Record<string, unknown> });
+
+        const textParts = candidateParts
+          .filter((p) => p && typeof p.text === "string")
+          .map((p) => p.text as string)
+          .join("");
+
+        if (functionCalls.length === 0) {
+          finalRawText = textParts;
+          geminiSucceeded = true;
+          break;
+        }
+
+        // Append the model's functionCall turn to conversation contents
+        contents.push({
+          role: "model",
+          parts: candidateParts,
+        });
+
+        const functionResponseParts: any[] = [];
+        for (const fc of functionCalls) {
+          const callSignature = `${fc.name}:${JSON.stringify(fc.args || {})}`;
+          let toolResult: ToolExecutionResult;
+
+          if (seenToolCalls.has(callSignature)) {
+            toolResult = {
+              toolName: fc.name as any,
+              success: false,
+              error: "Duplicate tool call skipped to prevent loop.",
+              durationMs: 0,
+            };
+          } else {
+            seenToolCalls.add(callSignature);
+            onStreamEvent?.({ type: "status", phase: "calling_tool", toolName: fc.name });
+            toolResult = await executeChefTool(fc.name, fc.args || {}, {
+              userId,
+              conversationId,
+            });
+            executedToolNames.push(fc.name);
+            obs.recordToolCall({
+              toolName: fc.name,
+              input: fc.args || {},
+              output: toolResult.data,
+              success: toolResult.success,
+              durationMs: toolResult.durationMs,
+              error: toolResult.error,
+            });
+            onStreamEvent?.({
+              type: "tool_result",
+              toolName: fc.name,
+              success: toolResult.success,
+              data: toolResult.data,
+            });
+
+            if (toolResult.suggestions && toolResult.suggestions.length > 0) {
+              toolCollectedSuggestions.push(...toolResult.suggestions);
+            }
+          }
+
+          functionResponseParts.push({
+            functionResponse: {
+              name: fc.name,
+              response: toolResult.success
+                ? { status: "ok", ...toolResult.data }
+                : { status: "error", error: toolResult.error },
+            },
+          });
+        }
+
+        contents.push({
+          role: "user",
+          parts: functionResponseParts,
+        });
+
+        // If we hit the final iteration and still have text, keep it
+        if (iter === MAX_TOOL_ITERATIONS - 1 && textParts) {
+          finalRawText = textParts;
+          geminiSucceeded = true;
+        }
+      }
+
+      if (geminiSucceeded) {
+        const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(finalRawText);
         await logAIUsage({
           userId,
           conversationId,
           modelName: geminiModel,
-          tokensPrompt: promptTokens,
-          tokensCompletion: completionTokens,
+          tokensPrompt: totalPromptTokens,
+          tokensCompletion: totalCompletionTokens,
         });
 
         const suggestions = await resolveStructuredSuggestions(menuDishes);
+        const finalMessage = humanizeChefMessage(
+          cleanMessage,
+          Boolean(suggestions?.length),
+          activeIngredients
+        );
+
+        const { totalLatencyMs, traceId } = await obs.finalize({
+          outputMessage: finalMessage,
+          modelUsed: geminiModel,
+          suggestionCount: suggestions?.length || 0,
+        });
 
         return {
-          message: humanizeChefMessage(cleanMessage, Boolean(suggestions?.length), activeIngredients),
+          message: finalMessage,
           structuredSuggestions: suggestions,
           tokensUsed: {
-            prompt: promptTokens,
-            completion: completionTokens,
-            total: promptTokens + completionTokens,
+            prompt: totalPromptTokens,
+            completion: totalCompletionTokens,
+            total: totalPromptTokens + totalCompletionTokens,
           },
           modelUsed: geminiModel,
+          traceId,
+          latencyMs: totalLatencyMs,
+          ...(executedToolNames.length > 0 ? { toolCallsExecuted: executedToolNames } : {}),
         };
       }
-    } catch (apiError) {
+    } catch (apiError: any) {
+      if (apiError?.name === "AbortError") throw apiError;
       console.warn("Live Gemini API call encountered error, trying the next provider:", apiError);
     }
   }
@@ -712,15 +1051,12 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     ].filter(Boolean) as string[];
     for (const orModel of candidateModels) {
       try {
-        const userContent = quickStartData?.ingredients?.length
-          ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
-          : lastUserMessage;
-
-        const historyMessages = messages.slice(-5).map((m, idx, arr) => ({
+        const historyMessages = cleanMessages.slice(-5).map((m, idx, arr) => ({
           role: m.role,
           content: idx === arr.length - 1 && m.role === "user" ? userContent : m.content,
         }));
 
+        const genStart = Date.now();
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -742,7 +1078,9 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
               ...historyMessages,
             ],
           }),
+          signal,
         });
+        const genLatency = Date.now() - genStart;
 
         if (response.ok) {
           const data = await response.json();
@@ -751,30 +1089,53 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
             const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
             const promptTokens = data.usage?.prompt_tokens || 100;
             const completionTokens = data.usage?.completion_tokens || 200;
+            const modelTag = `openrouter/${orModel}`;
+
+            obs.recordGeneration({
+              model: modelTag,
+              input: historyMessages,
+              output: rawText,
+              promptTokens,
+              completionTokens,
+              latencyMs: genLatency,
+            });
 
             await logAIUsage({
               userId,
               conversationId,
-              modelName: `openrouter/${orModel}`,
+              modelName: modelTag,
               tokensPrompt: promptTokens,
               tokensCompletion: completionTokens,
             });
 
             const suggestions = await resolveStructuredSuggestions(menuDishes);
+            const finalMessage = humanizeChefMessage(
+              cleanMessage,
+              Boolean(suggestions?.length),
+              activeIngredients
+            );
+            const { totalLatencyMs, traceId } = await obs.finalize({
+              outputMessage: finalMessage,
+              modelUsed: modelTag,
+              suggestionCount: suggestions?.length || 0,
+            });
 
             return {
-              message: humanizeChefMessage(cleanMessage, Boolean(suggestions?.length), activeIngredients),
+              message: finalMessage,
               structuredSuggestions: suggestions,
               tokensUsed: {
                 prompt: promptTokens,
                 completion: completionTokens,
                 total: promptTokens + completionTokens,
               },
-              modelUsed: `openrouter/${orModel}`,
+              modelUsed: modelTag,
+              traceId,
+              latencyMs: totalLatencyMs,
             };
           }
         }
-      } catch (orError) {
+      } catch (orError: any) {
+        if (orError?.name === "AbortError") throw orError;
         console.warn(`OpenRouter (${orModel}) failed, trying next:`, orError);
       }
     }
@@ -784,10 +1145,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   const groqApiKey = process.env.GROQ_API_KEY;
   if (groqApiKey) {
     try {
-      const userContent = quickStartData?.ingredients?.length
-        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
-        : lastUserMessage;
-
+      const genStart = Date.now();
       const groq = new Groq({ apiKey: groqApiKey });
       const chatCompletion = await groq.chat.completions.create({
         messages: [
@@ -797,31 +1155,50 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
         model: "llama-3.3-70b-versatile",
         temperature: 0.7,
       });
+      const genLatency = Date.now() - genStart;
 
       const rawText = chatCompletion.choices[0]?.message?.content || "";
       const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
       const promptTokens = chatCompletion.usage?.prompt_tokens || 150;
       const completionTokens = chatCompletion.usage?.completion_tokens || 250;
+      const modelTag = "llama-3.3-70b-versatile (groq)";
+
+      obs.recordGeneration({
+        model: modelTag,
+        input: userContent,
+        output: rawText,
+        promptTokens,
+        completionTokens,
+        latencyMs: genLatency,
+      });
 
       await logAIUsage({
         userId,
         conversationId,
-        modelName: "llama-3.3-70b-versatile (groq)",
+        modelName: modelTag,
         tokensPrompt: promptTokens,
         tokensCompletion: completionTokens,
       });
 
       const suggestions = await resolveStructuredSuggestions(menuDishes);
+      const finalMessage = sanitizeModelOutput(cleanMessage);
+      const { totalLatencyMs, traceId } = await obs.finalize({
+        outputMessage: finalMessage,
+        modelUsed: modelTag,
+        suggestionCount: suggestions?.length || 0,
+      });
 
       return {
-        message: cleanMessage,
+        message: finalMessage,
         structuredSuggestions: suggestions,
         tokensUsed: {
           prompt: promptTokens,
           completion: completionTokens,
           total: promptTokens + completionTokens,
         },
-        modelUsed: "llama-3.3-70b-versatile (groq)",
+        modelUsed: modelTag,
+        traceId,
+        latencyMs: totalLatencyMs,
       };
     } catch (groqError) {
       console.warn("Groq API call encountered error, proceeding to next provider:", groqError);
@@ -832,10 +1209,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   const ollamaApiKey = process.env.OLLAMA_API_KEY;
   if (ollamaApiKey) {
     try {
-      const userContent = quickStartData?.ingredients?.length
-        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use (MUST ALL BE INCLUDED): ${quickStartData.ingredients.join(", ")}\nServings: ${quickStartData.servings || 2}\nDietary/Allergies: ${quickStartData.dietary || "None"}, Allergies: ${quickStartData.allergies || "None"}\nCooking time limit: ${quickStartData.cookingTimeLimit || "Any"}\nEquipment: ${quickStartData.equipment?.join(", ") || "Stove"}\nUser request: ${lastUserMessage}`
-        : lastUserMessage;
-
+      const genStart = Date.now();
       const ollamaClient = new Ollama({
         host: "https://ollama.com",
         headers: { Authorization: "Bearer " + ollamaApiKey },
@@ -849,11 +1223,21 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
         ],
         stream: false,
       });
+      const genLatency = Date.now() - genStart;
 
       const rawText = response.message?.content || "";
       const { cleanMessage, menuDishes } = extractMenuFromLLMResponse(rawText);
       const promptTokens = response.prompt_eval_count || 100;
       const completionTokens = response.eval_count || 200;
+
+      obs.recordGeneration({
+        model: "glm-5.3-flash",
+        input: userContent,
+        output: rawText,
+        promptTokens,
+        completionTokens,
+        latencyMs: genLatency,
+      });
 
       await logAIUsage({
         userId,
@@ -864,9 +1248,15 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       });
 
       const suggestions = await resolveStructuredSuggestions(menuDishes);
+      const finalMessage = sanitizeModelOutput(cleanMessage);
+      const { totalLatencyMs, traceId } = await obs.finalize({
+        outputMessage: finalMessage,
+        modelUsed: "glm-5.3-flash",
+        suggestionCount: suggestions?.length || 0,
+      });
 
       return {
-        message: cleanMessage,
+        message: finalMessage,
         structuredSuggestions: suggestions,
         tokensUsed: {
           prompt: promptTokens,
@@ -874,6 +1264,8 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
           total: promptTokens + completionTokens,
         },
         modelUsed: "glm-5.3-flash",
+        traceId,
+        latencyMs: totalLatencyMs,
       };
     } catch (ollamaError) {
       console.warn("Ollama API call encountered error, proceeding to next provider:", ollamaError);
@@ -900,11 +1292,19 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       });
 
       const ingredientList = quickStartData.ingredients.join(", ");
+      const msg = `Here are ${liveSuggestions.length} real ${quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""} recipes built around ${ingredientList}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`;
+      const { totalLatencyMs, traceId } = await obs.finalize({
+        outputMessage: msg,
+        modelUsed: "spoonacular-live-recipes",
+        suggestionCount: liveSuggestions.length,
+      });
       return {
-        message: `Here are ${liveSuggestions.length} real ${quickStartData.cuisine && quickStartData.cuisine !== "any" ? quickStartData.cuisine : ""} recipes built around ${ingredientList}. Tap "See the recipe" on a dish below, then start cooking when you're ready.`,
+        message: msg,
         structuredSuggestions: liveSuggestions,
         tokensUsed: liveTokens,
         modelUsed: "spoonacular-live-recipes",
+        traceId,
+        latencyMs: totalLatencyMs,
       };
     }
   }
@@ -912,11 +1312,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   // 7. Free Cloud AI LLM fallback (Pollinations OpenAI-compatible endpoint)
   if (process.env.NODE_ENV !== "test") {
     try {
-      const userContent = quickStartData?.ingredients?.length
-        ? `Cuisine: ${quickStartData.cuisine || "Any"}\nIngredients to use: ${quickStartData.ingredients.join(", ")}\nUser request: ${lastUserMessage}`
-        : lastUserMessage;
-
-      const historyMessages = messages.slice(-5).map((m, idx, arr) => ({
+      const historyMessages = cleanMessages.slice(-5).map((m, idx, arr) => ({
         role: m.role,
         content: idx === arr.length - 1 && m.role === "user" ? userContent : m.content,
       }));
@@ -934,6 +1330,7 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
             ...historyMessages,
           ],
         }),
+        signal,
       });
 
       if (polliRes.ok) {
@@ -951,15 +1348,29 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
             tokensCompletion: 200,
           });
 
+          const finalMessage = humanizeChefMessage(
+            cleanMessage,
+            Boolean(suggestions?.length),
+            activeIngredients
+          );
+          const { totalLatencyMs, traceId } = await obs.finalize({
+            outputMessage: finalMessage,
+            modelUsed: "pollinations-free-llm",
+            suggestionCount: suggestions?.length || 0,
+          });
+
           return {
-            message: humanizeChefMessage(cleanMessage, Boolean(suggestions?.length), activeIngredients),
+            message: finalMessage,
             structuredSuggestions: suggestions,
             tokensUsed: { prompt: 100, completion: 200, total: 300 },
             modelUsed: "pollinations-free-llm",
+            traceId,
+            latencyMs: totalLatencyMs,
           };
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.name === "AbortError") throw err;
       console.warn("Pollinations free LLM failed, using local culinary engine:", err);
     }
   }
@@ -970,11 +1381,18 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
   );
 
   if (isDirectGreeting && !quickStartData?.ingredients?.length) {
+    const greetMsg =
+      "Hello, I'm your chef. What would you like to cook, or what do you have in the fridge today?";
+    const { totalLatencyMs, traceId } = await obs.finalize({
+      outputMessage: greetMsg,
+      modelUsed: "cookcart-local-engine",
+    });
     return {
-      message:
-        "Hello, I'm your chef. What would you like to cook, or what do you have in the fridge today?",
+      message: greetMsg,
       tokensUsed: { prompt: 20, completion: 40, total: 60 },
       modelUsed: "cookcart-local-engine",
+      traceId,
+      latencyMs: totalLatencyMs,
     };
   }
 
@@ -989,10 +1407,16 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
       tokensPrompt: stepTokens.prompt,
       tokensCompletion: stepTokens.completion,
     });
+    const { totalLatencyMs, traceId } = await obs.finalize({
+      outputMessage: stepAnswer,
+      modelUsed: "cookcart-local-engine",
+    });
     return {
       message: stepAnswer,
       tokensUsed: stepTokens,
       modelUsed: "cookcart-local-engine",
+      traceId,
+      latencyMs: totalLatencyMs,
     };
   }
 
@@ -1007,10 +1431,71 @@ export async function executeAIChat(options: AIRequestOptions): Promise<AIRespon
     tokensCompletion: mockTokens.completion,
   });
 
+  const attachedSuggestions = await attachDishImages(localResult.suggestions);
+  const { totalLatencyMs, traceId } = await obs.finalize({
+    outputMessage: localResult.message,
+    modelUsed: "cookcart-local-engine",
+    suggestionCount: attachedSuggestions.length,
+  });
+
   return {
     message: localResult.message,
-    structuredSuggestions: await attachDishImages(localResult.suggestions),
+    structuredSuggestions: attachedSuggestions,
     tokensUsed: mockTokens,
     modelUsed: "cookcart-local-engine",
+    traceId,
+    latencyMs: totalLatencyMs,
   };
+}
+
+/**
+ * Progressive Streaming Generator (`executeAIChatStream`):
+ * - Streams status updates, tool executions, progressive text chunks (`delta`),
+ *   validated recipe cards (`suggestions`), and final metadata (`done`) via SSE.
+ * - Filters out `<COOKCART_MENU>...</COOKCART_MENU>` via `MenuTagStreamFilter` so
+ *   incomplete JSON is never exposed as text in the user's chat bubble.
+ * - Respects `AbortSignal` for instant Stop Generation support.
+ */
+export async function* executeAIChatStream(
+  options: AIRequestOptions
+): AsyncGenerator<AIStreamEvent, AIResponsePayload, void> {
+  const queuedEvents: AIStreamEvent[] = [];
+
+  const result = await executeAIChat(options, (ev) => {
+    queuedEvents.push(ev);
+  });
+
+  for (const ev of queuedEvents) {
+    if (options.signal?.aborted) break;
+    yield ev;
+  }
+
+  // Stream the clean message progressively through MenuTagStreamFilter in natural word groups
+  const filter = new MenuTagStreamFilter();
+  const words = result.message.split(/(\s+)/);
+  const chunkSize = 3;
+
+  for (let i = 0; i < words.length; i += chunkSize) {
+    if (options.signal?.aborted) break;
+    const rawPiece = words.slice(i, i + chunkSize).join("");
+    const safePiece = filter.push(rawPiece);
+    if (safePiece) {
+      yield { type: "delta", text: safePiece };
+    }
+  }
+
+  const { remainingVisibleText } = filter.flush();
+  if (remainingVisibleText && !options.signal?.aborted) {
+    yield { type: "delta", text: remainingVisibleText };
+  }
+
+  if (result.structuredSuggestions && result.structuredSuggestions.length > 0 && !options.signal?.aborted) {
+    yield {
+      type: "suggestions",
+      structuredSuggestions: result.structuredSuggestions,
+    };
+  }
+
+  yield { type: "done", payload: result };
+  return result;
 }

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth";
-import { executeAIChat } from "@/lib/ai/aiService";
+import { executeAIChat, executeAIChatStream, type AIChatMessage, type AIResponsePayload } from "@/lib/ai/aiService";
+import { sanitizeConversationHistory } from "@/lib/ai/promptSecurity";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const chatMessageSchema = z.object({
+  // Client messages may only be "user" or "assistant"; "system" is accepted at schema level
+  // only to avoid breaking legacy history arrays, and is immediately stripped by sanitizeConversationHistory.
   role: z.enum(["user", "assistant", "system"]),
   content: z.string().min(1).max(12000),
   timestamp: z.string().optional(),
@@ -14,6 +17,7 @@ const chatMessageSchema = z.object({
 const chatRequestSchema = z.object({
   conversationId: z.string().max(120).optional(),
   messages: z.array(chatMessageSchema).min(1).max(100),
+  stream: z.boolean().optional(),
   quickStartData: z
     .object({
       cuisine: z.string().max(100).optional(),
@@ -27,6 +31,64 @@ const chatRequestSchema = z.object({
     })
     .optional(),
 });
+
+async function persistConversationToDb(params: {
+  userId: string;
+  convoId: string;
+  messages: AIChatMessage[];
+  quickStartData?: z.infer<typeof chatRequestSchema>["quickStartData"];
+  aiResponse: AIResponsePayload;
+}) {
+  const { userId, convoId, messages, quickStartData, aiResponse } = params;
+  try {
+    const fullMessages = [
+      ...messages,
+      {
+        role: "assistant" as const,
+        content: aiResponse.message,
+        timestamp: new Date().toISOString(),
+        structuredSuggestions: aiResponse.structuredSuggestions,
+      },
+    ];
+
+    const existingConvo = await prisma.chatConversation.findUnique({
+      where: { id: convoId },
+      select: { id: true, userId: true, cuisine: true, ingredients: true },
+    });
+
+    const firstUserMsg =
+      messages.find((m) => m.role === "user")?.content || "Cooking consultation";
+    const title = quickStartData?.cuisine
+      ? `${quickStartData.cuisine} - ${quickStartData.ingredients?.slice(0, 2).join(", ") || "Meal"}`
+      : firstUserMsg.slice(0, 30);
+
+    if (existingConvo && existingConvo.userId === userId) {
+      await prisma.chatConversation.update({
+        where: { id: convoId },
+        data: {
+          messages: JSON.stringify(fullMessages),
+          cuisine: quickStartData?.cuisine || existingConvo.cuisine,
+          ingredients: quickStartData?.ingredients
+            ? JSON.stringify(quickStartData.ingredients)
+            : existingConvo.ingredients,
+        },
+      });
+    } else if (!existingConvo) {
+      await prisma.chatConversation.create({
+        data: {
+          id: convoId,
+          userId,
+          title,
+          cuisine: quickStartData?.cuisine || "any",
+          ingredients: JSON.stringify(quickStartData?.ingredients || []),
+          messages: JSON.stringify(fullMessages),
+        },
+      });
+    }
+  } catch (dbError) {
+    console.warn("Could not persist conversation to DB:", dbError);
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -50,7 +112,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const { conversationId, messages, quickStartData } = parsed.data;
+    // Security: strip any client-injected "system" messages
+    const cleanMessages = sanitizeConversationHistory(parsed.data.messages);
+    if (!cleanMessages.some((m) => m.role === "user")) {
+      return NextResponse.json(
+        { error: "At least one user message is required" },
+        { status: 400 }
+      );
+    }
+
+    const { conversationId, quickStartData } = parsed.data;
+    const wantsStream =
+      parsed.data.stream === true ||
+      req.headers?.get?.("accept")?.includes("text/event-stream") === true;
+
     let convoId =
       conversationId || "convo_" + Math.random().toString(36).substring(2, 9);
 
@@ -83,66 +158,91 @@ export async function POST(req: Request) {
       }
     }
 
-    // Call the unified AI service module
+    // Streaming SSE Mode (`stream: true` or `Accept: text/event-stream`)
+    if (wantsStream) {
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          const sendEvent = (event: string, data: unknown) => {
+            controller.enqueue(
+              encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+            );
+          };
+
+          try {
+            const generator = executeAIChatStream({
+              userId: session.userId,
+              conversationId: convoId,
+              messages: cleanMessages,
+              quickStartData,
+              chefProfile,
+              signal: req.signal,
+            });
+
+            let finalPayload: AIResponsePayload | undefined;
+            for await (const ev of generator) {
+              if (req.signal?.aborted) break;
+              if (ev.type === "done") {
+                finalPayload = ev.payload;
+                sendEvent("done", {
+                  success: true,
+                  conversationId: convoId,
+                  ...ev.payload,
+                });
+              } else {
+                sendEvent(ev.type, ev);
+              }
+            }
+
+            if (finalPayload && !req.signal?.aborted) {
+              await persistConversationToDb({
+                userId: session.userId,
+                convoId,
+                messages: cleanMessages,
+                quickStartData,
+                aiResponse: finalPayload,
+              });
+            }
+          } catch (streamErr: any) {
+            if (streamErr?.name !== "AbortError") {
+              sendEvent("error", {
+                error: "Failed to process AI cooking request: " + (streamErr?.message || "Unknown error"),
+              });
+            }
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(readable, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    // Standard JSON Mode (default for backward-compatibility and existing unit tests)
     const aiResponse = await executeAIChat({
       userId: session?.userId,
       conversationId: convoId,
-      messages,
+      messages: cleanMessages,
       quickStartData,
       chefProfile,
+      signal: req.signal,
     });
 
-    // If user is authenticated, persist conversation to database (verified ownership)
     if (session?.userId) {
-      try {
-        const fullMessages = [
-          ...messages,
-          {
-            role: "assistant" as const,
-            content: aiResponse.message,
-            timestamp: new Date().toISOString(),
-            structuredSuggestions: aiResponse.structuredSuggestions,
-          },
-        ];
-
-        const existingConvo = await prisma.chatConversation.findUnique({
-          where: { id: convoId },
-          select: { id: true, userId: true, cuisine: true, ingredients: true },
-        });
-
-        const firstUserMsg =
-          messages.find((m) => m.role === "user")?.content ||
-          "Cooking consultation";
-        const title = quickStartData?.cuisine
-          ? `${quickStartData.cuisine} - ${quickStartData.ingredients?.slice(0, 2).join(", ") || "Meal"}`
-          : firstUserMsg.slice(0, 30);
-
-        if (existingConvo && existingConvo.userId === session.userId) {
-          await prisma.chatConversation.update({
-            where: { id: convoId },
-            data: {
-              messages: JSON.stringify(fullMessages),
-              cuisine: quickStartData?.cuisine || existingConvo.cuisine,
-              ingredients: quickStartData?.ingredients
-                ? JSON.stringify(quickStartData.ingredients)
-                : existingConvo.ingredients,
-            },
-          });
-        } else if (!existingConvo) {
-          await prisma.chatConversation.create({
-            data: {
-              id: convoId,
-              userId: session.userId,
-              title,
-              cuisine: quickStartData?.cuisine || "any",
-              ingredients: JSON.stringify(quickStartData?.ingredients || []),
-              messages: JSON.stringify(fullMessages),
-            },
-          });
-        }
-      } catch (dbError) {
-        console.warn("Could not persist conversation to DB:", dbError);
-      }
+      await persistConversationToDb({
+        userId: session.userId,
+        convoId,
+        messages: cleanMessages,
+        quickStartData,
+        aiResponse,
+      });
     }
 
     return NextResponse.json({

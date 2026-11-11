@@ -11,6 +11,8 @@ interface DishSuggestionCardProps {
   suggestion: DishSuggestion;
   onSelectDish?: (dish: DishSuggestion) => void;
   onStartCooking?: (dish: DishSuggestion) => void;
+  traceId?: string;
+  conversationId?: string;
 }
 
 const SAVE_FAILED = "Couldn't save it just now.";
@@ -19,6 +21,8 @@ export function DishSuggestionCard({
   suggestion,
   onSelectDish,
   onStartCooking,
+  traceId,
+  conversationId,
 }: DishSuggestionCardProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -28,6 +32,27 @@ export function DishSuggestionCard({
   const [saving, setSaving] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [saveNote, setSaveNote] = useState("");
+
+  const handleRating = async (nextRating: "up" | "down") => {
+    const updated = rating === nextRating ? null : nextRating;
+    setRating(updated);
+    if (updated) {
+      try {
+        await fetch("/api/ai/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            traceId,
+            conversationId,
+            dishTitle: suggestion.title,
+            rating: updated,
+          }),
+        });
+      } catch {
+        // Non-blocking telemetry
+      }
+    }
+  };
 
   const saveFailed = saveNote === SAVE_FAILED;
 
@@ -189,7 +214,7 @@ export function DishSuggestionCard({
       <div className="mt-2 flex items-center gap-1 -ml-2">
         <button
           type="button"
-          onClick={() => setRating(rating === "up" ? null : "up")}
+          onClick={() => handleRating("up")}
           aria-pressed={rating === "up"}
           className={iconButton(
             "ghost",
@@ -203,7 +228,7 @@ export function DishSuggestionCard({
         </button>
         <button
           type="button"
-          onClick={() => setRating(rating === "down" ? null : "down")}
+          onClick={() => handleRating("down")}
           aria-pressed={rating === "down"}
           className={iconButton(
             "ghost",

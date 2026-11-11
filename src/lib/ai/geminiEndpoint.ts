@@ -22,3 +22,11 @@ export function getGeminiGenerateContentUrl(model: string, apiKey: string): stri
   }
   return `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent`;
 }
+
+export function getGeminiStreamContentUrl(model: string, apiKey: string): string {
+  const cleanModel = model.replace(/^models\//, "").trim();
+  if (isVertexExpressApiKey(apiKey)) {
+    return `https://aiplatform.googleapis.com/v1/publishers/google/models/${cleanModel}:streamGenerateContent?alt=sse`;
+  }
+  return `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:streamGenerateContent?alt=sse`;
+}

@@ -8,7 +8,7 @@ import { QuickStartForm, type QuickStartData } from "@/components/QuickStartForm
 import { DishSuggestionCard } from "@/components/DishSuggestionCard";
 import { DishSuggestion } from "@/types";
 import { ChefAvatarBadge } from "@/components/avatar/ChefAvatar";
-import { Send, Plus, MessageSquare, Trash2, Settings, Loader2, X } from "lucide-react";
+import { Send, Plus, MessageSquare, Trash2, Settings, Loader2, X, Square } from "lucide-react";
 import Link from "next/link";
 import { button, cx, field, iconButton } from "@/components/ui/styles";
 
@@ -17,6 +17,8 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   structuredSuggestions?: DishSuggestion[];
+  traceId?: string;
+  isStreaming?: boolean;
 }
 
 interface ConversationItem {
@@ -41,10 +43,12 @@ function ChatPageContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [savedOpen, setSavedOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // "Chef Cart" was the old default name; treat it as unset.
   const activeChefName = user?.chefName && user.chefName !== "Chef Cart" ? user.chefName : "Your chef";
@@ -54,6 +58,7 @@ function ChatPageContent() {
   useEffect(() => {
     if (!isLoading) {
       setThinkingIndex(0);
+      setStatusNote(null);
       return;
     }
     const interval = setInterval(() => {
@@ -85,6 +90,9 @@ function ChatPageContent() {
   useEffect(() => {
     fetchConversations();
     startNewChat(initialCuisineParam);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, [user, initialCuisineParam]);
 
   const fetchConversations = async () => {
@@ -100,6 +108,7 @@ function ChatPageContent() {
   };
 
   const loadConversationHistory = async (id: string) => {
+    abortControllerRef.current?.abort();
     setConversationId(id);
     setIsLoading(true);
     try {
@@ -136,6 +145,8 @@ function ChatPageContent() {
   };
 
   const startNewChat = (cuisineHint?: string) => {
+    abortControllerRef.current?.abort();
+    setIsLoading(false);
     const newId = "convo_" + Math.random().toString(36).substring(2, 9);
     setConversationId(newId);
 
@@ -152,10 +163,218 @@ function ChatPageContent() {
     ]);
   };
 
-  const handleQuickStartSubmit = async (formData: QuickStartData) => {
-    setIsLoading(true);
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setStatusNote(null);
+    setMessages((prev) =>
+      prev.map((m, idx) =>
+        idx === prev.length - 1 && m.role === "assistant" && m.isStreaming
+          ? {
+              ...m,
+              content: m.content.trim() || "Stopped.",
+              isStreaming: false,
+            }
+          : m
+      )
+    );
+  };
 
-    // Shown as the user's message, so it reads like something a person would say.
+  /**
+   * Stream response from POST /api/ai/chat via SSE, updating the assistant message progressively.
+   */
+  const streamChefResponse = async (
+    baseMessages: ChatMessage[],
+    quickStartData?: QuickStartData
+  ) => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setIsLoading(true);
+    setStatusNote(null);
+
+    const placeholderAssistant: ChatMessage = {
+      role: "assistant",
+      content: "",
+      timestamp: new Date().toISOString(),
+      isStreaming: true,
+    };
+
+    setMessages([...baseMessages, placeholderAssistant]);
+
+    try {
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({
+          conversationId,
+          messages: baseMessages,
+          quickStartData,
+          stream: true,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        let errText = "Something went wrong on my side. Please try again.";
+        try {
+          const errJson = await res.json();
+          if (errJson?.error) errText = errJson.error;
+        } catch {
+          // Keep default error
+        }
+        setIsLoading(false);
+        setMessages([
+          ...baseMessages,
+          {
+            role: "assistant",
+            content: errText,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+        return;
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("text/event-stream") || !res.body) {
+        // Fallback if server returned standard JSON
+        const data = await res.json();
+        setIsLoading(false);
+        if (data.conversationId && data.conversationId !== conversationId) {
+          setConversationId(data.conversationId);
+        }
+        setMessages([
+          ...baseMessages,
+          {
+            role: "assistant",
+            content: data.message || "",
+            timestamp: new Date().toISOString(),
+            structuredSuggestions: data.structuredSuggestions,
+            traceId: data.traceId,
+          },
+        ]);
+        fetchConversations();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = "";
+      let accumulatedText = "";
+      let finalSuggestions: DishSuggestion[] | undefined;
+      let finalTraceId: string | undefined;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        sseBuffer += decoder.decode(value, { stream: true });
+
+        const frames = sseBuffer.split("\n\n");
+        sseBuffer = frames.pop() || "";
+
+        for (const frame of frames) {
+          const lines = frame.split("\n");
+          let eventName = "message";
+          let dataLine = "";
+          for (const line of lines) {
+            if (line.startsWith("event:")) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+              dataLine += line.slice(5).trim();
+            }
+          }
+          if (!dataLine) continue;
+
+          try {
+            const payload = JSON.parse(dataLine);
+            if (eventName === "status") {
+              if (payload.phase === "calling_tool" && payload.toolName) {
+                setStatusNote(`Checking ${payload.toolName.replace(/_/g, " ")}...`);
+              } else {
+                setStatusNote(null);
+              }
+            } else if (eventName === "delta" && typeof payload.text === "string") {
+              accumulatedText += payload.text;
+              const currentText = accumulatedText;
+              setMessages([
+                ...baseMessages,
+                {
+                  role: "assistant",
+                  content: currentText,
+                  timestamp: new Date().toISOString(),
+                  structuredSuggestions: finalSuggestions,
+                  traceId: finalTraceId,
+                  isStreaming: true,
+                },
+              ]);
+            } else if (eventName === "suggestions" && Array.isArray(payload.structuredSuggestions)) {
+              finalSuggestions = payload.structuredSuggestions;
+              setMessages([
+                ...baseMessages,
+                {
+                  role: "assistant",
+                  content: accumulatedText,
+                  timestamp: new Date().toISOString(),
+                  structuredSuggestions: finalSuggestions,
+                  traceId: finalTraceId,
+                  isStreaming: true,
+                },
+              ]);
+            } else if (eventName === "done") {
+              if (payload.conversationId && payload.conversationId !== conversationId) {
+                setConversationId(payload.conversationId);
+              }
+              if (payload.message) accumulatedText = payload.message;
+              if (payload.structuredSuggestions) finalSuggestions = payload.structuredSuggestions;
+              if (payload.traceId) finalTraceId = payload.traceId;
+            } else if (eventName === "error" && payload.error) {
+              accumulatedText = payload.error;
+            }
+          } catch {
+            // Ignore malformed SSE frame
+          }
+        }
+      }
+
+      setIsLoading(false);
+      setStatusNote(null);
+      setMessages([
+        ...baseMessages,
+        {
+          role: "assistant",
+          content: accumulatedText || "Here you go.",
+          timestamp: new Date().toISOString(),
+          structuredSuggestions: finalSuggestions,
+          traceId: finalTraceId,
+          isStreaming: false,
+        },
+      ]);
+      fetchConversations();
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        return;
+      }
+      setIsLoading(false);
+      setStatusNote(null);
+      setMessages([
+        ...baseMessages,
+        {
+          role: "assistant",
+          content: "I couldn't reach the kitchen. Check your connection and try again.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    }
+  };
+
+  const handleQuickStartSubmit = async (formData: QuickStartData) => {
     const style = formData.cuisine === "Any style" ? "" : `${formData.cuisine} `;
     const time = formData.cookingTimeLimit === "any" ? "" : `, ready in ${formData.cookingTimeLimit}`;
     const userPrompt = `Three ${style}dishes using ${formData.ingredients.join(", ")}, for ${formData.servings} ${formData.servings === 1 ? "person" : "people"}${time}.`;
@@ -170,56 +389,7 @@ function ChatPageContent() {
     ];
 
     setMessages(newMessages);
-
-    try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId,
-          messages: newMessages,
-          quickStartData: formData,
-        }),
-      });
-
-      const data = await res.json();
-      setIsLoading(false);
-
-      if (res.ok) {
-        if (data.conversationId && data.conversationId !== conversationId) {
-          setConversationId(data.conversationId);
-        }
-        setMessages([
-          ...newMessages,
-          {
-            role: "assistant",
-            content: data.message,
-            timestamp: new Date().toISOString(),
-            structuredSuggestions: data.structuredSuggestions,
-          },
-        ]);
-        fetchConversations();
-      } else {
-        setMessages([
-          ...newMessages,
-          {
-            role: "assistant",
-            content: data.error || "Something went wrong on my side. Please try again.",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-      }
-    } catch {
-      setIsLoading(false);
-      setMessages([
-        ...newMessages,
-        {
-          role: "assistant",
-          content: "I couldn't reach the kitchen. Check your connection and try again.",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    }
+    await streamChefResponse(newMessages, formData);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -239,56 +409,7 @@ function ChatPageContent() {
     ];
 
     setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId,
-          messages: newMessages,
-        }),
-      });
-
-      const data = await res.json();
-      setIsLoading(false);
-
-      if (res.ok) {
-        if (data.conversationId && data.conversationId !== conversationId) {
-          setConversationId(data.conversationId);
-        }
-        setMessages([
-          ...newMessages,
-          {
-            role: "assistant",
-            content: data.message,
-            timestamp: new Date().toISOString(),
-            structuredSuggestions: data.structuredSuggestions,
-          },
-        ]);
-        fetchConversations();
-      } else {
-        setMessages([
-          ...newMessages,
-          {
-            role: "assistant",
-            content: data.error || "Something went wrong on my side. Please try again.",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-      }
-    } catch {
-      setIsLoading(false);
-      setMessages([
-        ...newMessages,
-        {
-          role: "assistant",
-          content: "I couldn't reach the kitchen. Check your connection and try again.",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    }
+    await streamChefResponse(newMessages);
   };
 
   const handleSelectDish = (dish: DishSuggestion) => {
@@ -452,18 +573,20 @@ function ChatPageContent() {
                   </div>
                 ) : (
                   <div key={idx} className="space-y-4">
-                    <div className="flex items-end gap-2.5">
-                      {/* Only the newest answer nods as it arrives. */}
-                      <ChefAvatarBadge
-                        avatarConfig={activeChefConfig}
-                        size={36}
-                        title={activeChefName}
-                        mood={idx === messages.length - 1 ? "nod" : "still"}
-                      />
-                      <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-stone-100 text-stone-900 px-4 py-3">
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {(msg.content || !msg.isStreaming) && (
+                      <div className="flex items-end gap-2.5">
+                        {/* Only the newest answer nods as it arrives. */}
+                        <ChefAvatarBadge
+                          avatarConfig={activeChefConfig}
+                          size={36}
+                          title={activeChefName}
+                          mood={idx === messages.length - 1 ? "nod" : "still"}
+                        />
+                        <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-stone-100 text-stone-900 px-4 py-3">
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Dish suggestions from the chef */}
                     {msg.structuredSuggestions && msg.structuredSuggestions.length > 0 && (
@@ -476,6 +599,8 @@ function ChatPageContent() {
                               suggestion={suggestion}
                               onSelectDish={handleSelectDish}
                               onStartCooking={handleStartCooking}
+                              traceId={msg.traceId}
+                              conversationId={conversationId}
                             />
                           ))}
                         </div>
@@ -486,14 +611,14 @@ function ChatPageContent() {
                 )
               )}
 
-              {/* Thinking state */}
-              {isLoading && (
+              {/* Thinking state (shown while waiting for the first streamed chunk) */}
+              {isLoading && (!messages.at(-1)?.content || statusNote) && (
                 <div className="flex items-end gap-2.5">
                   <ChefAvatarBadge avatarConfig={activeChefConfig} size={36} title={activeChefName} mood="thinking" />
                   <div className="rounded-2xl rounded-bl-md bg-stone-100 text-stone-500 px-4 py-3 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden />
-                    <span key={thinkingIndex} className="cc-fade-in">
-                      {THINKING_PHRASES[thinkingIndex]}
+                    <span key={statusNote || thinkingIndex} className="cc-fade-in">
+                      {statusNote || THINKING_PHRASES[thinkingIndex]}
                     </span>
                   </div>
                 </div>
@@ -521,15 +646,28 @@ function ChatPageContent() {
                   autoComplete="off"
                   enterKeyHint="send"
                 />
-                <button
-                  type="submit"
-                  disabled={isLoading || !inputMessage.trim()}
-                  className={iconButton("primary", "md", "shrink-0")}
-                  aria-label="Send"
-                  title="Send"
-                >
-                  <Send className="w-5 h-5" aria-hidden />
-                </button>
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={handleStopGeneration}
+                    className={button("secondary", "md", "shrink-0 px-3.5")}
+                    aria-label="Stop response"
+                    title="Stop response"
+                  >
+                    <Square className="w-4 h-4 fill-current" aria-hidden />
+                    <span className="text-small">Stop</span>
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!inputMessage.trim()}
+                    className={iconButton("primary", "md", "shrink-0")}
+                    aria-label="Send"
+                    title="Send"
+                  >
+                    <Send className="w-5 h-5" aria-hidden />
+                  </button>
+                )}
               </form>
             </div>
           </div>
